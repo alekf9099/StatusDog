@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report — StatusDog</title>
+<meta name="description" content="Full diagnostic report for a URL: status, response time, redirect chain, TLS certificate and response headers.">
+<link rel="stylesheet" href="/assets/statusdog.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <nav class="site-nav">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/docs">Docs</a>
+      <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding:36px 0 56px">
+
+  <h1 style="font-size:26px">Diagnostic report</h1>
+
+  <form class="check-form" id="check-form" style="margin-bottom:26px">
+    <input type="text" id="url" placeholder="example.com" spellcheck="false" required aria-label="URL to check">
+    <button type="submit" id="submit">Run check</button>
+  </form>
+
+  <div id="report"></div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>StatusDog · MIT</span>
+    <span class="spacer"></span>
+    <a href="/docs">Docs</a>
+    <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import { check, escapeHtml, formatMs, prettyUrl, statusBadge } from '/assets/statusdog.js';
+
+const form = document.getElementById('check-form');
+const input = document.getElementById('url');
+const submit = document.getElementById('submit');
+const report = document.getElementById('report');
+
+const initial = new URLSearchParams(location.search).get('url');
+if (initial) {
+  input.value = initial;
+  run(initial);
+} else {
+  report.innerHTML = '<div class="empty">Enter a URL above to run a check.</div>';
+}
+
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const url = input.value.trim();
+  if (!url) return;
+  // Keep the URL shareable and the back button meaningful.
+  history.replaceState(null, '', `/check?url=${encodeURIComponent(url)}`);
+  run(url);
+});
+
+async function run(url) {
+  submit.disabled = true;
+  submit.textContent = 'Checking…';
+  report.innerHTML = '<div class="card muted">Running the check…</div>';
+  try {
+    report.innerHTML = render(await check(url));
+  } catch (err) {
+    report.innerHTML = `<div class="notice error">${escapeHtml(err.message)}</div>`;
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'Run check';
+  }
+}
+
+function render(result) {
+  return [
+    summary(result),
+    chain(result),
+    tls(result),
+    headers(result),
+    raw(result),
+  ].filter(Boolean).join('');
+}
+
+function summary(result) {
+  const problem = result.ok
+    ? ''
+    : `<div class="notice error" style="margin-bottom:18px">${escapeHtml(result.message ?? 'Check failed')}</div>`;
+  const redirected = result.finalUrl !== result.url
+    ? `<div class="small muted" style="margin-top:14px">Final URL <code>${escapeHtml(result.finalUrl)}</code></div>`
+    : '';
+  return `
+    <section class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+        ${statusBadge(result)}
+        <strong style="word-break:break-all">${escapeHtml(prettyUrl(result.url))}</strong>
+        <span class="small muted" style="margin-left:auto">checked ${escapeHtml(new Date(result.checkedAt).toLocaleString())}</span>
+      </div>
+      ${problem}
+      <div class="metrics">
+        <div class="metric"><span class="label">Status</span><span class="value">${result.status ?? '–'}</span></div>
+        <div class="metric"><span class="label">Response time</span><span class="value">${formatMs(result.responseTimeMs)}</span></div>
+        <div class="metric"><span class="label">Redirects</span><span class="value">${result.redirects}</span></div>
+        <div class="metric"><span class="label">Failure</span><span class="value">${escapeHtml(result.reason ?? 'none')}</span></div>
+      </div>
+      ${redirected}
+      <div style="margin-top:18px">
+        <a href="/dashboard?add=${encodeURIComponent(result.url)}"><button type="button" class="secondary">Keep watching it</button></a>
+      </div>
+    </section>`;
+}
+
+function chain(result) {
+  const hops = result.detail?.chain ?? [];
+  if (hops.length === 0) return '';
+  const items = hops
+    .map((hop, index) => `
+      <li>
+        <span class="hop">${index + 1} · ${hop.status}</span>
+        ${escapeHtml(hop.url)}<br>
+        <span class="small muted">→ ${escapeHtml(hop.location)}</span>
+      </li>`)
+    .join('');
+  return `
+    <section class="card" style="margin-bottom:16px">
+      <h2>Redirect chain</h2>
+      <ul class="chain">${items}
+        <li><span class="hop">${hops.length + 1} · ${result.status ?? '–'}</span>${escapeHtml(result.finalUrl)}</li>
+      </ul>
+    </section>`;
+}
+
+function tls(result) {
+  const cert = result.detail?.tls;
+  if (!cert) return '';
+  const days = cert.daysRemaining;
+  const badge = days === null
+    ? ''
+    : days < 0
+      ? '<span class="badge down"><span class="dot"></span>expired</span>'
+      : days < 14
+        ? '<span class="badge warn"><span class="dot"></span>expiring soon</span>'
+        : '<span class="badge up"><span class="dot"></span>valid</span>';
+  return `
+    <section class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <h2 style="margin:0">TLS certificate</h2>
+        ${badge}
+      </div>
+      <div class="scroll-x">
+        <table class="kv">
+          <tr><th>Subject</th><td>${escapeHtml(cert.subject ?? '–')}</td></tr>
+          <tr><th>Issuer</th><td>${escapeHtml(cert.issuer ?? '–')}</td></tr>
+          <tr><th>Valid from</th><td>${escapeHtml(cert.validFrom ?? '–')}</td></tr>
+          <tr><th>Valid to</th><td>${escapeHtml(cert.validTo ?? '–')}${days === null ? '' : ` (${days} days)`}</td></tr>
+          <tr><th>Protocol</th><td>${escapeHtml(cert.protocol ?? '–')}</td></tr>
+        </table>
+      </div>
+    </section>`;
+}
+
+function headers(result) {
+  const entries = Object.entries(result.detail?.headers ?? {});
+  if (entries.length === 0) return '';
+  const rows = entries
+    .map(([name, value]) => `<tr><th>${escapeHtml(name)}</th><td>${escapeHtml(value)}</td></tr>`)
+    .join('');
+  return `
+    <section class="card" style="margin-bottom:16px">
+      <h2>Response headers</h2>
+      <p class="small muted" style="margin-top:-8px">
+        A curated subset — cookies and credentials are never reported.
+      </p>
+      <div class="scroll-x"><table class="kv">${rows}</table></div>
+    </section>`;
+}
+
+function raw(result) {
+  return `
+    <details class="card">
+      <summary style="cursor:pointer;font-weight:600">Raw JSON</summary>
+      <pre style="margin:14px 0 0"><code>${escapeHtml(JSON.stringify(result, null, 2))}</code></pre>
+    </details>`;
+}
+</script>
+
+</body>
+</html>

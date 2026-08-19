@@ -1,3 +1,8 @@
-# A maintenance page should never be indexed in place of the real site.
 User-agent: *
-Disallow: /
+Allow: /$
+Allow: /docs
+Allow: /dashboard
+# Reports and fallback previews are per-request pages, not content to index.
+Disallow: /check
+Disallow: /preview
+Disallow: /api/

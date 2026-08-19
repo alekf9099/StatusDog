@@ -1,13 +1,57 @@
 import http from 'node:http';
 import https from 'node:https';
+import type { TLSSocket } from 'node:tls';
 import { USER_AGENT } from '../config/defaults.js';
-import type { FailureReason, ProbeResult, ResolvedTarget } from '../config/types.js';
+import type {
+  FailureReason,
+  ProbeDetail,
+  ProbeResult,
+  RedirectHop,
+  ResolvedTarget,
+  TlsInfo,
+} from '../config/types.js';
 import { bodyMatches, describeExpectations, statusMatches } from './matchers.js';
 
 /** Response bodies are only read up to this size; the rest is drained. */
 const MAX_BODY_BYTES = 64 * 1024;
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+/**
+ * Response headers worth reporting. An allowlist rather than a denylist, so a
+ * `set-cookie` or an auth echo can never leak into a shareable report.
+ */
+const REPORTED_HEADERS = [
+  'server',
+  'content-type',
+  'content-length',
+  'content-encoding',
+  'cache-control',
+  'age',
+  'date',
+  'location',
+  'x-powered-by',
+  'strict-transport-security',
+  'content-security-policy',
+  'x-frame-options',
+  'x-content-type-options',
+  'access-control-allow-origin',
+  'retry-after',
+  'x-cache',
+  'cf-cache-status',
+  'x-vercel-cache',
+];
+
+/**
+ * Dedicated agents so probes never share sockets with anything else.
+ *
+ * `maxCachedSessions: 0` matters: with TLS session resumption the server skips
+ * re-sending its certificate chain, so `getPeerCertificate()` comes back empty
+ * on every check after the first. Forcing a full handshake also makes the
+ * measured response time comparable from one check to the next.
+ */
+const httpAgent = new http.Agent({ keepAlive: false });
+const httpsAgent = new https.Agent({ keepAlive: false, maxCachedSessions: 0 });
 
 class ProbeError extends Error {
   constructor(readonly reason: FailureReason, message: string) {
@@ -20,6 +64,7 @@ interface RawResponse {
   status: number;
   headers: http.IncomingHttpHeaders;
   body: string;
+  tls: TlsInfo | null;
 }
 
 /**
@@ -31,6 +76,7 @@ interface RawResponse {
 export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
   const startedAt = Date.now();
   const checkedAt = new Date(startedAt).toISOString();
+  const chain: RedirectHop[] = [];
   let currentUrl = target.url;
   let method = target.method;
   let redirects = 0;
@@ -56,6 +102,7 @@ export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
             `Exceeded ${target.maxRedirects} redirects (last hop: ${currentUrl})`,
           );
         }
+        chain.push({ url: currentUrl, status: response.status, location });
         redirects++;
         currentUrl = new URL(location, currentUrl).toString();
         // Match browser behaviour: 303 always downgrades to GET, and so do
@@ -78,6 +125,7 @@ export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
         checkedAt,
         reason: failure?.reason ?? null,
         message: failure?.message ?? null,
+        detail: buildDetail(response, chain),
       };
     }
   } catch (err) {
@@ -92,8 +140,19 @@ export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
       checkedAt,
       reason: probeError.reason,
       message: probeError.message,
+      detail: chain.length > 0 ? { headers: {}, tls: null, chain } : null,
     };
   }
+}
+
+function buildDetail(response: RawResponse, chain: RedirectHop[]): ProbeDetail {
+  const headers: Record<string, string> = {};
+  for (const name of REPORTED_HEADERS) {
+    const value = response.headers[name];
+    if (value === undefined) continue;
+    headers[name] = Array.isArray(value) ? value.join(', ') : String(value);
+  }
+  return { headers, tls: response.tls, chain };
 }
 
 function evaluate(
@@ -142,7 +201,8 @@ function requestOnce(
       return;
     }
 
-    const transport = url.protocol === 'https:' ? https : http;
+    const secure = url.protocol === 'https:';
+    const transport = secure ? https : http;
     let settled = false;
     let timedOut = false;
 
@@ -157,6 +217,7 @@ function requestOnce(
       url,
       {
         method,
+        agent: secure ? httpsAgent : httpAgent,
         headers: {
           'user-agent': USER_AGENT,
           accept: '*/*',
@@ -164,6 +225,8 @@ function requestOnce(
         },
       },
       (response) => {
+        // Read the certificate now: the socket may be pooled or torn down later.
+        const tls = readTlsInfo(response.socket);
         const chunks: Buffer[] = [];
         let received = 0;
         response.on('data', (chunk: Buffer) => {
@@ -176,6 +239,7 @@ function requestOnce(
               status: response.statusCode ?? 0,
               headers: response.headers,
               body: Buffer.concat(chunks).subarray(0, MAX_BODY_BYTES).toString('utf8'),
+              tls,
             }),
           );
         });
@@ -195,6 +259,38 @@ function requestOnce(
     }
     request.end();
   });
+}
+
+function readTlsInfo(socket: unknown): TlsInfo | null {
+  const tlsSocket = socket as TLSSocket | undefined;
+  if (!tlsSocket || typeof tlsSocket.getPeerCertificate !== 'function') return null;
+
+  try {
+    const cert = tlsSocket.getPeerCertificate();
+    if (!cert || Object.keys(cert).length === 0) return null;
+
+    const validTo = cert.valid_to ? new Date(cert.valid_to) : null;
+    const expiry = validTo && !Number.isNaN(validTo.getTime()) ? validTo : null;
+    return {
+      subject: firstValue(cert.subject?.CN),
+      issuer: firstValue(cert.issuer?.O) ?? firstValue(cert.issuer?.CN),
+      validFrom: cert.valid_from ?? null,
+      validTo: cert.valid_to ?? null,
+      daysRemaining: expiry
+        ? Math.floor((expiry.getTime() - Date.now()) / 86_400_000)
+        : null,
+      protocol: tlsSocket.getProtocol?.() ?? null,
+    };
+  } catch {
+    // Certificate details are a nice-to-have; never fail a check over them.
+    return null;
+  }
+}
+
+/** Certificate fields are `string | string[]` depending on the certificate. */
+function firstValue(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
 }
 
 function toProbeError(err: unknown, timedOut = false): ProbeError {

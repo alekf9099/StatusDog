@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — StatusDog</title>
+<meta name="description" content="Watch a list of URLs and track their uptime and response time.">
+<link rel="stylesheet" href="/assets/statusdog.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <nav class="site-nav">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/docs">Docs</a>
+      <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding:36px 0 56px">
+
+  <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px">
+    <h1 style="font-size:26px;margin:0">Dashboard</h1>
+    <span class="small muted" id="summary"></span>
+    <span style="flex:1"></span>
+    <button type="button" class="secondary" id="refresh">Check all now</button>
+  </div>
+
+  <p class="small muted" style="margin:0 0 22px">
+    Auto-checking every <span id="interval-label">60</span>s while this tab is open.
+  </p>
+
+  <form class="check-form" id="add-form" style="margin-bottom:26px">
+    <input type="text" id="url" placeholder="Add a URL to watch — example.com" spellcheck="false" required aria-label="URL to watch">
+    <button type="submit">Add monitor</button>
+  </form>
+
+  <div id="monitors"></div>
+
+  <div class="notice" style="margin-top:30px">
+    <strong>Stored in this browser.</strong> Monitors and their history live in
+    localStorage, and checks only run while this tab is open — closing it stops
+    the clock. For monitoring that keeps going without you, run the CLI on a
+    server: see <a href="/docs">the docs</a>.
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>StatusDog · MIT</span>
+    <span class="spacer"></span>
+    <a href="/docs">Docs</a>
+    <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import {
+  check, escapeHtml, formatMs, formatRelative, prettyUrl,
+  sparkline, statusBadge, store, uptimePct,
+} from '/assets/statusdog.js';
+
+const INTERVAL_MS = 60_000;
+
+const list = document.getElementById('monitors');
+const summary = document.getElementById('summary');
+const addForm = document.getElementById('add-form');
+const input = document.getElementById('url');
+const refresh = document.getElementById('refresh');
+document.getElementById('interval-label').textContent = String(INTERVAL_MS / 1000);
+
+// `?add=` arrives from the landing page and the report page.
+const pending = new URLSearchParams(location.search).get('add');
+if (pending) {
+  store.add(pending);
+  history.replaceState(null, '', '/dashboard');
+}
+
+render();
+void runAll();
+setInterval(runAll, INTERVAL_MS);
+
+addForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const url = input.value.trim();
+  if (!url) return;
+  const { monitor, added } = store.add(url);
+  input.value = '';
+  render();
+  if (added) void runOne(monitor.id);
+});
+
+refresh.addEventListener('click', () => void runAll());
+
+list.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-action]');
+  if (!button) return;
+  const { action, id } = button.dataset;
+  if (action === 'remove') {
+    store.remove(id);
+    render();
+  } else if (action === 'check') {
+    void runOne(id);
+  }
+});
+
+async function runAll() {
+  const monitors = store.list();
+  if (monitors.length === 0) return;
+  refresh.disabled = true;
+  refresh.textContent = 'Checking…';
+  await Promise.all(monitors.map((m) => runOne(m.id)));
+  refresh.disabled = false;
+  refresh.textContent = 'Check all now';
+}
+
+async function runOne(id) {
+  const monitor = store.list().find((m) => m.id === id);
+  if (!monitor) return;
+  try {
+    store.record(id, await check(monitor.url));
+  } catch (err) {
+    // A rejected request is itself a signal — record it as a failed check.
+    store.record(id, {
+      url: monitor.url,
+      ok: false,
+      status: null,
+      responseTimeMs: 0,
+      redirects: 0,
+      checkedAt: new Date().toISOString(),
+      reason: 'network',
+      message: err.message,
+      detail: null,
+    });
+  }
+  render();
+}
+
+function render() {
+  const monitors = store.list();
+  const down = monitors.filter((m) => m.lastResult && !m.lastResult.ok).length;
+  summary.textContent = monitors.length === 0
+    ? ''
+    : `${monitors.length} monitor${monitors.length === 1 ? '' : 's'} · ${down ? `${down} down` : 'all healthy'}`;
+
+  list.innerHTML = monitors.length === 0
+    ? '<div class="empty">No monitors yet. Add a URL above to start watching it.</div>'
+    : `<div class="grid cols-auto">${monitors.map(card).join('')}</div>`;
+}
+
+function card(monitor) {
+  const result = monitor.lastResult;
+  const history = monitor.history ?? [];
+  const pct = uptimePct(history);
+  const problem = result && !result.ok
+    ? `<div class="notice error small" style="margin-top:14px">${escapeHtml(result.message ?? 'Check failed')}</div>`
+    : '';
+
+  return `
+    <section class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        ${statusBadge(result)}
+        <button type="button" class="ghost" data-action="remove" data-id="${escapeHtml(monitor.id)}"
+          style="margin-left:auto" aria-label="Remove monitor">Remove</button>
+      </div>
+      <div style="font-weight:600;word-break:break-all;margin-bottom:14px">
+        <a href="/check?url=${encodeURIComponent(monitor.url)}">${escapeHtml(prettyUrl(monitor.url))}</a>
+      </div>
+      ${sparkline(history)}
+      <div class="metrics" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+        <div class="metric"><span class="label">Uptime</span><span class="value">${pct === null ? '–' : `${pct}%`}</span></div>
+        <div class="metric"><span class="label">Response</span><span class="value">${formatMs(result?.responseTimeMs ?? null)}</span></div>
+        <div class="metric"><span class="label">Checked</span><span class="value" style="font-size:15px">${escapeHtml(formatRelative(result?.checkedAt))}</span></div>
+      </div>
+      ${problem}
+      <div style="margin-top:14px">
+        <button type="button" class="secondary" data-action="check" data-id="${escapeHtml(monitor.id)}">Check now</button>
+      </div>
+    </section>`;
+}
+</script>
+
+</body>
+</html>
