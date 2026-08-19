@@ -15,7 +15,7 @@ export * from './monitor/index.js';
 export * from './store/index.js';
 export * from './fallback/index.js';
 export * from './dashboard/index.js';
-export { attachNotifiers, createNotifier, createNotifiers } from './notify/index.js';
+export { attachNotifiers, createNotifier, createNotifiers, defaultWebhookFormat } from './notify/index.js';
 export { dispatchTransitions, notifierConfigsFromEnv, notifiersFromEnv } from './notify/dispatch.js';
 export type { DispatchOutcome, DispatchSummary } from './notify/dispatch.js';
 export type { Notifier } from './notify/index.js';

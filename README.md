@@ -137,6 +137,7 @@ the file out of the deployment.
 | `KV_REST_API_URL` + `KV_REST_API_TOKEN` | A Redis-compatible REST store. `UPSTASH_REDIS_REST_*` and `REDIS_REST_*` are also accepted. |
 | `STATUSDOG_WEBHOOK_URL` | Optional. Alert webhooks, comma-separated. |
 | `STATUSDOG_WEBHOOK_ON` | Optional. `down`, `up`, or `down,up` (default: both). |
+| `STATUSDOG_WEBHOOK_FORMAT` | Optional. `full` or `text`; per-host default otherwise. |
 
 [`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) calls it every 15
 minutes and needs two repository secrets, `MONITOR_ENDPOINT` and `CRON_SECRET`.
@@ -156,8 +157,12 @@ carries the weight: a transition only happens after `failureThreshold`
 consecutive failures, and only the change fires — a target down for a day alerts
 once, not ninety-six times.
 
-The payload carries both `text` (what Slack renders) and `content` (what Discord
-renders), so either provider works with no adapter:
+#### Payload
+
+Two shapes, picked per host.
+
+`full` (the default) carries the whole event, and includes both `text` (what Slack
+renders) and `content` (what Discord renders), so either works with no adapter:
 
 ```json
 {
@@ -171,10 +176,32 @@ renders), so either provider works with no adapter:
 }
 ```
 
-Delivery runs after results are persisted and never fails the run — an
-unreachable webhook comes back in the response and as a warning on the workflow
-run, not as a lost check. Only a webhook's **origin** is ever logged or returned,
-since the path is the credential.
+`text` sends only the summary:
+
+```json
+{ "text": "Down: Public API (https://example.com/health) — Unexpected status 503" }
+```
+
+Strict chat APIs need it. **Google Chat** validates the body against its Message
+resource and answers `400 Invalid JSON payload received. Unknown name "event"` on
+anything it does not recognise — a rich body there fails outright rather than
+posting a degraded message. So `chat.googleapis.com` defaults to `text`; set
+`STATUSDOG_WEBHOOK_FORMAT` to override either way.
+
+#### Google Chat
+
+In the space: **space name → Apps & integrations → Webhooks → Add webhooks**, name
+it, then copy the URL. It looks like
+`https://chat.googleapis.com/v1/spaces/AAA/messages?key=…&token=…` — the query
+string is the credential, and it is preserved on delivery. Put it in
+`STATUSDOG_WEBHOOK_URL` and redeploy; no other setting is needed.
+
+#### Delivery
+
+Runs after results are persisted and never fails the run — an unreachable webhook
+comes back in the response and as a warning on the workflow run, not as a lost
+check. Only a webhook's **origin** is ever logged or returned, since the path (or
+query string) is the credential.
 
 For the CLI, notifiers come from `statusdog.config.json` instead:
 
