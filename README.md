@@ -11,6 +11,10 @@ meantime — either as standalone server or as middleware inside your own app.
 - **Self-contained pages.** The dashboard and fallback templates are single HTML
   documents with no external requests — they still render when everything else is down.
 
+**Live fallback page:** <https://status-dog.vercel.app> — the maintenance screen
+this repo deploys to Vercel. It answers every path with `503` + `Retry-After`;
+`/healthz` stays `200` so an uptime check can tell it apart from the real service.
+
 ---
 
 ## Requirements
@@ -227,6 +231,8 @@ gets the maintenance page instead.
 A maintenance page hosted on your own infrastructure is down exactly when you
 need it. This repo therefore deploys as a Vercel project that answers every path
 with the fallback page — point your DNS or load balancer at it during an outage.
+
+This repo is deployed at <https://status-dog.vercel.app>. To set up your own:
 
 1. Import the repository at <https://vercel.com/new>. [`vercel.json`](vercel.json)
    already sets the build command and routes every path to
