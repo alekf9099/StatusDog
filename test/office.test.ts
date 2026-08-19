@@ -5,23 +5,24 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const moodModule = pathToFileURL(path.resolve('public/assets/office/mood.js')).href;
+const dogsModule = pathToFileURL(path.resolve('public/assets/office/dogs.js')).href;
 
 const {
   deriveMood,
   latencyBaseline,
-  dogIdentity,
-  dogName,
-  hashString,
   officeSummary,
   MOODS,
 } = (await import(moodModule)) as {
   deriveMood: (monitor: unknown) => { mood: string; cause: string; baselineMs: number | null; ratio: number | null };
   latencyBaseline: (history: unknown[]) => number | null;
+  officeSummary: (workers: Array<{ mood: { mood: string } }>) => { total: number; counts: Record<string, number>; worst: string };
+  MOODS: string[];
+};
+
+const { dogIdentity, dogName, hashString } = (await import(dogsModule)) as {
   dogIdentity: (id: string) => { key: string; names: { en: string; ko: string }; coat: { key: string }; accessory: string; beatOffsetMs: number };
   dogName: (id: string, language: string) => string;
   hashString: (input: unknown) => number;
-  officeSummary: (workers: Array<{ mood: { mood: string } }>) => { total: number; counts: Record<string, number>; worst: string };
-  MOODS: string[];
 };
 
 /** History of successful checks at a steady latency, newest last. */

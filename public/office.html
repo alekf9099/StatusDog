@@ -37,6 +37,22 @@
   </div>
   <p class="small muted" style="margin:0 0 20px" data-i18n="office.lede"></p>
 
+  <form class="office-hire" id="hire-form">
+    <label class="hire-url">
+      <span data-i18n="office.hire.urlLabel">Website to watch</span>
+      <input type="text" id="hire-url" spellcheck="false" required
+             data-i18n-placeholder="office.hire.urlPlaceholder" placeholder="example.com">
+    </label>
+    <label class="hire-name">
+      <span data-i18n="office.hire.nameLabel">Dog's name (optional)</span>
+      <input type="text" id="hire-name" spellcheck="false" maxlength="20"
+             data-i18n-placeholder="office.hire.namePlaceholder" placeholder="leave blank to roll one">
+    </label>
+    <button type="submit" id="hire-submit" data-i18n="office.hire.submit">Add dog</button>
+    <p class="hire-note" data-i18n="office.hire.note"></p>
+    <p class="hire-error" id="hire-error" hidden></p>
+  </form>
+
   <div class="office-room" id="office-room">
     <div class="office-wall">
       <div class="office-clock" aria-hidden="true"></div>
@@ -71,6 +87,11 @@ const office = new OfficeDashboard({
   room: document.getElementById('office'),
   floor: document.getElementById('office-floor'),
   board: document.getElementById('office-board'),
+  hireForm: document.getElementById('hire-form'),
+  hireUrl: document.getElementById('hire-url'),
+  hireName: document.getElementById('hire-name'),
+  hireSubmit: document.getElementById('hire-submit'),
+  hireError: document.getElementById('hire-error'),
 });
 office.start();
 </script>

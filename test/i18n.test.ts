@@ -130,6 +130,9 @@ test('every key the pages reference exists', () => {
     'office/DogWorkerCard.js',
     'office/ServerReportModal.js',
     'office/OfficeDashboard.js',
+    'office/dogs.js',
+    'office/overrides.js',
+    'office/url.js',
   ];
   const known = new Set(Object.keys(LOCALES.en!));
   const referenced = new Set<string>();

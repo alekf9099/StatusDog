@@ -1,11 +1,8 @@
 /**
  * StatusDog Office — the logic half.
  *
- * Two pure concerns, deliberately free of DOM access so they can be unit-tested:
- *
- *   1. `deriveMood` turns a monitor's raw numbers into how its dog is feeling.
- *   2. `dogIdentity` gives each target a stable dog — same name and coat on every
- *      visit, from a hash of the target id rather than a random draw.
+ * Turns a monitor's raw numbers into how its dog is feeling. Free of DOM access so
+ * it can be unit-tested; who the dog *is* lives in dogs.js.
  *
  * The moods are not decoration. `strained` in particular reports something the
  * plain dashboard does not: latency well above this target's *own* baseline, or
@@ -103,75 +100,6 @@ export function deriveMood(monitor) {
   }
 
   return { ...base, mood: 'working', cause: 'nominal' };
-}
-
-/* ---------------- dog identity ---------------- */
-
-/**
- * Dogs are data, not UI copy, so they live here rather than in the locale
- * tables: a monitor should keep the same dog when the language changes.
- */
-const DOGS = [
-  { key: 'mocha', en: 'Mocha', ko: '모카' },
-  { key: 'coco', en: 'Coco', ko: '코코' },
-  { key: 'bori', en: 'Bori', ko: '보리' },
-  { key: 'kongi', en: 'Kongi', ko: '콩이' },
-  { key: 'bam', en: 'Bam', ko: '밤이' },
-  { key: 'dubu', en: 'Dubu', ko: '두부' },
-  { key: 'haru', en: 'Haru', ko: '하루' },
-  { key: 'nuri', en: 'Nuri', ko: '누리' },
-  { key: 'mango', en: 'Mango', ko: '망고' },
-  { key: 'sol', en: 'Sol', ko: '솔이' },
-  { key: 'tori', en: 'Tori', ko: '토리' },
-  { key: 'pudding', en: 'Pudding', ko: '푸딩' },
-];
-
-/** Coats are CSS custom-property triples so both themes stay legible. */
-const COATS = [
-  { key: 'cream', body: '#e8c9a0', ear: '#cda679', patch: '#f5e3cb' },
-  { key: 'cocoa', body: '#a9754f', ear: '#8a5b3b', patch: '#d6ae8b' },
-  { key: 'charcoal', body: '#6f7480', ear: '#565b66', patch: '#9aa1ad' },
-  { key: 'ginger', body: '#dd9b52', ear: '#c07f3a', patch: '#f2c48b' },
-  { key: 'snow', body: '#e6e9ee', ear: '#c8cdd6', patch: '#f7f9fb' },
-  { key: 'sesame', body: '#c9a26b', ear: '#a07f4e', patch: '#e6cfa8' },
-];
-
-const ACCESSORIES = ['none', 'collar', 'scarf', 'cap'];
-
-/** FNV-1a. Small, stable, and not a security boundary — just a spread. */
-export function hashString(input) {
-  let hash = 0x811c9dc5;
-  const text = String(input ?? '');
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash >>> 0;
-}
-
-/**
- * The dog assigned to a monitor id. Deterministic, so the same target is always
- * greeted by the same colleague.
- */
-export function dogIdentity(id) {
-  const hash = hashString(id);
-  const dog = DOGS[hash % DOGS.length];
-  const coat = COATS[Math.floor(hash / DOGS.length) % COATS.length];
-  const accessory = ACCESSORIES[Math.floor(hash / (DOGS.length * COATS.length)) % ACCESSORIES.length];
-
-  return {
-    key: dog.key,
-    names: { en: dog.en, ko: dog.ko },
-    coat,
-    accessory,
-    /** Small per-dog animation offset so a room of dogs does not move in lockstep. */
-    beatOffsetMs: hash % 900,
-  };
-}
-
-export function dogName(id, language) {
-  const { names } = dogIdentity(id);
-  return names[language] ?? names.en;
 }
 
 /** Roster targets are permanent staff; browser-local ones clock out with the tab. */

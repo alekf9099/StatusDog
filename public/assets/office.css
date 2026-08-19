@@ -142,6 +142,46 @@
   50% { box-shadow: 0 0 0 14px rgba(229, 83, 75, 0); filter: brightness(1.45); }
 }
 
+/* ---------- hiring ---------- */
+
+.office-hire {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+.office-hire label {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.office-hire input {
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-soft);
+  color: var(--fg);
+}
+.office-hire .hire-url { flex: 1 1 240px; min-width: 0; }
+.office-hire .hire-name { flex: 0 1 150px; min-width: 0; }
+.office-hire button { align-self: flex-end; white-space: nowrap; }
+.office-hire .hire-note { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted); }
+.office-hire .hire-error {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  color: var(--mood-alarmed);
+}
+
 /* ---------- desk grid ---------- */
 
 .office-floor {
@@ -554,6 +594,71 @@
 .desk[data-mood="alarmed"] .desk-status .dot { animation: office-siren 1.1s ease-in-out infinite; }
 .desk-latency { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
+/* A new hire walks in rather than blinking into existence. */
+.desk[data-arriving="true"] { animation: desk-arrive .55s cubic-bezier(.22, .61, .36, 1); }
+@keyframes desk-arrive {
+  0% { opacity: 0; transform: translateY(18px) scale(.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- rename, in the report ---------- */
+
+.report-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.report-name h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-edit {
+  flex: none;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--muted);
+  border-radius: 7px;
+  padding: 2px 7px;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.report-edit:hover { background: var(--bg-soft); color: var(--fg); filter: none; }
+
+.rename-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 4px;
+}
+.rename-form input {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  padding: 5px 9px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg-soft);
+  color: var(--fg);
+  width: min(200px, 100%);
+}
+.rename-form button { padding: 6px 12px; font-size: 13px; }
+.rename-hint { font-size: 12px; color: var(--muted); margin: 0; }
+
+.report-actions-secondary {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.report-actions-secondary button {
+  font-size: 13px;
+  padding: 7px 12px;
+}
+.report-danger {
+  border-color: color-mix(in srgb, var(--mood-alarmed) 45%, var(--border));
+  color: var(--mood-alarmed);
+}
+
 /* ---------- report slide-over ---------- */
 
 .report-panel,
@@ -692,4 +797,5 @@
   .prop-sweat, .prop-question, .prop-alarm, .prop-zzz { opacity: 1; }
   .office[data-worst="alarmed"] .office-siren { opacity: 1; }
   .desk:hover { transform: none; }
+  .desk[data-arriving="true"] { animation: none; }
 }

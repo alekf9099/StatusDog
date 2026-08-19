@@ -11,7 +11,7 @@
  */
 import { escapeHtml, formatMs } from '../statusdog.js';
 import { t, getLanguage } from '../i18n.js';
-import { dogIdentity } from './mood.js';
+import { resolveDog } from './dogs.js';
 
 /**
  * The dog, drawn once and reused. Sits behind the desk, so the lower body being
@@ -131,6 +131,7 @@ export function renderDogWorkerCard(worker) {
   return `
     <button type="button" class="desk" data-mood="${escapeHtml(mood.mood)}"
             data-worker-id="${escapeHtml(monitor.uid)}"
+            ${worker.arriving ? 'data-arriving="true"' : ''}
             style="--coat:${dog.coat.body}"
             aria-label="${escapeHtml(label)}">
       <div class="desk-scene">
@@ -154,7 +155,12 @@ export function renderDogChip(worker) {
   return `<div class="dog-chip" data-mood="${escapeHtml(worker.mood.mood)}">${dogSvg(worker.dog)}</div>`;
 }
 
-/** Attach a dog to any monitor-shaped object. */
-export function makeWorker(monitor, mood) {
-  return { monitor, mood, dog: dogIdentity(monitor.id) };
+/**
+ * Attach a dog to any monitor-shaped object.
+ *
+ * `override` is whatever has been stored for this worker — a rename, a re-rolled
+ * look, or nothing at all, in which case the dog falls out of the id hash.
+ */
+export function makeWorker(monitor, mood, override = null, extras = {}) {
+  return { monitor, mood, dog: resolveDog(monitor.id, override), override, ...extras };
 }
