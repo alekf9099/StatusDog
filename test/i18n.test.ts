@@ -124,8 +124,13 @@ test('normalizeLanguage accepts real Accept-Language shapes', () => {
 
 test('every key the pages reference exists', () => {
   // Catches a data-i18n typo, which would otherwise render the raw key on screen.
-  const pages = ['index.html', 'check.html', 'dashboard.html', 'docs.html'];
-  const scripts = ['statusdog.js'];
+  const pages = ['index.html', 'check.html', 'dashboard.html', 'docs.html', 'office.html'];
+  const scripts = [
+    'statusdog.js',
+    'office/DogWorkerCard.js',
+    'office/ServerReportModal.js',
+    'office/OfficeDashboard.js',
+  ];
   const known = new Set(Object.keys(LOCALES.en!));
   const referenced = new Set<string>();
 

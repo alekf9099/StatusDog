@@ -260,6 +260,81 @@ export const LOCALES = {
     'docs.roadmap.h2': 'Roadmap',
     'docs.roadmap.p':
       'Retention is the last 480 checks per target — about five days at a 15-minute interval. Longer history, per-target alert routing, and a public status page per monitor are the obvious next steps.',
+
+    /* ---------- office ---------- */
+    'nav.office': 'Office',
+    'dash.officeView': 'See the office',
+    'docs.office.h2': 'The office view',
+    'docs.office.pHtml':
+      '<a href="/office">/office</a> shows one dog per monitored site. It is the same data as the dashboard, read as behaviour rather than as a table — which turns out to be the faster way to spot the one desk that is wrong.',
+    'docs.office.moods.h3': 'What each mood means',
+    'docs.office.strainHtml':
+      '<strong>Straining is the mood the table cannot show you.</strong> It fires when the last check is more than twice this target\'s own median — and at least 150ms above it — or when it is past 70% of the <code>maxResponseTimeMs</code> its config sets. A site that normally answers in 96ms and suddenly takes 400ms is in trouble; one that always takes 3s is not, and its dog stays calm.',
+    'docs.office.staffHtml':
+      'Dogs on the roster are permanent staff. Monitors you added in this browser show up as <strong>interns</strong>, because they only work while the tab is open — the badge is there so you never mistake a browser-only monitor for round-the-clock coverage.',
+    'docs.office.clickHtml':
+      'Click any desk for that site\'s report: status, response time against its usual, TLS expiry, response headers, and the recent history as a sparkline. Keyboard works too — desks are buttons, and <kbd>Esc</kbd> closes the panel.',
+    'docs.office.mood.workingV': 'Up, and answering at its usual speed.',
+    'docs.office.mood.strainedV': 'Up, but much slower than usual or close to its configured limit.',
+    'docs.office.mood.uneasyV': 'A check failed, but not enough times in a row to count as an outage.',
+    'docs.office.mood.alarmedV': 'Confirmed down. The wall siren comes on too.',
+    'docs.office.mood.offDutyV': 'No check has run yet, so there is nothing to report.',
+    'home.office.h2': 'Meet the office',
+    'home.office.ledeHtml':
+      'Every monitored site gets a dog colleague who watches it. They drink coffee when things are calm, sweat when the site slows down, and leap out of their chair when it goes down. <a href="/office">Visit the office →</a>',
+    'office.pageTitle': 'The Office — StatusDog',
+    'office.metaDescription':
+      'A room of dog colleagues, one per monitored site. Each one shows how its site is doing; click a desk for the report.',
+    'office.h1': 'StatusDog Office',
+    'office.lede':
+      'One dog per monitored site. How they behave is how their site is doing — click a desk for the full report.',
+    'office.tableView': 'View as a table',
+    'office.intern': 'intern',
+    'office.emptyHtml':
+      'Nobody has clocked in yet. Add a site on the <a href="/">home page</a> or to <code>monitors.json</code>, and a dog will take the desk.',
+    'office.empty': 'Nobody has clocked in yet.',
+    'office.desk.label': '{dog}, watching {site}. Status: {status}. Open the report.',
+
+    'office.mood.working.short': 'On it 🐾',
+    'office.mood.working.line': '{dog} is watching the monitor with a coffee. Nothing to report.',
+    'office.mood.strained.short': 'Server is panting',
+    'office.mood.strained.line':
+      '{dog} is typing fast and sweating a bit — the site is answering, but much slower than it usually does.',
+    'office.mood.uneasy.short': 'Something twitched',
+    'office.mood.uneasy.line':
+      '{dog} looked up from the screen. A check failed, but not enough times in a row to call it an outage yet.',
+    'office.mood.alarmed.short': 'Down! 🚨',
+    'office.mood.alarmed.line': '{dog} is out of the chair. The site is confirmed down.',
+    'office.mood.offDuty.short': 'Not started',
+    'office.mood.offDuty.line': '{dog} has just arrived and has not run a check yet.',
+
+    'office.board.headcount': { one: '{count} dog on duty', other: '{count} dogs on duty' },
+    'office.board.allCalm': 'a quiet day',
+    'office.board.alarmed': { one: '{count} raising the alarm', other: '{count} raising the alarm' },
+    'office.board.uneasy': { one: '{count} looking uneasy', other: '{count} looking uneasy' },
+    'office.board.strained': { one: '{count} straining', other: '{count} straining' },
+    'office.board.offDuty': { one: '{count} not started', other: '{count} not started' },
+    'office.board.emptyTitle': 'Empty office.',
+    'office.board.emptyHint': 'Add a site and someone will come in.',
+    'office.board.offline': 'Cannot reach the roster:',
+    'office.board.noStorageHtml':
+      '<strong>The permanent staff are not clocked in.</strong> No store is connected, so roster results are not being kept — see <a href="/docs">the docs</a>.',
+
+    'office.report.title': "{dog}'s report on {site}",
+    'office.report.heading': "{dog}'s desk",
+    'office.report.close': 'Close the report',
+    'office.report.now': 'Right now',
+    'office.report.diagnosis': 'Why this mood',
+    'office.report.baseline': 'Usual response',
+    'office.report.ratio': 'Versus usual',
+    'office.report.limit': 'Configured limit',
+    'office.report.consecutiveFailures': 'Failures in a row',
+    'office.report.since': 'State since',
+    'office.report.lastError': 'Last error',
+    'office.report.recent': { one: 'Last {count} check', other: 'Last {count} checks' },
+    'office.report.liveHeading': 'Fresh check',
+    'office.report.recheck': 'Check again now',
+    'office.report.checking': 'Checking…',
   },
 
   ko: {
@@ -509,5 +584,80 @@ export const LOCALES = {
     'docs.roadmap.h2': '앞으로',
     'docs.roadmap.p':
       '보관 범위는 대상별 최근 480회이며, 15분 간격 기준 약 5일입니다. 더 긴 이력, 대상별 알림 분기, 모니터별 공개 상태 페이지가 다음 단계로 자연스럽습니다.',
+
+    /* ---------- office ---------- */
+    'nav.office': '오피스',
+    'dash.officeView': '오피스에서 보기',
+    'docs.office.h2': '오피스 화면',
+    'docs.office.pHtml':
+      '<a href="/office">/office</a>는 감시 중인 사이트마다 강아지 한 마리를 보여줍니다. 대시보드와 같은 데이터를 표가 아니라 행동으로 읽는 것인데, 잘못된 책상 하나를 찾는 데는 이쪽이 더 빠릅니다.',
+    'docs.office.moods.h3': '각 상태의 의미',
+    'docs.office.strainHtml':
+      '<strong>"헥헥거림"은 표로는 볼 수 없는 상태입니다.</strong> 마지막 확인이 그 대상 자신의 중앙값보다 2배 넘게 느리고 최소 150ms 이상 차이 날 때, 또는 설정된 <code>maxResponseTimeMs</code>의 70%를 넘겼을 때 나타납니다. 평소 96ms인 사이트가 갑자기 400ms가 되면 문제지만, 항상 3초인 사이트는 문제가 아니므로 그 강아지는 평온합니다.',
+    'docs.office.staffHtml':
+      '감시 목록에 등록된 강아지는 정규직입니다. 이 브라우저에서 추가한 모니터는 <strong>인턴</strong>으로 표시되는데, 탭이 열려 있는 동안만 일하기 때문입니다. 브라우저 전용 모니터를 24시간 감시로 착각하지 않도록 붙여둔 배지입니다.',
+    'docs.office.clickHtml':
+      '아무 책상이나 클릭하면 그 사이트의 리포트가 열립니다: 상태 코드, 평소 대비 응답 시간, TLS 만료, 응답 헤더, 최근 이력 스파크라인. 키보드로도 됩니다 — 책상은 버튼이고 <kbd>Esc</kbd>로 패널을 닫습니다.',
+    'docs.office.mood.workingV': '정상이고, 평소 속도로 응답합니다.',
+    'docs.office.mood.strainedV': '정상이지만 평소보다 훨씬 느리거나 설정된 한계에 가깝습니다.',
+    'docs.office.mood.uneasyV': '확인이 실패했지만 장애로 볼 만큼 연속되지는 않았습니다.',
+    'docs.office.mood.alarmedV': '장애가 확정됐습니다. 벽면 경보등도 함께 켜집니다.',
+    'docs.office.mood.offDutyV': '아직 확인이 실행되지 않아 보고할 것이 없습니다.',
+    'home.office.h2': '오피스 구경하기',
+    'home.office.ledeHtml':
+      '감시 중인 사이트마다 담당 강아지가 한 마리씩 붙습니다. 평온할 때는 커피를 마시고, 사이트가 느려지면 땀을 흘리며, 장애가 나면 의자에서 벌떡 일어납니다. <a href="/office">오피스 방문하기 →</a>',
+    'office.pageTitle': '오피스 — StatusDog',
+    'office.metaDescription':
+      '감시 중인 사이트마다 강아지 직원이 한 명. 각자 담당 사이트의 상태를 몸으로 보여줍니다. 책상을 클릭하면 리포트가 열립니다.',
+    'office.h1': 'StatusDog 오피스',
+    'office.lede':
+      '감시 중인 사이트마다 강아지 한 마리. 강아지의 행동이 곧 그 사이트의 상태입니다 — 책상을 클릭하면 전체 리포트가 열립니다.',
+    'office.tableView': '표로 보기',
+    'office.intern': '인턴',
+    'office.emptyHtml':
+      '아직 출근한 직원이 없습니다. <a href="/">홈</a>에서 사이트를 추가하거나 <code>monitors.json</code>에 등록하면 강아지가 자리에 앉습니다.',
+    'office.empty': '아직 출근한 직원이 없습니다.',
+    'office.desk.label': '{dog}, {site} 담당. 상태: {status}. 리포트 열기.',
+
+    'office.mood.working.short': '열일 중 🐾',
+    'office.mood.working.line': '{dog}(이)가 커피를 들고 모니터를 보고 있습니다. 특별한 일 없습니다.',
+    'office.mood.strained.short': '서버가 헥헥거려요',
+    'office.mood.strained.line':
+      '{dog}(이)가 땀을 흘리며 키보드를 두드리고 있습니다. 사이트가 응답은 하는데 평소보다 훨씬 느립니다.',
+    'office.mood.uneasy.short': '뭔가 이상해요',
+    'office.mood.uneasy.line':
+      '{dog}(이)가 화면에서 고개를 들었습니다. 확인이 한 번 실패했지만, 아직 장애로 볼 만큼 연속되지는 않았습니다.',
+    'office.mood.alarmed.short': '장애 발생! 🚨',
+    'office.mood.alarmed.line': '{dog}(이)가 의자에서 벌떡 일어났습니다. 사이트 장애가 확정됐습니다.',
+    'office.mood.offDuty.short': '대기 중',
+    'office.mood.offDuty.line': '{dog}(이)가 막 출근했고 아직 확인을 실행하지 않았습니다.',
+
+    'office.board.headcount': '근무 중 {count}마리',
+    'office.board.allCalm': '조용한 하루',
+    'office.board.alarmed': '{count}마리 비상',
+    'office.board.uneasy': '{count}마리 불안',
+    'office.board.strained': '{count}마리 헥헥',
+    'office.board.offDuty': '{count}마리 대기',
+    'office.board.emptyTitle': '텅 빈 사무실.',
+    'office.board.emptyHint': '사이트를 추가하면 누군가 출근합니다.',
+    'office.board.offline': '감시 목록을 불러올 수 없습니다:',
+    'office.board.noStorageHtml':
+      '<strong>정규직 직원들이 출근하지 못했습니다.</strong> 저장소가 연결되지 않아 감시 목록 결과가 보관되지 않습니다 — <a href="/docs">문서</a>를 참고하세요.',
+
+    'office.report.title': '{dog}의 {site} 리포트',
+    'office.report.heading': '{dog}의 책상',
+    'office.report.close': '리포트 닫기',
+    'office.report.now': '현재 상태',
+    'office.report.diagnosis': '왜 이런 상태인가',
+    'office.report.baseline': '평소 응답',
+    'office.report.ratio': '평소 대비',
+    'office.report.limit': '설정된 한계',
+    'office.report.consecutiveFailures': '연속 실패',
+    'office.report.since': '상태 유지 시작',
+    'office.report.lastError': '마지막 오류',
+    'office.report.recent': '최근 {count}회 확인',
+    'office.report.liveHeading': '지금 다시 확인',
+    'office.report.recheck': '지금 다시 확인',
+    'office.report.checking': '확인 중…',
   },
 };

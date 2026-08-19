@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="office.pageTitle">The Office — StatusDog</title>
+<meta name="description" data-i18n-content="office.metaDescription" content="A room of dog colleagues, one per monitored site.">
+<link rel="stylesheet" href="/assets/statusdog.css">
+<link rel="stylesheet" href="/assets/office.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <nav class="site-nav">
+      <a href="/" data-i18n="nav.home">Home</a>
+      <a href="/office" data-i18n="nav.office">Office</a>
+      <a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/docs" data-i18n="nav.docs">Docs</a>
+      <a href="https://github.com/alekf9099/StatusDog" data-i18n="nav.github">GitHub</a>
+      <span class="lang-switch" role="group" data-i18n-aria-label="lang.switchLabel" aria-label="Language">
+        <button type="button" data-lang="en" data-i18n="lang.en">EN</button>
+        <button type="button" data-lang="ko" data-i18n="lang.ko">한국어</button>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap office" style="padding:32px 0 56px" id="office">
+
+  <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+    <h1 style="font-size:26px;margin:0" data-i18n="office.h1">StatusDog Office</h1>
+    <span style="flex:1"></span>
+    <a href="/dashboard" class="small" data-i18n="office.tableView">View as a table</a>
+  </div>
+  <p class="small muted" style="margin:0 0 20px" data-i18n="office.lede"></p>
+
+  <div class="office-room" id="office-room">
+    <div class="office-wall">
+      <div class="office-clock" aria-hidden="true"></div>
+      <div class="office-board" id="office-board" role="status" aria-live="polite"></div>
+      <div class="office-siren" aria-hidden="true"></div>
+    </div>
+    <div id="office-floor"></div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span data-i18n="footer.license">StatusDog · MIT</span>
+    <span class="spacer"></span>
+    <a href="/dashboard" data-i18n="footer.dashboard">Dashboard</a>
+    <a href="/docs" data-i18n="footer.docs">Docs</a>
+    <a href="/api/monitors" data-i18n="footer.api">API</a>
+    <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import { initI18n } from '/assets/i18n.js';
+import { markCurrentNav } from '/assets/statusdog.js';
+import { OfficeDashboard } from '/assets/office/OfficeDashboard.js';
+
+initI18n();
+markCurrentNav();
+
+const office = new OfficeDashboard({
+  room: document.getElementById('office'),
+  floor: document.getElementById('office-floor'),
+  board: document.getElementById('office-board'),
+});
+office.start();
+</script>
+
+</body>
+</html>
