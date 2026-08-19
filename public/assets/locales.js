@@ -326,6 +326,10 @@ export const LOCALES = {
     'office.board.noStorageHtml':
       '<strong>The permanent staff are not clocked in.</strong> No store is connected, so roster results are not being kept — see <a href="/docs">the docs</a>.',
 
+    'stale.bannerHtml':
+      '<strong>Nothing is being checked right now.</strong> The last check was {ago}, and checks are expected every 15 minutes. Everything below is history, not the current state.',
+    'stale.bannerNever':
+      'No check has run yet. Numbers will appear once the scheduler has been set up.',
     'office.hire.urlLabel': 'Website to watch',
     'office.hire.urlPlaceholder': 'example.com',
     'office.hire.nameLabel': "Dog's name (optional)",
@@ -675,6 +679,10 @@ export const LOCALES = {
     'office.board.noStorageHtml':
       '<strong>정규직 직원들이 출근하지 못했습니다.</strong> 저장소가 연결되지 않아 감시 목록 결과가 보관되지 않습니다 — <a href="/docs">문서</a>를 참고하세요.',
 
+    'stale.bannerHtml':
+      '<strong>지금 아무것도 확인되지 않고 있습니다.</strong> 마지막 확인이 {ago}이고, 원래는 15분마다 확인해야 합니다. 아래 내용은 현재 상태가 아니라 과거 기록입니다.',
+    'stale.bannerNever':
+      '아직 확인이 실행되지 않았습니다. 스케줄러를 설정하면 숫자가 채워집니다.',
     'office.hire.urlLabel': '감시할 웹사이트',
     'office.hire.urlPlaceholder': 'example.com',
     'office.hire.nameLabel': '강아지 이름 (선택)',

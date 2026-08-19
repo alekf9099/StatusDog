@@ -37,6 +37,8 @@
   </div>
   <p class="small muted" style="margin:0 0 20px" data-i18n="office.lede"></p>
 
+  <div class="stale-banner" id="stale-banner" role="status" aria-live="polite" data-visible="false"></div>
+
   <form class="office-hire" id="hire-form">
     <label class="hire-url">
       <span data-i18n="office.hire.urlLabel">Website to watch</span>
@@ -92,6 +94,7 @@ const office = new OfficeDashboard({
   hireName: document.getElementById('hire-name'),
   hireSubmit: document.getElementById('hire-submit'),
   hireError: document.getElementById('hire-error'),
+  staleBanner: document.getElementById('stale-banner'),
 });
 office.start();
 </script>

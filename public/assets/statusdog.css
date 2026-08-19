@@ -263,6 +263,24 @@ p code, li code, td code {
   * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
 
+/* ---------- stale-scheduler banner ---------- */
+
+/* Loud on purpose. A dashboard showing yesterday's green numbers as though they
+   were current is worse than one showing nothing at all. */
+.stale-banner {
+  display: none;
+  margin: 0 0 20px;
+  padding: 13px 16px;
+  border: 1px solid color-mix(in srgb, var(--down) 45%, var(--border));
+  border-left-width: 4px;
+  border-radius: 0 10px 10px 0;
+  background: color-mix(in srgb, var(--down) 10%, transparent);
+  color: var(--fg);
+  font-size: 14px;
+}
+.stale-banner[data-visible="true"] { display: block; }
+.stale-banner strong { color: var(--down); }
+
 /* ---------- language switch ---------- */
 
 .lang-switch {

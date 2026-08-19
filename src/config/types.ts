@@ -51,6 +51,11 @@ export interface TargetConfig {
   failureThreshold?: number;
   /** Consecutive successes before the target flips back to `up`. */
   recoveryThreshold?: number;
+  /**
+   * Warn this many days before the TLS certificate expires. Each threshold fires
+   * once per certificate. `[]` disables the warnings.
+   */
+  certExpiryWarnDays?: number[];
   /** Page served for this target while it is down. */
   fallback?: FallbackConfig;
   enabled?: boolean;
@@ -128,6 +133,7 @@ export interface ResolvedTarget {
   maxRedirects: number;
   failureThreshold: number;
   recoveryThreshold: number;
+  certExpiryWarnDays: number[];
   fallback: Required<Omit<FallbackConfig, 'vars'>> & { vars: Record<string, string> };
   enabled: boolean;
 }
@@ -150,6 +156,8 @@ export type FailureReason =
   | 'timeout'
   | 'dns'
   | 'refused'
+  /** The TLS handshake or certificate validation failed. */
+  | 'tls'
   | 'network'
   | 'invalid-url';
 

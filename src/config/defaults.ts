@@ -13,6 +13,8 @@ export const TARGET_DEFAULTS: Required<
   maxRedirects: 5,
   failureThreshold: 2,
   recoveryThreshold: 1,
+  // Two warnings a month out, then tightening. Each fires once per certificate.
+  certExpiryWarnDays: [30, 14, 7, 3, 1],
   enabled: true,
 };
 

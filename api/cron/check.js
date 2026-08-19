@@ -15,12 +15,26 @@
  *   KV_REST_API_URL / _TOKEN   (or the Upstash equivalents) for storage
  *   STATUSDOG_WEBHOOK_URL      optional; comma-separated alert webhooks
  *   STATUSDOG_WEBHOOK_ON       optional; `down`, `up`, or `down,up`
+ *   STATUSDOG_WEBHOOK_FORMAT   optional; `full` or `text`
+ *
+ * Besides up/down changes it also warns before a TLS certificate expires — the
+ * one total outage that is entirely foreseeable. Each threshold fires once per
+ * certificate, and renewing resets them.
  */
 import { probe } from '../../dist/monitor/probe.js';
 import { resolveRoster } from '../../dist/store/roster.js';
 import { applyCheck } from '../../dist/store/uptime.js';
 import { kvEnvNames, kvFromEnv } from '../../dist/store/kv.js';
-import { dispatchTransitions, notifiersFromEnv } from '../../dist/notify/dispatch.js';
+import {
+  describeStaleness,
+  evaluateStaleness,
+  readSchedulerState,
+  recordRun,
+  wasReportedStale,
+  writeSchedulerState,
+} from '../../dist/store/scheduler.js';
+import { dispatchAlerts, dispatchTransitions, notifiersFromEnv } from '../../dist/notify/dispatch.js';
+import { certSeverity, describeCertExpiry } from '../../dist/monitor/cert.js';
 import { ROSTER } from '../../dist/roster.data.js';
 
 /** Constant-time comparison so the secret cannot be probed byte by byte. */
@@ -75,6 +89,7 @@ export default async function handler(req, res) {
 
   const startedAt = Date.now();
   const transitions = [];
+  const alerts = [];
 
   const checks = await Promise.all(targets.map(async (target) => {
     const result = await probe(target);
@@ -86,7 +101,7 @@ export default async function handler(req, res) {
     };
 
     try {
-      const { entry, transitioned, previousState } = await applyCheck(kv, target, result);
+      const { entry, transitioned, previousState, cert } = await applyCheck(kv, target, result);
       if (transitioned) {
         transitions.push({
           target,
@@ -96,30 +111,99 @@ export default async function handler(req, res) {
           at: result.checkedAt,
         });
       }
-      return { ...base, state: entry.state, transitioned, stored: true };
+
+      if (cert.crossed !== null) {
+        alerts.push({
+          kind: 'cert-expiry',
+          severity: certSeverity(cert),
+          summary: describeCertExpiry(target, cert),
+          target: { id: target.id, name: target.name, url: target.url },
+          at: result.checkedAt,
+          data: {
+            daysRemaining: cert.daysRemaining,
+            threshold: cert.crossed,
+            expired: cert.expired,
+            validTo: cert.state.validTo,
+          },
+        });
+      }
+
+      return {
+        ...base,
+        state: entry.state,
+        transitioned,
+        stored: true,
+        certDaysRemaining: cert.daysRemaining,
+      };
     } catch (err) {
       // A storage failure must not hide the check itself.
       return { ...base, stored: false, storeError: err.message };
     }
   }));
 
+  const unstored = checks.filter((check) => !check.stored);
+  const everythingFailed = checks.length > 0 && unstored.length === checks.length;
+  const down = checks.filter((check) => !check.ok).length;
+
+  // Stamp the run so the heartbeat and the UI can tell whether checks are still
+  // arriving. Only on a run that actually stored something — a run that could not
+  // reach the store has not really happened.
+  //
+  // This has to come *before* the fan-out below, because it can produce an alert
+  // of its own and the fan-out only sends what is in the array when it runs.
+  let scheduler = null;
+  if (!everythingFailed) {
+    try {
+      const previous = await readSchedulerState(kv);
+
+      // Only a run can tell that checks have resumed, so this is where the
+      // all-clear comes from — the heartbeat is daily and would be far too slow.
+      if (wasReportedStale(previous)) {
+        const staleness = evaluateStaleness(previous, startedAt);
+        alerts.push({
+          kind: 'monitor-stale',
+          severity: 'info',
+          summary: describeStaleness(staleness, 'recovered'),
+          target: null,
+          at: new Date(startedAt).toISOString(),
+          data: { state: 'recovered', wasSilentForMs: staleness.sinceMs },
+        });
+      }
+
+      scheduler = recordRun(previous, new Date(startedAt).toISOString(), checks.length, down);
+      await writeSchedulerState(kv, scheduler);
+    } catch (err) {
+      // The checks themselves are already saved; losing the stamp is survivable.
+      scheduler = { error: err.message };
+    }
+  }
+
   // Alerting comes last and never fails the run: a dead webhook is not an
   // outage, and the check results are already safely persisted by this point.
   const notifiers = notifiersFromEnv();
-  const { attempted, delivered, failed, outcomes } = await dispatchTransitions(
-    notifiers,
-    transitions,
-  );
-
-  const unstored = checks.filter((check) => !check.stored);
-  const everythingFailed = checks.length > 0 && unstored.length === checks.length;
+  const [transitionResults, alertResults] = await Promise.all([
+    dispatchTransitions(notifiers, transitions),
+    dispatchAlerts(notifiers, alerts),
+  ]);
+  const attempted = transitionResults.attempted + alertResults.attempted;
+  const delivered = transitionResults.delivered + alertResults.delivered;
+  const failed = transitionResults.failed + alertResults.failed;
+  const outcomes = [...transitionResults.outcomes, ...alertResults.outcomes];
 
   res.status(everythingFailed ? 502 : 200).json({
     checkedAt: new Date(startedAt).toISOString(),
     durationMs: Date.now() - startedAt,
     targets: checks.length,
-    down: checks.filter((check) => !check.ok).length,
+    down,
+    scheduler,
     transitions: transitions.map((event) => `${event.target.id}:${event.from}->${event.to}`),
+    // `alerts` now holds more than one kind, and a scheduler alert has no target.
+    certWarnings: alerts
+      .filter((alert) => alert.kind === 'cert-expiry')
+      .map((alert) => `${alert.target.id}:${alert.data.daysRemaining}d`),
+    schedulerAlerts: alerts
+      .filter((alert) => alert.kind === 'monitor-stale')
+      .map((alert) => alert.data.state),
     alerts: { notifiers: notifiers.length, attempted, delivered, failed, outcomes },
     checks,
   });

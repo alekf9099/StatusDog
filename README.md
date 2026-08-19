@@ -198,6 +198,7 @@ the file out of the deployment.
 | `STATUSDOG_WEBHOOK_URL` | Optional. Alert webhooks, comma-separated. |
 | `STATUSDOG_WEBHOOK_ON` | Optional. `down`, `up`, or `down,up` (default: both). |
 | `STATUSDOG_WEBHOOK_FORMAT` | Optional. `full` or `text`; per-host default otherwise. |
+| `STATUSDOG_STALE_AFTER_MINUTES` | Optional. How long without a check counts as stale. Default 45. |
 
 [`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) calls it every 15
 minutes and needs two repository secrets, `MONITOR_ENDPOINT` and `CRON_SECRET`.
@@ -271,6 +272,40 @@ For the CLI, notifiers come from `statusdog.config.json` instead:
   { "type": "webhook", "url": "https://hooks.example.com/statusdog", "on": ["down"] }
 ]
 ```
+
+#### Certificate expiry
+
+The probe already reads the certificate on every check, so warnings cost nothing
+extra. `certExpiryWarnDays` defaults to `[1, 3, 7, 14, 30]`; each threshold fires
+**once per certificate**, and renewing resets them. Set it to `[]` to turn them off.
+
+An expiring certificate is the one total outage that is entirely foreseeable — by
+the time the handshake breaks, the site is already down. Related: certificate
+failures now report as `reason: "tls"` with a readable message
+(`TLS certificate does not cover this hostname`) rather than an opaque
+`network: ERR_TLS_CERT_ALTNAME_INVALID`.
+
+#### When the scheduler itself stops
+
+Everything above notices when a *site* goes quiet. Nothing noticed when the
+*scheduler* did, and that is the worse failure: silence looks exactly like health,
+so a revoked token or an exhausted Actions quota would leave the dashboard showing
+last Tuesday's green numbers.
+
+Three things watch for it now, with deliberately different blind spots:
+
+| Watcher | Notices | Within |
+| --- | --- | --- |
+| `/api/cron/heartbeat` on **Vercel Cron**, daily | Runs have stopped | a day |
+| `/api/cron/check` itself | Runs have resumed | 15 minutes |
+| The office and dashboard banner | Either, when a human looks | immediately |
+
+Vercel Cron rather than GitHub Actions for the heartbeat, because Actions is the
+thing being watched. Daily is all the Hobby plan allows, and a dead scheduler found
+within a day beats one never found at all.
+
+The banner is the part that matters most in practice: a stale view says so in
+plain words instead of presenting old numbers as current.
 
 Storage keeps the last 480 checks per target — about five days at a 15-minute
 interval — under `statusdog:v1:target:<id>`. The client is ~100 lines of `fetch`

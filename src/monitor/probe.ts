@@ -293,6 +293,26 @@ function firstValue(value: string | string[] | undefined): string | null {
   return value ?? null;
 }
 
+/**
+ * Certificate and handshake failures, in words someone can act on.
+ *
+ * `rejectUnauthorized` is left at its default, so an invalid certificate fails
+ * the check rather than being quietly accepted — which is the right call for a
+ * monitor: visitors would see the same failure.
+ */
+const TLS_ERRORS: Record<string, string> = {
+  CERT_HAS_EXPIRED: 'TLS certificate has expired',
+  CERT_NOT_YET_VALID: 'TLS certificate is not valid yet',
+  ERR_TLS_CERT_ALTNAME_INVALID: 'TLS certificate does not cover this hostname',
+  UNABLE_TO_VERIFY_LEAF_SIGNATURE: 'TLS certificate chain is incomplete or untrusted',
+  DEPTH_ZERO_SELF_SIGNED_CERT: 'TLS certificate is self-signed',
+  SELF_SIGNED_CERT_IN_CHAIN: 'TLS certificate chain contains a self-signed certificate',
+  CERT_UNTRUSTED: 'TLS certificate is not trusted',
+  CERT_REVOKED: 'TLS certificate has been revoked',
+  ERR_SSL_WRONG_VERSION_NUMBER: 'Not a TLS port — is this https on an http listener?',
+  EPROTO: 'TLS handshake failed',
+};
+
 function toProbeError(err: unknown, timedOut = false): ProbeError {
   if (err instanceof ProbeError) return err;
   if (timedOut) {
@@ -309,8 +329,14 @@ function toProbeError(err: unknown, timedOut = false): ProbeError {
     case 'ETIMEDOUT':
     case 'ESOCKETTIMEDOUT':
       return new ProbeError('timeout', 'Connection timed out');
-    default:
+    default: {
+      // Node rejects a bad certificate before any response arrives, so these used
+      // to surface as an opaque "network: CERT_HAS_EXPIRED". Naming them turns a
+      // puzzling alert into an actionable one.
+      const tls = TLS_ERRORS[code ?? ''];
+      if (tls) return new ProbeError('tls', tls);
       return new ProbeError('network', code ? `${code}: ${message}` : message);
+    }
   }
 }
 
@@ -336,6 +362,8 @@ export function probeUrl(
     maxRedirects: 5,
     failureThreshold: 1,
     recoveryThreshold: 1,
+    // A one-off check has nowhere to remember a warning, so it makes none.
+    certExpiryWarnDays: [],
     fallback: {
       template: 'maintenance',
       title: 'We will be right back',

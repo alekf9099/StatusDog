@@ -181,6 +181,10 @@ function resolveTarget(
       pick('recoveryThreshold') ?? TARGET_DEFAULTS.recoveryThreshold,
       `targets[${index}].recoveryThreshold`,
     ),
+    certExpiryWarnDays: certDays(
+      pick('certExpiryWarnDays') ?? TARGET_DEFAULTS.certExpiryWarnDays,
+      `targets[${index}].certExpiryWarnDays`,
+    ),
     fallback: {
       // A template name stays as-is; anything that looks like a path is resolved
       // relative to the config file so configs are portable.
@@ -197,6 +201,19 @@ function resolveTarget(
 
 function isBuiltinTemplateName(name: string): boolean {
   return /^[a-z0-9-]+$/i.test(name) && !name.includes('.');
+}
+
+/** An empty list is meaningful — it turns the warnings off — so only shape is checked. */
+function certDays(value: number[], label: string): number[] {
+  if (!Array.isArray(value)) {
+    throw new ConfigError(`${label} must be an array of days.`);
+  }
+  for (const day of value) {
+    if (typeof day !== 'number' || !Number.isFinite(day) || day < 0) {
+      throw new ConfigError(`${label} must contain non-negative numbers, got ${JSON.stringify(day)}.`);
+    }
+  }
+  return [...new Set(value)].sort((a, b) => a - b);
 }
 
 function positive(value: number, label: string): number {

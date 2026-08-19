@@ -14,7 +14,7 @@
  * restart imperceptibly. The open report is updated in place instead, so it does
  * not shut under the reader.
  */
-import { check, escapeHtml, store } from '../statusdog.js';
+import { check, escapeHtml, renderStaleBanner, store } from '../statusdog.js';
 import { t } from '../i18n.js';
 import { deriveMood, officeSummary } from './mood.js';
 import { makeWorker, renderDogWorkerCard } from './DogWorkerCard.js';
@@ -29,10 +29,11 @@ export class OfficeDashboard {
   /**
    * @param {{ room: HTMLElement, floor: HTMLElement, board: HTMLElement }} elements
    */
-  constructor({ room, floor, board, hireForm, hireUrl, hireName, hireSubmit, hireError }) {
+  constructor({ room, floor, board, hireForm, hireUrl, hireName, hireSubmit, hireError, staleBanner }) {
     this.room = room;
     this.floor = floor;
     this.board = board;
+    this.staleBanner = staleBanner ?? null;
     this.hire = { form: hireForm, url: hireUrl, name: hireName, submit: hireSubmit, error: hireError };
 
     /** uids seen in a previous render, so only genuinely new dogs animate in. */
@@ -233,6 +234,7 @@ export class OfficeDashboard {
 
     this.room.dataset.worst = summary.worst;
     this.board.innerHTML = this.renderBoard(summary);
+    renderStaleBanner(this.staleBanner, this.serverPayload?.scheduler ?? null);
 
     this.floor.innerHTML = this.workers.length === 0
       ? `<div class="office-empty">${t('office.emptyHtml')}</div>`

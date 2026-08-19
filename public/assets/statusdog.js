@@ -138,6 +138,38 @@ export function sparkline(history = []) {
   return `<div class="spark">${bars}</div>`;
 }
 
+/**
+ * Fill in the stale-scheduler banner from an /api/monitors payload.
+ *
+ * Called by every view that shows stored numbers, because the failure this guards
+ * against is silent: a scheduler that stopped leaves the last good values in
+ * place, and they look exactly like current ones.
+ */
+export function renderStaleBanner(element, scheduler) {
+  if (!element) return;
+
+  if (!scheduler) {
+    element.dataset.visible = 'false';
+    element.innerHTML = '';
+    return;
+  }
+
+  if (scheduler.lastRunAt === null) {
+    element.dataset.visible = 'true';
+    element.textContent = t('stale.bannerNever');
+    return;
+  }
+
+  if (!scheduler.stale) {
+    element.dataset.visible = 'false';
+    element.innerHTML = '';
+    return;
+  }
+
+  element.dataset.visible = 'true';
+  element.innerHTML = t('stale.bannerHtml', { ago: escapeHtml(formatRelative(scheduler.lastRunAt)) });
+}
+
 /** Mark the current page in the header nav. Called by each page after initI18n. */
 export function markCurrentNav() {
   const path = location.pathname.replace(/\/$/, '') || '/';

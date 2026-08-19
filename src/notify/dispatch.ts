@@ -1,6 +1,6 @@
 import type { NotifierConfig, WebhookFormat, WebhookNotifierConfig } from '../config/types.js';
 import type { TransitionEvent } from '../monitor/transition.js';
-import { createNotifiers, type Notifier } from './index.js';
+import { createNotifiers, type Alert, type Notifier } from './index.js';
 
 /**
  * Alerting for the serverless scheduler.
@@ -91,15 +91,31 @@ export async function dispatchTransitions(
   notifiers: Notifier[],
   events: TransitionEvent[],
 ): Promise<DispatchSummary> {
-  if (notifiers.length === 0 || events.length === 0) {
-    return { transitions: events.length, attempted: 0, delivered: 0, failed: 0, outcomes: [] };
+  return fanOut(notifiers, events, (notifier, event) => notifier.notify(event));
+}
+
+/** The same fan-out for alerts that are not up/down changes. */
+export async function dispatchAlerts(
+  notifiers: Notifier[],
+  alerts: Alert[],
+): Promise<DispatchSummary> {
+  return fanOut(notifiers, alerts, (notifier, alert) => notifier.notifyAlert(alert));
+}
+
+async function fanOut<T>(
+  notifiers: Notifier[],
+  items: T[],
+  deliver: (notifier: Notifier, item: T) => Promise<void>,
+): Promise<DispatchSummary> {
+  if (notifiers.length === 0 || items.length === 0) {
+    return { transitions: items.length, attempted: 0, delivered: 0, failed: 0, outcomes: [] };
   }
 
   const outcomes = await Promise.all(
-    events.flatMap((event) =>
+    items.flatMap((item) =>
       notifiers.map(async (notifier): Promise<DispatchOutcome> => {
         try {
-          await notifier.notify(event);
+          await deliver(notifier, item);
           return { notifier: notifier.name, delivered: true };
         } catch (err) {
           return { notifier: notifier.name, delivered: false, error: (err as Error).message };
@@ -109,7 +125,7 @@ export async function dispatchTransitions(
   );
 
   return {
-    transitions: events.length,
+    transitions: items.length,
     attempted: outcomes.length,
     delivered: outcomes.filter((outcome) => outcome.delivered).length,
     failed: outcomes.filter((outcome) => !outcome.delivered).length,
