@@ -267,6 +267,12 @@ export const LOCALES = {
     'docs.office.h2': 'The office view',
     'docs.office.pHtml':
       '<a href="/office">/office</a> shows one dog per monitored site. It is the same data as the dashboard, read as behaviour rather than as a table — which turns out to be the faster way to spot the one desk that is wrong.',
+    'docs.office.hire.h3': 'Hiring a dog',
+    'docs.office.hire.pHtml':
+      'The form at the top of the office adds a site and gives it a dog. The look is <strong>rolled once and stored</strong> — not derived from the URL — so a dog you recognise today is the same one tomorrow, and two sites cannot end up sharing a face by coincidence. Leave the name blank and one is picked for you.',
+    'docs.office.rename.h3': 'Naming and re-rolling',
+    'docs.office.rename.pHtml':
+      'Open a dog\'s report to rename it, roll a different one, or let an intern go. Saving a blank name restores the rolled one. <strong>These are saved in your browser only</strong> — the site has no accounts, so a server-side rename would let any visitor rename dogs for everyone. Roster dogs can be renamed but not removed here; that means editing <code>monitors.json</code>.',
     'docs.office.moods.h3': 'What each mood means',
     'docs.office.strainHtml':
       '<strong>Straining is the mood the table cannot show you.</strong> It fires when the last check is more than twice this target\'s own median — and at least 150ms above it — or when it is past 70% of the <code>maxResponseTimeMs</code> its config sets. A site that normally answers in 96ms and suddenly takes 400ms is in trouble; one that always takes 3s is not, and its dog stays calm.',
@@ -320,6 +326,25 @@ export const LOCALES = {
     'office.board.noStorageHtml':
       '<strong>The permanent staff are not clocked in.</strong> No store is connected, so roster results are not being kept — see <a href="/docs">the docs</a>.',
 
+    'office.hire.urlLabel': 'Website to watch',
+    'office.hire.urlPlaceholder': 'example.com',
+    'office.hire.nameLabel': "Dog's name (optional)",
+    'office.hire.namePlaceholder': 'leave blank to roll one',
+    'office.hire.submit': 'Add dog',
+    'office.hire.hiring': 'Hiring…',
+    'office.hire.note':
+      'A dog is picked at random and keeps that look. Added dogs are interns — they only work while this tab is open, and they live in this browser.',
+    'office.hire.invalid': 'That does not look like a public website address.',
+    'office.hire.duplicate': 'A dog is already watching that site.',
+    'office.rename.edit': 'Rename',
+    'office.rename.label': "Dog's name",
+    'office.rename.save': 'Save',
+    'office.rename.cancel': 'Cancel',
+    'office.rename.hint': 'Leave it blank to go back to the rolled name. Saved in this browser only.',
+    'office.reroll': 'Roll a different dog',
+    'office.dismiss': 'Remove this dog',
+    'office.staffNote':
+      'This one is on the server roster, so it cannot be removed here — edit monitors.json. Renaming works, and is saved in this browser.',
     'office.report.title': "{dog}'s report on {site}",
     'office.report.heading': "{dog}'s desk",
     'office.report.close': 'Close the report',
@@ -591,6 +616,12 @@ export const LOCALES = {
     'docs.office.h2': '오피스 화면',
     'docs.office.pHtml':
       '<a href="/office">/office</a>는 감시 중인 사이트마다 강아지 한 마리를 보여줍니다. 대시보드와 같은 데이터를 표가 아니라 행동으로 읽는 것인데, 잘못된 책상 하나를 찾는 데는 이쪽이 더 빠릅니다.',
+    'docs.office.hire.h3': '강아지 채용하기',
+    'docs.office.hire.pHtml':
+      '오피스 상단 입력창에서 사이트를 추가하면 강아지가 배정됩니다. 외형은 <strong>한 번 무작위로 뽑아 저장</strong>되며 URL에서 계산하지 않습니다 — 그래서 오늘 알아본 강아지가 내일도 같은 강아지이고, 서로 다른 사이트가 우연히 같은 얼굴을 갖는 일도 없습니다. 이름을 비워두면 알아서 정해집니다.',
+    'docs.office.rename.h3': '이름 변경과 다시 뽑기',
+    'docs.office.rename.pHtml':
+      '강아지 리포트를 열면 이름을 바꾸거나, 다른 강아지로 다시 뽑거나, 인턴을 내보낼 수 있습니다. 이름을 비우고 저장하면 원래 이름으로 돌아갑니다. <strong>이 설정은 사용 중인 브라우저에만 저장됩니다</strong> — 이 사이트에는 계정이 없어서 서버에 저장하면 아무나 남의 강아지 이름을 바꿀 수 있기 때문입니다. 감시 목록 소속 강아지는 이름 변경만 되고 내보내기는 <code>monitors.json</code>을 수정해야 합니다.',
     'docs.office.moods.h3': '각 상태의 의미',
     'docs.office.strainHtml':
       '<strong>"헥헥거림"은 표로는 볼 수 없는 상태입니다.</strong> 마지막 확인이 그 대상 자신의 중앙값보다 2배 넘게 느리고 최소 150ms 이상 차이 날 때, 또는 설정된 <code>maxResponseTimeMs</code>의 70%를 넘겼을 때 나타납니다. 평소 96ms인 사이트가 갑자기 400ms가 되면 문제지만, 항상 3초인 사이트는 문제가 아니므로 그 강아지는 평온합니다.',
@@ -644,6 +675,25 @@ export const LOCALES = {
     'office.board.noStorageHtml':
       '<strong>정규직 직원들이 출근하지 못했습니다.</strong> 저장소가 연결되지 않아 감시 목록 결과가 보관되지 않습니다 — <a href="/docs">문서</a>를 참고하세요.',
 
+    'office.hire.urlLabel': '감시할 웹사이트',
+    'office.hire.urlPlaceholder': 'example.com',
+    'office.hire.nameLabel': '강아지 이름 (선택)',
+    'office.hire.namePlaceholder': '비워두면 랜덤',
+    'office.hire.submit': '강아지 추가',
+    'office.hire.hiring': '채용 중…',
+    'office.hire.note':
+      '강아지는 무작위로 뽑히고 그 모습을 그대로 유지합니다. 여기서 추가한 강아지는 인턴입니다 — 이 탭이 열려 있는 동안만 일하고, 이 브라우저에만 저장됩니다.',
+    'office.hire.invalid': '공개된 웹사이트 주소로 보이지 않습니다.',
+    'office.hire.duplicate': '이미 그 사이트를 보고 있는 강아지가 있습니다.',
+    'office.rename.edit': '이름 변경',
+    'office.rename.label': '강아지 이름',
+    'office.rename.save': '저장',
+    'office.rename.cancel': '취소',
+    'office.rename.hint': '비워두고 저장하면 원래 이름으로 돌아갑니다. 이 브라우저에만 저장됩니다.',
+    'office.reroll': '다른 강아지로 바꾸기',
+    'office.dismiss': '이 강아지 내보내기',
+    'office.staffNote':
+      '이 강아지는 서버 감시 목록 소속이라 여기서 내보낼 수 없습니다 — monitors.json을 수정하세요. 이름 변경은 가능하고, 이 브라우저에만 저장됩니다.',
     'office.report.title': '{dog}의 {site} 리포트',
     'office.report.heading': '{dog}의 책상',
     'office.report.close': '리포트 닫기',

@@ -8,18 +8,29 @@
  * Everything shown here is already on hand from `/api/monitors` — the stored
  * `lastResult` carries TLS and headers — so opening a report costs no request.
  * "Check again" runs a live probe on demand.
+ *
+ * It is also where a dog gets renamed or re-rolled. Those belong on the report
+ * rather than on the desk: the floor should read at a glance, and an edit control
+ * on every desk would compete with the status for attention.
  */
 import { check, escapeHtml, formatMs, formatRelative, prettyUrl, sparkline } from '../statusdog.js';
 import { t, getLanguage } from '../i18n.js';
 import { renderDogChip } from './DogWorkerCard.js';
 import { deriveMood } from './mood.js';
+import { MAX_DOG_NAME_LENGTH } from './dogs.js';
 
 export class ServerReportModal {
-  constructor() {
+  /**
+   * @param {{ onRename?: Function, onReroll?: Function, onDismiss?: Function }} hooks
+   *   Supplied by the office, which owns the override store and the redraw.
+   */
+  constructor(hooks = {}) {
+    this.hooks = hooks;
     this.worker = null;
     this.returnFocusTo = null;
     this.liveResult = null;
     this.busy = false;
+    this.editingName = false;
 
     this.scrim = document.createElement('div');
     this.scrim.className = 'report-scrim';
@@ -37,6 +48,24 @@ export class ServerReportModal {
     this.panel.addEventListener('click', (event) => {
       if (event.target.closest('[data-report-close]')) this.close();
       if (event.target.closest('[data-report-recheck]')) void this.recheck();
+      if (event.target.closest('[data-report-edit]')) this.startEditing();
+      if (event.target.closest('[data-report-cancel-edit]')) this.stopEditing();
+      if (event.target.closest('[data-report-reroll]')) this.reroll();
+      if (event.target.closest('[data-report-dismiss]')) this.dismiss();
+    });
+
+    this.panel.addEventListener('submit', (event) => {
+      if (!event.target.closest('[data-rename-form]')) return;
+      event.preventDefault();
+      this.commitName();
+    });
+
+    // Escape inside the name field should abandon the edit, not close the panel.
+    this.panel.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && this.editingName) {
+        event.stopPropagation();
+        this.stopEditing();
+      }
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && this.isOpen) this.close();
@@ -55,6 +84,7 @@ export class ServerReportModal {
     this.returnFocusTo = returnFocusTo;
     this.liveResult = null;
     this.busy = false;
+    this.editingName = false;
 
     this.scrim.hidden = false;
     this.panel.hidden = false;
@@ -73,7 +103,54 @@ export class ServerReportModal {
     if (!this.isOpen || !this.worker) return;
     if (worker.monitor.uid !== this.worker.monitor.uid) return;
     this.worker = worker;
+    // A poll must not yank the field out from under someone mid-rename.
+    if (this.editingName) return;
     this.render();
+  }
+
+  /* ---------------- naming ---------------- */
+
+  startEditing() {
+    this.editingName = true;
+    this.render();
+    const field = this.panel.querySelector('[data-rename-input]');
+    if (field) {
+      field.focus();
+      field.select();
+    }
+  }
+
+  stopEditing() {
+    this.editingName = false;
+    this.render();
+    this.panel.querySelector('[data-report-edit]')?.focus();
+  }
+
+  commitName() {
+    const field = this.panel.querySelector('[data-rename-input]');
+    if (!field || !this.worker) return;
+    const value = field.value;
+
+    // Leave edit mode *before* the hook fires. The hook triggers the office to
+    // re-render, and `update` deliberately skips a re-render while editing so a
+    // poll cannot yank the field away — which would otherwise strand the panel on
+    // the form after a save.
+    this.editingName = false;
+    // An empty field clears the override and restores the rolled name.
+    this.hooks.onRename?.(this.worker.monitor.uid, value);
+  }
+
+  reroll() {
+    if (!this.worker) return;
+    this.editingName = false;
+    this.hooks.onReroll?.(this.worker.monitor.uid);
+  }
+
+  dismiss() {
+    if (!this.worker) return;
+    const uid = this.worker.monitor.uid;
+    this.close();
+    this.hooks.onDismiss?.(uid);
   }
 
   close() {
@@ -120,7 +197,7 @@ export class ServerReportModal {
       <header class="report-head">
         ${renderDogChip(this.worker)}
         <div class="report-title">
-          <h2>${escapeHtml(t('office.report.heading', { dog: name }))}</h2>
+          ${this.nameRow(name)}
           <div class="report-sub">
             <a href="/check?url=${encodeURIComponent(monitor.url)}">${escapeHtml(prettyUrl(monitor.url))}</a>
           </div>
@@ -137,6 +214,29 @@ export class ServerReportModal {
         ${this.headers()}
         ${this.live()}
         ${this.actions()}
+      </div>`;
+  }
+
+  /** The heading doubles as the rename control. */
+  nameRow(name) {
+    if (this.editingName) {
+      return `
+        <form class="rename-form" data-rename-form>
+          <input type="text" data-rename-input maxlength="${MAX_DOG_NAME_LENGTH}"
+                 value="${escapeHtml(this.worker.dog.custom ? name : '')}"
+                 placeholder="${escapeHtml(name)}"
+                 aria-label="${escapeHtml(t('office.rename.label'))}">
+          <button type="submit">${escapeHtml(t('office.rename.save'))}</button>
+          <button type="button" class="secondary" data-report-cancel-edit>${escapeHtml(t('office.rename.cancel'))}</button>
+          <p class="rename-hint">${escapeHtml(t('office.rename.hint'))}</p>
+        </form>`;
+    }
+
+    return `
+      <div class="report-name">
+        <h2>${escapeHtml(t('office.report.heading', { dog: name }))}</h2>
+        <button type="button" class="report-edit" data-report-edit
+                aria-label="${escapeHtml(t('office.rename.label'))}">${escapeHtml(t('office.rename.edit'))}</button>
       </div>`;
   }
 
@@ -269,14 +369,25 @@ export class ServerReportModal {
   }
 
   actions() {
-    const url = this.worker.monitor.url;
+    const { monitor } = this.worker;
+    // Only interns can be dismissed here: roster targets live in monitors.json,
+    // and a button that silently failed to remove one would be a lie.
+    const dismiss = monitor.kind === 'intern'
+      ? `<button type="button" class="secondary report-danger" data-report-dismiss>${escapeHtml(t('office.dismiss'))}</button>`
+      : '';
+
     return `
       <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap">
         <button type="button" class="secondary" data-report-recheck ${this.busy ? 'disabled' : ''}>
           ${escapeHtml(this.busy ? t('office.report.checking') : t('office.report.recheck'))}
         </button>
-        <a href="/check?url=${encodeURIComponent(url)}"><button type="button" class="secondary">${escapeHtml(t('home.fullReport'))}</button></a>
-      </div>`;
+        <a href="/check?url=${encodeURIComponent(monitor.url)}"><button type="button" class="secondary">${escapeHtml(t('home.fullReport'))}</button></a>
+      </div>
+      <div class="report-actions-secondary">
+        <button type="button" class="secondary" data-report-reroll>${escapeHtml(t('office.reroll'))}</button>
+        ${dismiss}
+      </div>
+      ${monitor.kind === 'staff' ? `<p class="rename-hint" style="margin-top:12px">${escapeHtml(t('office.staffNote'))}</p>` : ''}`;
   }
 }
 

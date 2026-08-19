@@ -90,6 +90,18 @@ what it adds is a mood the table has no column for.
 | **Down** | Confirmed down; the wall siren comes on |
 | **Not started** | No check has run yet |
 
+**Hiring.** The form at the top of the office adds a site and assigns it a dog.
+The look is *rolled once and stored*, not derived from the URL — so a dog stays
+recognisable, and two sites cannot coincidentally share a face. Open a dog's
+report to rename it, roll a different one, or let an intern go; saving a blank
+name restores the rolled one.
+
+Renames and looks live in `localStorage`, which makes them **per browser**. That
+is deliberate: the site has no accounts, so a server-side rename endpoint would let
+any visitor rename dogs for everyone. Google login is planned, at which point
+[`createDogOverrideStore`](public/assets/office/overrides.js) takes a
+server-backed adapter and nothing else in the office changes.
+
 *Straining* is the useful one. It compares the last check against **this target's
 own median**, not a fixed threshold: more than 2× and at least 150ms above it. A
 site that normally answers in 96ms and suddenly takes 400ms is in trouble; one
@@ -103,13 +115,17 @@ works and <kbd>Esc</kbd> closes the panel.
 
 | File | Role |
 | --- | --- |
-| [`office/mood.js`](public/assets/office/mood.js) | Mood derivation and stable dog identity — pure, and unit-tested |
+| [`office/mood.js`](public/assets/office/mood.js) | Mood derivation — pure, and unit-tested |
+| [`office/dogs.js`](public/assets/office/dogs.js) | Who each dog is: the catalogue, the random roll, override resolution |
+| [`office/overrides.js`](public/assets/office/overrides.js) | Where a rename or re-roll is remembered |
+| [`office/url.js`](public/assets/office/url.js) | Tidies what someone typed into the hire form |
 | [`office/DogWorkerCard.js`](public/assets/office/DogWorkerCard.js) | One desk: the inline-SVG dog, its props, its nameplate |
 | [`office/ServerReportModal.js`](public/assets/office/ServerReportModal.js) | The report slide-over |
 | [`office/OfficeDashboard.js`](public/assets/office/OfficeDashboard.js) | The floor: data loading, layout, click routing |
 
-Each dog's name, coat and accessory come from a hash of its target id, so a site
-is always greeted by the same colleague. Everything is inline SVG and CSS — no
+A roster dog's name, coat and accessory come from a hash of its target id, so a
+target nobody has touched still has a consistent colleague; a hired dog's come
+from the roll stored when it joined. Everything is inline SVG and CSS — no
 images, nothing fetched — and `prefers-reduced-motion` gets a still version where
 posture, colour and props still tell the states apart.
 
