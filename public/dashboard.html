@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard — StatusDog</title>
-<meta name="description" content="Uptime and response time for monitored URLs — checked on a schedule by the server, plus your own browser-local list.">
+<title data-i18n="dash.pageTitle">Dashboard — StatusDog</title>
+<meta name="description" data-i18n-content="dash.metaDescription" content="Uptime and response time for monitored URLs.">
 <link rel="stylesheet" href="/assets/statusdog.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
 </head>
@@ -14,121 +14,127 @@
   <div class="wrap">
     <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
     <nav class="site-nav">
-      <a href="/">Home</a>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/docs">Docs</a>
-      <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+      <a href="/" data-i18n="nav.home">Home</a>
+      <a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/docs" data-i18n="nav.docs">Docs</a>
+      <a href="https://github.com/alekf9099/StatusDog" data-i18n="nav.github">GitHub</a>
+      <span class="lang-switch" role="group" data-i18n-aria-label="lang.switchLabel" aria-label="Language">
+        <button type="button" data-lang="en" data-i18n="lang.en">EN</button>
+        <button type="button" data-lang="ko" data-i18n="lang.ko">한국어</button>
+      </span>
     </nav>
   </div>
 </header>
 
 <main class="wrap" style="padding:36px 0 56px">
 
-  <h1 style="font-size:26px;margin-bottom:36px">Dashboard</h1>
+  <h1 style="font-size:26px;margin-bottom:36px" data-i18n="dash.h1">Dashboard</h1>
 
   <section style="margin-bottom:48px">
     <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px">
-      <h2 style="margin:0">Monitored 24/7</h2>
-      <span class="small muted" id="server-summary">loading…</span>
+      <h2 style="margin:0" data-i18n="dash.server.h2">Monitored 24/7</h2>
+      <span class="small muted" id="server-summary" data-i18n="dash.server.loading">loading…</span>
     </div>
-    <p class="small muted" style="margin:0 0 18px">
-      Checked on a schedule by the server, so history keeps accruing whether or not
-      this page is open. The roster lives in
-      <a href="https://github.com/alekf9099/StatusDog/blob/main/monitors.json">monitors.json</a>.
-    </p>
+    <p class="small muted" style="margin:0 0 18px" data-i18n-html="dash.server.ledeHtml"></p>
     <div id="server-monitors"></div>
   </section>
 
   <section>
     <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px">
-      <h2 style="margin:0">Your monitors</h2>
+      <h2 style="margin:0" data-i18n="dash.local.h2">Your monitors</h2>
       <span class="small muted" id="summary"></span>
       <span style="flex:1"></span>
-      <button type="button" class="secondary" id="refresh">Check all now</button>
+      <button type="button" class="secondary" id="refresh" data-i18n="dash.refresh">Check all now</button>
     </div>
-    <p class="small muted" style="margin:0 0 18px">
-      Stored in this browser and checked every <span id="interval-label">60</span>s
-      while this tab is open — closing it stops the clock.
-    </p>
+    <p class="small muted" style="margin:0 0 18px" data-i18n-html="dash.local.ledeHtml"></p>
 
     <form class="check-form" id="add-form" style="margin-bottom:26px">
-      <input type="text" id="url" placeholder="Add a URL to watch — example.com" spellcheck="false" required aria-label="URL to watch">
-      <button type="submit">Add monitor</button>
+      <input type="text" id="url" spellcheck="false" required
+        data-i18n-placeholder="dash.local.urlPlaceholder"
+        data-i18n-aria-label="dash.local.urlLabel"
+        placeholder="Add a URL to watch — example.com" aria-label="URL to watch">
+      <button type="submit" data-i18n="dash.local.add">Add monitor</button>
     </form>
 
     <div id="monitors"></div>
   </section>
 
-  <div class="notice" style="margin-top:36px">
-    <strong>Want a URL watched around the clock?</strong> Add it to
-    <code>monitors.json</code> and the scheduler picks it up — the roster is a
-    committed file rather than a form, so nobody can point StatusDog at an
-    arbitrary target on a schedule. Or run the CLI on your own machine; see
-    <a href="/docs">the docs</a>.
-  </div>
+  <div class="notice" style="margin-top:36px" data-i18n-html="dash.noticeHtml"></div>
 
 </main>
 
 <footer class="site-footer">
   <div class="wrap">
-    <span>StatusDog · MIT</span>
+    <span data-i18n="footer.license">StatusDog · MIT</span>
     <span class="spacer"></span>
-    <a href="/docs">Docs</a>
-    <a href="/api/monitors">API</a>
-    <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+    <a href="/docs" data-i18n="footer.docs">Docs</a>
+    <a href="/api/monitors" data-i18n="footer.api">API</a>
+    <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
   </div>
 </footer>
 
 <script type="module">
+import { initI18n, t } from '/assets/i18n.js';
 import {
-  check, escapeHtml, formatMs, formatRelative, prettyUrl,
+  check, escapeHtml, formatMs, formatRelative, markCurrentNav, prettyUrl,
   sparkline, stateBadge, statusBadge, store, uptimePct,
 } from '/assets/statusdog.js';
+
+const INTERVAL_MS = 60_000;
+
+initI18n();
+markCurrentNav();
 
 /* ---------------- server-side 24/7 monitors ---------------- */
 
 const serverList = document.getElementById('server-monitors');
 const serverSummary = document.getElementById('server-summary');
 
+/** Last payload, so a language switch re-renders instead of waiting for a poll. */
+let serverPayload = null;
+
 async function loadServerMonitors() {
   try {
     const response = await fetch('/api/monitors?history=60', { cache: 'no-store' });
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error ?? `HTTP ${response.status}`);
-    renderServerMonitors(payload);
+    if (!response.ok) throw new Error(payload.error ?? t('error.requestFailed', { status: response.status }));
+    serverPayload = payload;
+    renderServerMonitors();
   } catch (err) {
+    serverPayload = null;
     serverSummary.textContent = '';
-    serverList.innerHTML = `<div class="notice error">Could not load scheduled monitors: ${escapeHtml(err.message)}</div>`;
+    serverList.innerHTML = `<div class="notice error">${escapeHtml(t('dash.server.loadError', { message: err.message }))}</div>`;
   }
 }
 
-function renderServerMonitors(payload) {
-  const monitors = payload.monitors ?? [];
+function renderServerMonitors() {
+  if (!serverPayload) return;
+  const monitors = serverPayload.monitors ?? [];
 
-  if (payload.storage === 'none') {
-    serverSummary.textContent = 'storage not configured';
+  if (serverPayload.storage === 'none') {
+    serverSummary.textContent = t('dash.server.noStorage');
     const cards = monitors.length
       ? `<div class="grid cols-auto" style="margin-top:16px">${monitors.map(serverCard).join('')}</div>`
       : '';
-    serverList.innerHTML = `
-      <div class="notice">
-        <strong>No store connected yet.</strong> ${monitors.length} target${monitors.length === 1 ? '' : 's'}
-        on the roster, but results are not being persisted, so there is no history
-        to show. Connect a Redis-compatible store and set <code>CRON_SECRET</code> —
-        see <a href="/docs">the docs</a>.
-      </div>${cards}`;
+    serverList.innerHTML =
+      `<div class="notice">${t('dash.server.noStorageHtml', { count: monitors.length })}</div>${cards}`;
     return;
   }
 
   const down = monitors.filter((m) => m.state === 'down').length;
   const unseen = monitors.filter((m) => !m.lastResult).length;
+  const parts = [
+    t('dash.summary.targets', { count: monitors.length }),
+    down ? t('dash.summary.down', { count: down }) : t('dash.summary.allHealthy'),
+  ];
+  if (unseen) parts.push(t('dash.summary.notChecked', { count: unseen }));
+
   serverSummary.textContent = monitors.length === 0
-    ? 'nothing on the roster'
-    : `${monitors.length} target${monitors.length === 1 ? '' : 's'} · ${down ? `${down} down` : 'all healthy'}`
-      + (unseen ? ` · ${unseen} not yet checked` : '');
+    ? t('dash.server.emptyRoster')
+    : parts.join(' · ');
 
   serverList.innerHTML = monitors.length === 0
-    ? '<div class="empty">No targets in monitors.json.</div>'
+    ? `<div class="empty">${escapeHtml(t('dash.server.empty'))}</div>`
     : `<div class="grid cols-auto">${monitors.map(serverCard).join('')}</div>`;
 }
 
@@ -136,10 +142,13 @@ function serverCard(monitor) {
   const result = monitor.lastResult;
   const stats = monitor.stats;
   const problem = result && !result.ok
-    ? `<div class="notice error small" style="margin-top:14px">${escapeHtml(result.message ?? 'Check failed')}</div>`
+    ? `<div class="notice error small" style="margin-top:14px">${escapeHtml(result.message ?? t('error.checkFailed'))}</div>`
     : '';
   const since = monitor.since
-    ? `<div class="small muted" style="margin-top:12px">${escapeHtml(monitor.state)} since ${escapeHtml(formatRelative(monitor.since))}</div>`
+    ? `<div class="small muted" style="margin-top:12px">${escapeHtml(t('dash.since', {
+        state: t(`state.${monitor.state}`),
+        time: formatRelative(monitor.since),
+      }))}</div>`
     : '';
   const uptime = stats && stats.uptimePct !== null && stats.uptimePct !== undefined
     ? `${stats.uptimePct}%`
@@ -156,38 +165,50 @@ function serverCard(monitor) {
       </div>
       ${sparkline(monitor.history ?? [])}
       <div class="metrics" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
-        <div class="metric"><span class="label">Uptime</span><span class="value">${uptime}</span></div>
-        <div class="metric"><span class="label">Avg response</span><span class="value">${formatMs(stats?.avgResponseTimeMs ?? null)}</span></div>
-        <div class="metric"><span class="label">Checks</span><span class="value">${stats?.checks ?? 0}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.uptime'))}</span><span class="value">${uptime}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.avgResponse'))}</span><span class="value">${formatMs(stats?.avgResponseTimeMs ?? null)}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.checks'))}</span><span class="value">${stats?.checks ?? 0}</span></div>
       </div>
       ${problem}${since}
     </section>`;
 }
 
 loadServerMonitors();
-setInterval(loadServerMonitors, 60_000);
+setInterval(loadServerMonitors, INTERVAL_MS);
 
 /* ---------------- browser-local monitors ---------------- */
-
-const INTERVAL_MS = 60_000;
 
 const list = document.getElementById('monitors');
 const summary = document.getElementById('summary');
 const addForm = document.getElementById('add-form');
 const input = document.getElementById('url');
 const refresh = document.getElementById('refresh');
-document.getElementById('interval-label').textContent = String(INTERVAL_MS / 1000);
 
 // `?add=` arrives from the landing page and the report page.
 const pending = new URLSearchParams(location.search).get('add');
 if (pending) {
   store.add(pending);
-  history.replaceState(null, '', '/dashboard');
+  const url = new URL(location.href);
+  url.searchParams.delete('add');
+  history.replaceState(null, '', url);
 }
 
 render();
 void runAll();
 setInterval(runAll, INTERVAL_MS);
+
+document.addEventListener('statusdog:languagechange', () => {
+  setIntervalLabel();
+  renderServerMonitors();
+  render();
+});
+setIntervalLabel();
+
+function setIntervalLabel() {
+  // The label lives inside a translated sentence, so it is re-created each time.
+  const label = document.getElementById('interval-label');
+  if (label) label.textContent = String(INTERVAL_MS / 1000);
+}
 
 addForm.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -217,10 +238,10 @@ async function runAll() {
   const monitors = store.list();
   if (monitors.length === 0) return;
   refresh.disabled = true;
-  refresh.textContent = 'Checking…';
+  refresh.textContent = t('dash.refreshing');
   await Promise.all(monitors.map((m) => runOne(m.id)));
   refresh.disabled = false;
-  refresh.textContent = 'Check all now';
+  refresh.textContent = t('dash.refresh');
 }
 
 async function runOne(id) {
@@ -250,10 +271,13 @@ function render() {
   const down = monitors.filter((m) => m.lastResult && !m.lastResult.ok).length;
   summary.textContent = monitors.length === 0
     ? ''
-    : `${monitors.length} monitor${monitors.length === 1 ? '' : 's'} · ${down ? `${down} down` : 'all healthy'}`;
+    : [
+        t('dash.summary.monitors', { count: monitors.length }),
+        down ? t('dash.summary.down', { count: down }) : t('dash.summary.allHealthy'),
+      ].join(' · ');
 
   list.innerHTML = monitors.length === 0
-    ? '<div class="empty">No monitors yet. Add a URL above to start watching it.</div>'
+    ? `<div class="empty">${escapeHtml(t('dash.empty'))}</div>`
     : `<div class="grid cols-auto">${monitors.map(card).join('')}</div>`;
 }
 
@@ -262,7 +286,7 @@ function card(monitor) {
   const history = monitor.history ?? [];
   const pct = uptimePct(history);
   const problem = result && !result.ok
-    ? `<div class="notice error small" style="margin-top:14px">${escapeHtml(result.message ?? 'Check failed')}</div>`
+    ? `<div class="notice error small" style="margin-top:14px">${escapeHtml(result.message ?? t('error.checkFailed'))}</div>`
     : '';
 
   return `
@@ -270,20 +294,20 @@ function card(monitor) {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
         ${statusBadge(result)}
         <button type="button" class="ghost" data-action="remove" data-id="${escapeHtml(monitor.id)}"
-          style="margin-left:auto" aria-label="Remove monitor">Remove</button>
+          style="margin-left:auto" aria-label="${escapeHtml(t('dash.removeLabel'))}">${escapeHtml(t('dash.remove'))}</button>
       </div>
       <div style="font-weight:600;word-break:break-all;margin-bottom:14px">
         <a href="/check?url=${encodeURIComponent(monitor.url)}">${escapeHtml(prettyUrl(monitor.url))}</a>
       </div>
       ${sparkline(history)}
       <div class="metrics" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
-        <div class="metric"><span class="label">Uptime</span><span class="value">${pct === null ? '–' : `${pct}%`}</span></div>
-        <div class="metric"><span class="label">Response</span><span class="value">${formatMs(result?.responseTimeMs ?? null)}</span></div>
-        <div class="metric"><span class="label">Checked</span><span class="value" style="font-size:15px">${escapeHtml(formatRelative(result?.checkedAt))}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.uptime'))}</span><span class="value">${pct === null ? '–' : `${pct}%`}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.response'))}</span><span class="value">${formatMs(result?.responseTimeMs ?? null)}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.checked'))}</span><span class="value" style="font-size:15px">${escapeHtml(formatRelative(result?.checkedAt))}</span></div>
       </div>
       ${problem}
       <div style="margin-top:14px">
-        <button type="button" class="secondary" data-action="check" data-id="${escapeHtml(monitor.id)}">Check now</button>
+        <button type="button" class="secondary" data-action="check" data-id="${escapeHtml(monitor.id)}">${escapeHtml(t('dash.checkNow'))}</button>
       </div>
     </section>`;
 }

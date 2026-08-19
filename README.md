@@ -75,6 +75,12 @@ behind a web front end.
 | `/api/cron/check` | Scheduler entry point (authenticated) |
 | `/healthz` | Liveness probe for the site itself |
 
+The site is available in English and Korean. It follows the browser language by
+default; `?lang=en` or `?lang=ko` overrides it and makes a link shareable in that
+language. Strings live in [`public/assets/locales.js`](public/assets/locales.js) —
+a test asserts the two tables have identical keys and placeholders, so a missing
+translation fails CI rather than showing up as English text on a Korean page.
+
 ```bash
 curl "https://status-dog.vercel.app/api/check?url=example.com&expect=200"
 ```

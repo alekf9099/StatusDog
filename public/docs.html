@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Docs — StatusDog</title>
-<meta name="description" content="How to use StatusDog: the check API, the CLI, configuration, fallback pages and self-hosting.">
+<title data-i18n="docs.pageTitle">Docs — StatusDog</title>
+<meta name="description" data-i18n-content="docs.metaDescription" content="How to use StatusDog.">
 <link rel="stylesheet" href="/assets/statusdog.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
 </head>
@@ -14,88 +14,74 @@
   <div class="wrap">
     <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
     <nav class="site-nav">
-      <a href="/">Home</a>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/docs">Docs</a>
-      <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+      <a href="/" data-i18n="nav.home">Home</a>
+      <a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/docs" data-i18n="nav.docs">Docs</a>
+      <a href="https://github.com/alekf9099/StatusDog" data-i18n="nav.github">GitHub</a>
+      <span class="lang-switch" role="group" data-i18n-aria-label="lang.switchLabel" aria-label="Language">
+        <button type="button" data-lang="en" data-i18n="lang.en">EN</button>
+        <button type="button" data-lang="ko" data-i18n="lang.ko">한국어</button>
+      </span>
     </nav>
   </div>
 </header>
 
 <main class="wrap" style="padding:36px 0 56px;max-width:820px">
 
-  <h1 style="font-size:28px">Docs</h1>
-  <p class="lede">
-    StatusDog is an MIT-licensed Node package with zero runtime dependencies.
-    This site is the hosted front end; everything here also runs on your machine.
-  </p>
+  <h1 style="font-size:28px" data-i18n="docs.h1">Docs</h1>
+  <p class="lede" data-i18n="docs.lede"></p>
 
   <section class="block" style="padding-top:8px">
-    <h2>What this site can and cannot do</h2>
+    <h2 data-i18n="docs.can.h2">What this site can and cannot do</h2>
     <table class="kv">
-      <tr><th>Status &amp; availability</th><td>Yes — status code, failure reason, what a visitor sees</td></tr>
-      <tr><th>Response time</th><td>Yes — total time including redirects</td></tr>
-      <tr><th>Redirect chain</th><td>Yes — every hop and the final destination</td></tr>
-      <tr><th>SSL certificate</th><td>Yes — issuer, validity window, days remaining</td></tr>
-      <tr><th>Body content check</th><td>Yes — require a string to be present</td></tr>
-      <tr><th>Uptime history</th><td>Yes for roster targets, checked on a schedule and stored; your own browser list only accrues while a tab is open</td></tr>
-      <tr><th>Traffic / visitor counts</th><td>No — that needs access to the site's own analytics or server logs, not an external probe</td></tr>
+      <tr><th data-i18n="docs.can.status"></th><td data-i18n="docs.can.statusV"></td></tr>
+      <tr><th data-i18n="docs.can.time"></th><td data-i18n="docs.can.timeV"></td></tr>
+      <tr><th data-i18n="docs.can.chain"></th><td data-i18n="docs.can.chainV"></td></tr>
+      <tr><th data-i18n="docs.can.ssl"></th><td data-i18n="docs.can.sslV"></td></tr>
+      <tr><th data-i18n="docs.can.body"></th><td data-i18n="docs.can.bodyV"></td></tr>
+      <tr><th data-i18n="docs.can.history"></th><td data-i18n="docs.can.historyV"></td></tr>
+      <tr><th data-i18n="docs.can.traffic"></th><td data-i18n="docs.can.trafficV"></td></tr>
     </table>
   </section>
 
   <section class="block">
-    <h2>Check API</h2>
-    <p>One request, one probe. Nothing is stored.</p>
+    <h2 data-i18n="docs.api.h2">Check API</h2>
+    <p data-i18n="docs.api.p"></p>
     <pre><code>GET /api/check?url=example.com</code></pre>
     <table class="kv">
-      <tr><th>url</th><td>required · http(s); a bare host gets <code>https://</code> prepended</td></tr>
-      <tr><th>expect</th><td><code>200</code>, <code>2xx,3xx</code>, <code>200-299</code>, <code>*</code> · default <code>2xx,3xx</code></td></tr>
-      <tr><th>contains</th><td>response body must contain this text</td></tr>
-      <tr><th>method</th><td>default <code>GET</code></td></tr>
-      <tr><th>timeout</th><td>milliseconds, 1000–30000 · default <code>15000</code></td></tr>
-      <tr><th>redirects</th><td><code>false</code> to stop following redirects</td></tr>
+      <tr><th>url</th><td data-i18n="docs.api.url"></td></tr>
+      <tr><th>expect</th><td><code>200</code>, <code>2xx,3xx</code>, <code>200-299</code>, <code>*</code> · <span data-i18n="docs.api.expect"></span></td></tr>
+      <tr><th>contains</th><td data-i18n="docs.api.contains"></td></tr>
+      <tr><th>method</th><td data-i18n="docs.api.method"></td></tr>
+      <tr><th>timeout</th><td data-i18n="docs.api.timeout"></td></tr>
+      <tr><th>redirects</th><td data-i18n="docs.api.redirects"></td></tr>
     </table>
-    <p class="small muted">
-      Private, loopback and link-local addresses are rejected.
-    </p>
+    <p class="small muted" data-i18n="docs.api.note"></p>
     <pre><code>curl "https://status-dog.vercel.app/api/check?url=example.com&amp;expect=200"</code></pre>
   </section>
 
   <section class="block">
-    <h2>24/7 monitoring with the CLI</h2>
-    <p>
-      This browser stops checking when you close the tab. To keep watching a site
-      around the clock, run StatusDog on a machine that stays on.
-    </p>
+    <h2 data-i18n="docs.cli.h2">Running it yourself</h2>
+    <p data-i18n="docs.cli.p"></p>
     <pre><code>git clone https://github.com/alekf9099/StatusDog.git
 cd StatusDog &amp;&amp; npm install &amp;&amp; npm run build
 node dist/cli.js init
 node dist/cli.js start</code></pre>
-    <p>
-      <code>start</code> runs the check loop, persists history to
-      <code>data/history.json</code>, and serves a local dashboard on
-      <code>127.0.0.1:4321</code>.
-    </p>
+    <p data-i18n="docs.cli.after"></p>
     <table class="kv">
-      <tr><th>start</th><td>Run the check loop and the local dashboard</td></tr>
-      <tr><th>status</th><td>Check every target once; exits non-zero if any failed</td></tr>
-      <tr><th>check &lt;url&gt;</th><td>One-off check, no config file needed</td></tr>
-      <tr><th>list</th><td>List configured targets</td></tr>
-      <tr><th>fallback</th><td>Serve a maintenance page on its own port</td></tr>
-      <tr><th>init</th><td>Write a starter config file</td></tr>
+      <tr><th>start</th><td data-i18n="docs.cli.start"></td></tr>
+      <tr><th>status</th><td data-i18n="docs.cli.status"></td></tr>
+      <tr><th>check &lt;url&gt;</th><td data-i18n="docs.cli.check"></td></tr>
+      <tr><th>list</th><td data-i18n="docs.cli.list"></td></tr>
+      <tr><th>fallback</th><td data-i18n="docs.cli.fallback"></td></tr>
+      <tr><th>init</th><td data-i18n="docs.cli.init"></td></tr>
     </table>
-    <p class="small muted">
-      <code>status</code> and <code>check</code> exit non-zero on failure, so they
-      drop straight into CI or a cron job.
-    </p>
+    <p class="small muted" data-i18n="docs.cli.note"></p>
   </section>
 
   <section class="block">
-    <h2>Configuration</h2>
-    <p>
-      <code>statusdog.config.json</code> is discovered from the working directory
-      upwards. <code>//</code> and <code>/* */</code> comments are allowed.
-    </p>
+    <h2 data-i18n="docs.config.h2">Configuration</h2>
+    <p data-i18n="docs.config.p"></p>
     <pre><code>{
   "defaults": { "intervalMs": 60000, "failureThreshold": 2 },
   "targets": [
@@ -111,28 +97,20 @@ node dist/cli.js start</code></pre>
   ],
   "notifiers": [{ "type": "console" }]
 }</code></pre>
-    <p>
-      A target flips to <strong>down</strong> only after
-      <code>failureThreshold</code> consecutive failures, so one dropped request
-      does not trigger an alert. Full option tables are in the
-      <a href="https://github.com/alekf9099/StatusDog#configuration">README</a>.
-    </p>
+    <p data-i18n-html="docs.config.afterHtml"></p>
   </section>
 
   <section class="block">
-    <h2>Fallback pages</h2>
-    <p>
-      When a service is down, serve a real maintenance screen instead of a
-      connection error. Three built-in templates, plus your own HTML:
-    </p>
+    <h2 data-i18n="docs.fallback.h2">Fallback pages</h2>
+    <p data-i18n="docs.fallback.p"></p>
     <p>
       <a href="/preview/maintenance">maintenance</a> ·
       <a href="/preview/error">error</a> ·
       <a href="/preview/offline">offline</a>
     </p>
-    <p>Standalone, on its own port:</p>
+    <p data-i18n="docs.fallback.standalone"></p>
     <pre><code>node dist/cli.js fallback --port 8080 --template maintenance</code></pre>
-    <p>Or inside your own app, gated on a monitored dependency:</p>
+    <p data-i18n="docs.fallback.middleware"></p>
     <pre><code>import { loadConfig, Monitor, createFallbackMiddleware } from 'statusdog';
 
 const monitor = new Monitor(await loadConfig());
@@ -142,145 +120,85 @@ app.use(createFallbackMiddleware(monitor, {
   targetId: 'payments-api',
   allowPaths: ['/healthz', /^\/webhooks\//],
 }));</code></pre>
-    <p class="small muted">
-      Requests pass through while the target is up. Once it is confirmed down,
-      everything except <code>allowPaths</code> gets the maintenance page.
-    </p>
+    <p class="small muted" data-i18n-html="docs.fallback.noteHtml"></p>
   </section>
 
   <section class="block">
-    <h2>Scheduled monitoring, hosted</h2>
-    <p>
-      The <a href="/dashboard">dashboard</a>'s <strong>Monitored 24/7</strong>
-      section is checked by the server and stored, so history accrues with nothing
-      open. Two pieces make that work.
-    </p>
+    <h2 data-i18n="docs.sched.h2">Scheduled monitoring, hosted</h2>
+    <p data-i18n-html="docs.sched.pHtml"></p>
 
-    <h3>The roster</h3>
-    <p>
-      What gets watched lives in
-      <a href="https://github.com/alekf9099/StatusDog/blob/main/monitors.json">monitors.json</a>,
-      a committed file using the same schema as <code>statusdog.config.json</code>.
-      It is a file rather than a form on purpose: this site has no accounts, so a
-      public write endpoint would let anyone point StatusDog at a URL of their
-      choosing every 15 minutes. Editing the repo is reviewable; a form is not.
-    </p>
+    <h3 data-i18n="docs.sched.roster.h3">The roster</h3>
+    <p data-i18n-html="docs.sched.roster.pHtml"></p>
 
-    <h3>The scheduler</h3>
-    <p>
-      <code>POST /api/cron/check</code> probes every roster target and writes the
-      results. It needs a secret, and something has to call it:
-    </p>
+    <h3 data-i18n="docs.sched.scheduler.h3">The scheduler</h3>
+    <p data-i18n-html="docs.sched.scheduler.pHtml"></p>
     <table class="kv">
-      <tr><th>CRON_SECRET</th><td>Shared secret. Sent as <code>Authorization: Bearer …</code> or <code>x-cron-secret</code>. Unset means the route is closed, not open.</td></tr>
-      <tr><th>KV_REST_API_URL<br>KV_REST_API_TOKEN</th><td>A Redis-compatible REST store. <code>UPSTASH_REDIS_REST_*</code> and <code>REDIS_REST_*</code> also work.</td></tr>
-      <tr><th>STATUSDOG_WEBHOOK_URL</th><td>Optional. One or more alert webhooks, comma-separated.</td></tr>
-      <tr><th>STATUSDOG_WEBHOOK_ON</th><td>Optional. <code>down</code>, <code>up</code>, or <code>down,up</code> (default: both).</td></tr>
-      <tr><th>STATUSDOG_WEBHOOK_FORMAT</th><td>Optional. <code>full</code> or <code>text</code>; a per-host default applies otherwise.</td></tr>
+      <tr><th>CRON_SECRET</th><td data-i18n-html="docs.sched.env.cronHtml"></td></tr>
+      <tr><th>KV_REST_API_URL<br>KV_REST_API_TOKEN</th><td data-i18n-html="docs.sched.env.kvHtml"></td></tr>
+      <tr><th>STATUSDOG_WEBHOOK_URL</th><td data-i18n="docs.sched.env.webhook"></td></tr>
+      <tr><th>STATUSDOG_WEBHOOK_ON</th><td data-i18n="docs.sched.env.on"></td></tr>
+      <tr><th>STATUSDOG_WEBHOOK_FORMAT</th><td data-i18n="docs.sched.env.format"></td></tr>
     </table>
-    <p>
-      GitHub Actions does the waking up, every 15 minutes, from
-      <code>.github/workflows/monitor.yml</code>. Vercel's Hobby plan caps cron
-      jobs at once a day, which is useless for uptime monitoring; on a Pro plan you
-      can add a <code>crons</code> entry to <code>vercel.json</code> instead and
-      drop the workflow. GitHub delays scheduled runs under load, so treat 15
-      minutes as a floor rather than a guarantee.
-    </p>
-    <p class="small muted">
-      Until a store is connected, <code>/api/monitors</code> reports
-      <code>storage: "none"</code> and the dashboard says so — the rest of the site
-      keeps working.
-    </p>
+    <p data-i18n-html="docs.sched.actionsHtml"></p>
+    <div class="notice" data-i18n-html="docs.sched.regionHtml"></div>
+    <p class="small muted" style="margin-top:14px" data-i18n-html="docs.sched.degradeHtml"></p>
 
-    <h3>Read the results</h3>
+    <h3 data-i18n="docs.sched.read.h3">Read the results</h3>
     <pre><code>GET /api/monitors?history=60</code></pre>
-    <p class="small muted">
-      Returns each roster target's state, <code>since</code>, last result, uptime
-      and response-time stats, and recent checks. Public and read-only.
-    </p>
+    <p class="small muted" data-i18n-html="docs.sched.read.noteHtml"></p>
   </section>
 
   <section class="block">
-    <h2>Alerts</h2>
-    <p>
-      Set <code>STATUSDOG_WEBHOOK_URL</code> and every confirmed up/down change
-      posts JSON to it. <strong>Confirmed</strong> is the important word: a
-      transition only happens after <code>failureThreshold</code> consecutive
-      failures, and only the change fires — a target that stays down for a day
-      alerts once, not ninety-six times.
-    </p>
-    <h3>Payload</h3>
-    <p>
-      Two shapes, picked per host. <code>full</code> is the default and carries the
-      whole event, including both <code>text</code> (what Slack renders) and
-      <code>content</code> (what Discord renders), so either works with no adapter:
-    </p>
+    <h2 data-i18n="docs.alerts.h2">Alerts</h2>
+    <p data-i18n-html="docs.alerts.pHtml"></p>
+
+    <h3 data-i18n="docs.alerts.payload.h3">Payload</h3>
+    <p data-i18n-html="docs.alerts.payload.pHtml"></p>
     <pre><code>{
   "event": "down",
   "previousState": "up",
   "target": { "id": "api", "name": "Public API", "url": "https://example.com/health" },
-  "result": { "ok": false, "status": 503, "responseTimeMs": 31, "reason": "status", ... },
+  "result": { "ok": false, "status": 503, "responseTimeMs": 31, "reason": "status" },
   "at": "2026-08-19T07:00:00.000Z",
   "text": "Down: Public API (https://example.com/health) — Unexpected status 503",
   "content": "Down: Public API (https://example.com/health) — Unexpected status 503"
 }</code></pre>
-    <p>
-      <code>text</code> sends only the summary — <code>{"text": "Down: …"}</code> —
-      which strict chat APIs require.
-    </p>
+    <p data-i18n-html="docs.alerts.textHtml"></p>
 
-    <h3>Google Chat</h3>
-    <p>
-      Google Chat validates the body against its Message resource and answers
-      <code>400 Unknown name "event"</code> on any field it does not recognise, so a
-      rich body fails outright instead of posting a degraded message.
-      <code>chat.googleapis.com</code> therefore defaults to <code>text</code> and
-      needs no extra configuration.
-    </p>
-    <p>
-      To get the URL: in the space, <strong>space name → Apps &amp; integrations →
-      Webhooks → Add webhooks</strong>, name it, copy the URL. The
-      <code>?key=…&amp;token=…</code> query string is the credential and is preserved
-      on delivery.
-    </p>
+    <h3 data-i18n="docs.alerts.gchat.h3">Google Chat</h3>
+    <p data-i18n-html="docs.alerts.gchat.pHtml"></p>
+    <p data-i18n-html="docs.alerts.gchat.stepsHtml"></p>
 
-    <h3>Delivery</h3>
-    <p class="small muted">
-      Happens after results are persisted and never fails the run: an unreachable
-      webhook is reported in the response and as a warning on the workflow run, not
-      as a lost check. Only the webhook's origin is ever logged, because the path
-      and query string are the credential.
-    </p>
-    <p>
-      Running the CLI instead? Put notifiers in <code>statusdog.config.json</code>
-      under <code>notifiers</code> — <code>console</code> and <code>webhook</code>
-      are built in.
-    </p>
+    <h3 data-i18n="docs.alerts.delivery.h3">Delivery</h3>
+    <p class="small muted" data-i18n-html="docs.alerts.delivery.pHtml"></p>
+    <p data-i18n-html="docs.alerts.cliHtml"></p>
   </section>
 
   <section class="block">
-    <h2>Roadmap</h2>
-    <p>
-      Retention is the last 480 checks per target — about five days at a 15-minute
-      interval. Longer history, per-target alert routing, and a public status page
-      per monitor are the obvious next steps.
-    </p>
+    <h2 data-i18n="docs.roadmap.h2">Roadmap</h2>
+    <p data-i18n="docs.roadmap.p"></p>
   </section>
 
 </main>
 
 <footer class="site-footer">
   <div class="wrap">
-    <span>StatusDog · MIT</span>
+    <span data-i18n="footer.license">StatusDog · MIT</span>
     <span class="spacer"></span>
-    <a href="/">Home</a>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/healthz">Health</a>
-    <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+    <a href="/" data-i18n="footer.home">Home</a>
+    <a href="/dashboard" data-i18n="footer.dashboard">Dashboard</a>
+    <a href="/healthz" data-i18n="footer.health">Health</a>
+    <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
   </div>
 </footer>
 
-<script type="module" src="/assets/statusdog.js"></script>
+<script type="module">
+import { initI18n } from '/assets/i18n.js';
+import { markCurrentNav } from '/assets/statusdog.js';
+
+initI18n();
+markCurrentNav();
+</script>
 
 </body>
 </html>

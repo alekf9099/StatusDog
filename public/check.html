@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Report — StatusDog</title>
-<meta name="description" content="Full diagnostic report for a URL: status, response time, redirect chain, TLS certificate and response headers.">
+<title data-i18n="check.pageTitle">Report — StatusDog</title>
+<meta name="description" data-i18n-content="check.metaDescription" content="Full diagnostic report for a URL.">
 <link rel="stylesheet" href="/assets/statusdog.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
 </head>
@@ -14,21 +14,28 @@
   <div class="wrap">
     <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
     <nav class="site-nav">
-      <a href="/">Home</a>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/docs">Docs</a>
-      <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+      <a href="/" data-i18n="nav.home">Home</a>
+      <a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/docs" data-i18n="nav.docs">Docs</a>
+      <a href="https://github.com/alekf9099/StatusDog" data-i18n="nav.github">GitHub</a>
+      <span class="lang-switch" role="group" data-i18n-aria-label="lang.switchLabel" aria-label="Language">
+        <button type="button" data-lang="en" data-i18n="lang.en">EN</button>
+        <button type="button" data-lang="ko" data-i18n="lang.ko">한국어</button>
+      </span>
     </nav>
   </div>
 </header>
 
 <main class="wrap" style="padding:36px 0 56px">
 
-  <h1 style="font-size:26px">Diagnostic report</h1>
+  <h1 style="font-size:26px" data-i18n="check.h1">Diagnostic report</h1>
 
   <form class="check-form" id="check-form" style="margin-bottom:26px">
-    <input type="text" id="url" placeholder="example.com" spellcheck="false" required aria-label="URL to check">
-    <button type="submit" id="submit">Run check</button>
+    <input type="text" id="url" spellcheck="false" required
+      data-i18n-placeholder="home.urlPlaceholder"
+      data-i18n-aria-label="home.urlLabel"
+      placeholder="example.com" aria-label="URL to check">
+    <button type="submit" id="submit" data-i18n="check.submit">Run check</button>
   </form>
 
   <div id="report"></div>
@@ -37,86 +44,103 @@
 
 <footer class="site-footer">
   <div class="wrap">
-    <span>StatusDog · MIT</span>
+    <span data-i18n="footer.license">StatusDog · MIT</span>
     <span class="spacer"></span>
-    <a href="/docs">Docs</a>
-    <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+    <a href="/docs" data-i18n="footer.docs">Docs</a>
+    <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
   </div>
 </footer>
 
 <script type="module">
-import { check, escapeHtml, formatMs, prettyUrl, statusBadge } from '/assets/statusdog.js';
+import { initI18n, t } from '/assets/i18n.js';
+import { check, escapeHtml, formatMs, markCurrentNav, prettyUrl, statusBadge } from '/assets/statusdog.js';
+
+initI18n();
+markCurrentNav();
 
 const form = document.getElementById('check-form');
 const input = document.getElementById('url');
 const submit = document.getElementById('submit');
 const report = document.getElementById('report');
 
+let lastResult = null;
+
 const initial = new URLSearchParams(location.search).get('url');
 if (initial) {
   input.value = initial;
   run(initial);
 } else {
-  report.innerHTML = '<div class="empty">Enter a URL above to run a check.</div>';
+  showEmpty();
 }
 
 form.addEventListener('submit', (event) => {
   event.preventDefault();
   const url = input.value.trim();
   if (!url) return;
-  // Keep the URL shareable and the back button meaningful.
-  history.replaceState(null, '', `/check?url=${encodeURIComponent(url)}`);
+  // Keep the URL shareable, and keep the chosen language on it.
+  const next = new URL(location.href);
+  next.searchParams.set('url', url);
+  history.replaceState(null, '', next);
   run(url);
 });
 
+document.addEventListener('statusdog:languagechange', () => {
+  if (lastResult) report.innerHTML = render(lastResult);
+  else if (!input.value.trim()) showEmpty();
+});
+
+function showEmpty() {
+  report.innerHTML = `<div class="empty">${escapeHtml(t('check.empty'))}</div>`;
+}
+
 async function run(url) {
   submit.disabled = true;
-  submit.textContent = 'Checking…';
-  report.innerHTML = '<div class="card muted">Running the check…</div>';
+  submit.textContent = t('check.submitting');
+  report.innerHTML = `<div class="card muted">${escapeHtml(t('check.running'))}</div>`;
   try {
-    report.innerHTML = render(await check(url));
+    lastResult = await check(url);
+    report.innerHTML = render(lastResult);
   } catch (err) {
+    lastResult = null;
     report.innerHTML = `<div class="notice error">${escapeHtml(err.message)}</div>`;
   } finally {
     submit.disabled = false;
-    submit.textContent = 'Run check';
+    submit.textContent = t('check.submit');
   }
 }
 
 function render(result) {
-  return [
-    summary(result),
-    chain(result),
-    tls(result),
-    headers(result),
-    raw(result),
-  ].filter(Boolean).join('');
+  return [summary(result), chain(result), tls(result), headers(result), raw(result)]
+    .filter(Boolean)
+    .join('');
 }
 
 function summary(result) {
   const problem = result.ok
     ? ''
-    : `<div class="notice error" style="margin-bottom:18px">${escapeHtml(result.message ?? 'Check failed')}</div>`;
+    : `<div class="notice error" style="margin-bottom:18px">${escapeHtml(result.message ?? t('error.checkFailed'))}</div>`;
   const redirected = result.finalUrl !== result.url
-    ? `<div class="small muted" style="margin-top:14px">Final URL <code>${escapeHtml(result.finalUrl)}</code></div>`
+    ? `<div class="small muted" style="margin-top:14px">${escapeHtml(t('check.finalUrl'))} <code>${escapeHtml(result.finalUrl)}</code></div>`
     : '';
+  const checkedAt = t('check.checkedAt', { time: new Date(result.checkedAt).toLocaleString() });
+
   return `
     <section class="card" style="margin-bottom:16px">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px">
         ${statusBadge(result)}
         <strong style="word-break:break-all">${escapeHtml(prettyUrl(result.url))}</strong>
-        <span class="small muted" style="margin-left:auto">checked ${escapeHtml(new Date(result.checkedAt).toLocaleString())}</span>
+        <span class="small muted" style="margin-left:auto">${escapeHtml(checkedAt)}</span>
       </div>
       ${problem}
       <div class="metrics">
-        <div class="metric"><span class="label">Status</span><span class="value">${result.status ?? '–'}</span></div>
-        <div class="metric"><span class="label">Response time</span><span class="value">${formatMs(result.responseTimeMs)}</span></div>
-        <div class="metric"><span class="label">Redirects</span><span class="value">${result.redirects}</span></div>
-        <div class="metric"><span class="label">Failure</span><span class="value">${escapeHtml(result.reason ?? 'none')}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.status'))}</span><span class="value">${result.status ?? '–'}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.responseTime'))}</span><span class="value">${formatMs(result.responseTimeMs)}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.redirects'))}</span><span class="value">${result.redirects}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.failure'))}</span><span class="value">${escapeHtml(result.reason ?? t('value.none'))}</span></div>
       </div>
       ${redirected}
       <div style="margin-top:18px">
-        <a href="/dashboard?add=${encodeURIComponent(result.url)}"><button type="button" class="secondary">Keep watching it</button></a>
+        <a href="/dashboard?add=${encodeURIComponent(result.url)}"><button type="button" class="secondary">${escapeHtml(t('check.keepWatching'))}</button></a>
       </div>
     </section>`;
 }
@@ -134,7 +158,7 @@ function chain(result) {
     .join('');
   return `
     <section class="card" style="margin-bottom:16px">
-      <h2>Redirect chain</h2>
+      <h2>${escapeHtml(t('check.chain.h2'))}</h2>
       <ul class="chain">${items}
         <li><span class="hop">${hops.length + 1} · ${result.status ?? '–'}</span>${escapeHtml(result.finalUrl)}</li>
       </ul>
@@ -148,23 +172,26 @@ function tls(result) {
   const badge = days === null
     ? ''
     : days < 0
-      ? '<span class="badge down"><span class="dot"></span>expired</span>'
+      ? `<span class="badge down"><span class="dot"></span>${escapeHtml(t('check.tls.expired'))}</span>`
       : days < 14
-        ? '<span class="badge warn"><span class="dot"></span>expiring soon</span>'
-        : '<span class="badge up"><span class="dot"></span>valid</span>';
+        ? `<span class="badge warn"><span class="dot"></span>${escapeHtml(t('check.tls.expiring'))}</span>`
+        : `<span class="badge up"><span class="dot"></span>${escapeHtml(t('check.tls.valid'))}</span>`;
+  const validTo = escapeHtml(cert.validTo ?? '–')
+    + (days === null ? '' : ` ${escapeHtml(t('check.tls.daysSuffix', { n: days }))}`);
+
   return `
     <section class="card" style="margin-bottom:16px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-        <h2 style="margin:0">TLS certificate</h2>
+        <h2 style="margin:0">${escapeHtml(t('check.tls.h2'))}</h2>
         ${badge}
       </div>
       <div class="scroll-x">
         <table class="kv">
-          <tr><th>Subject</th><td>${escapeHtml(cert.subject ?? '–')}</td></tr>
-          <tr><th>Issuer</th><td>${escapeHtml(cert.issuer ?? '–')}</td></tr>
-          <tr><th>Valid from</th><td>${escapeHtml(cert.validFrom ?? '–')}</td></tr>
-          <tr><th>Valid to</th><td>${escapeHtml(cert.validTo ?? '–')}${days === null ? '' : ` (${days} days)`}</td></tr>
-          <tr><th>Protocol</th><td>${escapeHtml(cert.protocol ?? '–')}</td></tr>
+          <tr><th>${escapeHtml(t('check.tls.subject'))}</th><td>${escapeHtml(cert.subject ?? '–')}</td></tr>
+          <tr><th>${escapeHtml(t('check.tls.issuer'))}</th><td>${escapeHtml(cert.issuer ?? '–')}</td></tr>
+          <tr><th>${escapeHtml(t('check.tls.validFrom'))}</th><td>${escapeHtml(cert.validFrom ?? '–')}</td></tr>
+          <tr><th>${escapeHtml(t('check.tls.validTo'))}</th><td>${validTo}</td></tr>
+          <tr><th>${escapeHtml(t('check.tls.protocol'))}</th><td>${escapeHtml(cert.protocol ?? '–')}</td></tr>
         </table>
       </div>
     </section>`;
@@ -178,10 +205,8 @@ function headers(result) {
     .join('');
   return `
     <section class="card" style="margin-bottom:16px">
-      <h2>Response headers</h2>
-      <p class="small muted" style="margin-top:-8px">
-        A curated subset — cookies and credentials are never reported.
-      </p>
+      <h2>${escapeHtml(t('check.headers.h2'))}</h2>
+      <p class="small muted" style="margin-top:-8px">${escapeHtml(t('check.headers.note'))}</p>
       <div class="scroll-x"><table class="kv">${rows}</table></div>
     </section>`;
 }
@@ -189,7 +214,7 @@ function headers(result) {
 function raw(result) {
   return `
     <details class="card">
-      <summary style="cursor:pointer;font-weight:600">Raw JSON</summary>
+      <summary style="cursor:pointer;font-weight:600">${escapeHtml(t('check.raw'))}</summary>
       <pre style="margin:14px 0 0"><code>${escapeHtml(JSON.stringify(result, null, 2))}</code></pre>
     </details>`;
 }
