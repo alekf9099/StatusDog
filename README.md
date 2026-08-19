@@ -71,6 +71,8 @@ behind a web front end.
 | `/docs` | Usage docs |
 | `/preview/:template` | Live previews of the fallback screens |
 | `/api/check?url=…` | JSON API for a single check |
+| `/api/monitors` | The 24/7 roster with stored state and history |
+| `/api/cron/check` | Scheduler entry point (authenticated) |
 | `/healthz` | Liveness probe for the site itself |
 
 ```bash
@@ -82,17 +84,74 @@ curl "https://status-dog.vercel.app/api/check?url=example.com&expect=200"
 rejected, and only a curated set of response headers is reported — never cookies
 or credentials.
 
+The dashboard has two halves: **Monitored 24/7**, checked on a schedule by the
+server and stored, and **Your monitors**, kept in your browser and checked only
+while a tab is open.
+
 **What the site cannot do.** Traffic and visitor counts are not measurable from
-outside; that needs the site's own analytics or server logs. And the dashboard
-stores monitors in your browser, checking them only while a tab is open — uptime
-history that accrues around the clock needs the CLI on a machine that stays on,
-or a database-backed deployment (not built yet).
+outside; that needs the site's own analytics or server logs.
 
 Run the site locally with:
 
 ```bash
 npm run dev:web
 ```
+
+---
+
+## Scheduled monitoring
+
+Uptime history that accrues with nothing open needs two things: a list of what to
+watch, and something to do the watching.
+
+### The roster
+
+[`monitors.json`](monitors.json) — same schema as `statusdog.config.json`, and
+the only place the hosted site takes its 24/7 targets from.
+
+```json
+{
+  "defaults": { "timeoutMs": 15000, "failureThreshold": 2, "expectStatus": ["2xx"] },
+  "targets": [
+    { "id": "api", "name": "Public API", "url": "https://example.com/health", "expectBody": "\"status\":\"ok\"" }
+  ]
+}
+```
+
+It is a committed file rather than a form on purpose. The hosted site has no
+accounts, so a public write endpoint would let anyone enlist StatusDog to hit a
+URL of their choosing every 15 minutes. Editing the repo is reviewable.
+
+The roster is baked into `dist/roster.data.js` at build time by
+[`scripts/generate-roster.mjs`](scripts/generate-roster.mjs) — a bundler cannot see
+through `readFile(cwd + '/monitors.json')`, so reading it at runtime would leave
+the file out of the deployment.
+
+### The scheduler
+
+`POST /api/cron/check` probes every roster target and persists the results.
+
+| Environment variable | Purpose |
+| --- | --- |
+| `CRON_SECRET` | Shared secret, sent as `Authorization: Bearer …` or `x-cron-secret`. **Unset closes the route rather than opening it.** |
+| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | A Redis-compatible REST store. `UPSTASH_REDIS_REST_*` and `REDIS_REST_*` are also accepted. |
+
+[`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) calls it every 15
+minutes and needs two repository secrets, `MONITOR_ENDPOINT` and `CRON_SECRET`.
+GitHub Actions rather than Vercel Cron because the Hobby plan caps cron at once a
+day; on Pro, add a `crons` entry to `vercel.json` and drop the workflow. Either
+way, GitHub and Vercel both delay scheduled runs under load, so 15 minutes is a
+floor and not a guarantee.
+
+Nothing here is required. With no store configured, `/api/monitors` returns
+`storage: "none"`, the dashboard says as much, and the rest of the site is
+unaffected.
+
+Storage keeps the last 480 checks per target — about five days at a 15-minute
+interval — under `statusdog:v1:target:<id>`. The client is ~100 lines of `fetch`
+in [`src/store/kv.ts`](src/store/kv.ts); a monitoring tool that needs a
+40-package client library to record "the site was up" has its priorities
+backwards.
 
 ---
 
@@ -315,6 +374,10 @@ monitor.start();
 | `startFallbackServer(opts)` / `createFallbackMiddleware(monitor, opts)` | Serve one |
 | `startDashboard(monitor, opts)` | Status UI and JSON API |
 | `createNotifiers(configs, logger)` / `attachNotifiers(...)` | Alerting |
+| `applyResult(state, result, thresholds)` | The up/down threshold rule, as a pure function |
+| `kvFromEnv()` / `createKvClient(opts)` | Redis-over-REST client, or `null` when unconfigured |
+| `applyCheck(kv, target, result)` / `readAll(kv, targets)` | Persist and read scheduled-check state |
+| `loadRoster(file?)` / `resolveRoster(json)` | Read and validate `monitors.json` |
 
 ---
 
@@ -326,13 +389,15 @@ src/
   index.ts          Public library exports
   config/           Config loading, defaults, validation, shared types
   monitor/          Probe, expectation matchers, history store, scheduling engine
+  store/            KV client, scheduled-check persistence, roster loading
   fallback/         Built-in templates, renderer, standalone server, middleware
   dashboard/        Status UI and JSON API
   notify/           Console and webhook notifiers
   util/             Logging and time formatting
-api/                Vercel functions — check, preview, healthz
+api/                Vercel functions — check, monitors, cron/check, preview, healthz
 public/             The hosted site: landing, report, dashboard, docs
-scripts/dev-web.mjs Local server that mirrors the Vercel routing
+monitors.json       The 24/7 roster
+scripts/            Local dev server, build-time roster snapshot
 templates/          Example custom fallback template
 test/               node:test suites
 ```

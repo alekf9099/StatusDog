@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dashboard — StatusDog</title>
-<meta name="description" content="Watch a list of URLs and track their uptime and response time.">
+<meta name="description" content="Uptime and response time for monitored URLs — checked on a schedule by the server, plus your own browser-local list.">
 <link rel="stylesheet" href="/assets/statusdog.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
 </head>
@@ -24,29 +24,47 @@
 
 <main class="wrap" style="padding:36px 0 56px">
 
-  <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px">
-    <h1 style="font-size:26px;margin:0">Dashboard</h1>
-    <span class="small muted" id="summary"></span>
-    <span style="flex:1"></span>
-    <button type="button" class="secondary" id="refresh">Check all now</button>
-  </div>
+  <h1 style="font-size:26px;margin-bottom:36px">Dashboard</h1>
 
-  <p class="small muted" style="margin:0 0 22px">
-    Auto-checking every <span id="interval-label">60</span>s while this tab is open.
-  </p>
+  <section style="margin-bottom:48px">
+    <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+      <h2 style="margin:0">Monitored 24/7</h2>
+      <span class="small muted" id="server-summary">loading…</span>
+    </div>
+    <p class="small muted" style="margin:0 0 18px">
+      Checked on a schedule by the server, so history keeps accruing whether or not
+      this page is open. The roster lives in
+      <a href="https://github.com/alekf9099/StatusDog/blob/main/monitors.json">monitors.json</a>.
+    </p>
+    <div id="server-monitors"></div>
+  </section>
 
-  <form class="check-form" id="add-form" style="margin-bottom:26px">
-    <input type="text" id="url" placeholder="Add a URL to watch — example.com" spellcheck="false" required aria-label="URL to watch">
-    <button type="submit">Add monitor</button>
-  </form>
+  <section>
+    <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+      <h2 style="margin:0">Your monitors</h2>
+      <span class="small muted" id="summary"></span>
+      <span style="flex:1"></span>
+      <button type="button" class="secondary" id="refresh">Check all now</button>
+    </div>
+    <p class="small muted" style="margin:0 0 18px">
+      Stored in this browser and checked every <span id="interval-label">60</span>s
+      while this tab is open — closing it stops the clock.
+    </p>
 
-  <div id="monitors"></div>
+    <form class="check-form" id="add-form" style="margin-bottom:26px">
+      <input type="text" id="url" placeholder="Add a URL to watch — example.com" spellcheck="false" required aria-label="URL to watch">
+      <button type="submit">Add monitor</button>
+    </form>
 
-  <div class="notice" style="margin-top:30px">
-    <strong>Stored in this browser.</strong> Monitors and their history live in
-    localStorage, and checks only run while this tab is open — closing it stops
-    the clock. For monitoring that keeps going without you, run the CLI on a
-    server: see <a href="/docs">the docs</a>.
+    <div id="monitors"></div>
+  </section>
+
+  <div class="notice" style="margin-top:36px">
+    <strong>Want a URL watched around the clock?</strong> Add it to
+    <code>monitors.json</code> and the scheduler picks it up — the roster is a
+    committed file rather than a form, so nobody can point StatusDog at an
+    arbitrary target on a schedule. Or run the CLI on your own machine; see
+    <a href="/docs">the docs</a>.
   </div>
 
 </main>
@@ -56,6 +74,7 @@
     <span>StatusDog · MIT</span>
     <span class="spacer"></span>
     <a href="/docs">Docs</a>
+    <a href="/api/monitors">API</a>
     <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
   </div>
 </footer>
@@ -63,8 +82,92 @@
 <script type="module">
 import {
   check, escapeHtml, formatMs, formatRelative, prettyUrl,
-  sparkline, statusBadge, store, uptimePct,
+  sparkline, stateBadge, statusBadge, store, uptimePct,
 } from '/assets/statusdog.js';
+
+/* ---------------- server-side 24/7 monitors ---------------- */
+
+const serverList = document.getElementById('server-monitors');
+const serverSummary = document.getElementById('server-summary');
+
+async function loadServerMonitors() {
+  try {
+    const response = await fetch('/api/monitors?history=60', { cache: 'no-store' });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error ?? `HTTP ${response.status}`);
+    renderServerMonitors(payload);
+  } catch (err) {
+    serverSummary.textContent = '';
+    serverList.innerHTML = `<div class="notice error">Could not load scheduled monitors: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderServerMonitors(payload) {
+  const monitors = payload.monitors ?? [];
+
+  if (payload.storage === 'none') {
+    serverSummary.textContent = 'storage not configured';
+    const cards = monitors.length
+      ? `<div class="grid cols-auto" style="margin-top:16px">${monitors.map(serverCard).join('')}</div>`
+      : '';
+    serverList.innerHTML = `
+      <div class="notice">
+        <strong>No store connected yet.</strong> ${monitors.length} target${monitors.length === 1 ? '' : 's'}
+        on the roster, but results are not being persisted, so there is no history
+        to show. Connect a Redis-compatible store and set <code>CRON_SECRET</code> —
+        see <a href="/docs">the docs</a>.
+      </div>${cards}`;
+    return;
+  }
+
+  const down = monitors.filter((m) => m.state === 'down').length;
+  const unseen = monitors.filter((m) => !m.lastResult).length;
+  serverSummary.textContent = monitors.length === 0
+    ? 'nothing on the roster'
+    : `${monitors.length} target${monitors.length === 1 ? '' : 's'} · ${down ? `${down} down` : 'all healthy'}`
+      + (unseen ? ` · ${unseen} not yet checked` : '');
+
+  serverList.innerHTML = monitors.length === 0
+    ? '<div class="empty">No targets in monitors.json.</div>'
+    : `<div class="grid cols-auto">${monitors.map(serverCard).join('')}</div>`;
+}
+
+function serverCard(monitor) {
+  const result = monitor.lastResult;
+  const stats = monitor.stats;
+  const problem = result && !result.ok
+    ? `<div class="notice error small" style="margin-top:14px">${escapeHtml(result.message ?? 'Check failed')}</div>`
+    : '';
+  const since = monitor.since
+    ? `<div class="small muted" style="margin-top:12px">${escapeHtml(monitor.state)} since ${escapeHtml(formatRelative(monitor.since))}</div>`
+    : '';
+  const uptime = stats && stats.uptimePct !== null && stats.uptimePct !== undefined
+    ? `${stats.uptimePct}%`
+    : '–';
+
+  return `
+    <section class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        ${stateBadge(monitor.state)}
+        <span class="small muted" style="margin-left:auto">${escapeHtml(monitor.name)}</span>
+      </div>
+      <div style="font-weight:600;word-break:break-all;margin-bottom:14px">
+        <a href="/check?url=${encodeURIComponent(monitor.url)}">${escapeHtml(prettyUrl(monitor.url))}</a>
+      </div>
+      ${sparkline(monitor.history ?? [])}
+      <div class="metrics" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+        <div class="metric"><span class="label">Uptime</span><span class="value">${uptime}</span></div>
+        <div class="metric"><span class="label">Avg response</span><span class="value">${formatMs(stats?.avgResponseTimeMs ?? null)}</span></div>
+        <div class="metric"><span class="label">Checks</span><span class="value">${stats?.checks ?? 0}</span></div>
+      </div>
+      ${problem}${since}
+    </section>`;
+}
+
+loadServerMonitors();
+setInterval(loadServerMonitors, 60_000);
+
+/* ---------------- browser-local monitors ---------------- */
 
 const INTERVAL_MS = 60_000;
 

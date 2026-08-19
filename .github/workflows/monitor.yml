@@ -1,0 +1,77 @@
+name: Monitor
+
+# The 24/7 scheduler. Vercel's Hobby plan caps cron jobs at once a day, which is
+# useless for uptime monitoring, so GitHub Actions does the waking up instead and
+# the Vercel function does the checking.
+#
+# Requires two repository secrets:
+#   MONITOR_ENDPOINT  e.g. https://status-dog.vercel.app/api/cron/check
+#   CRON_SECRET       the same value set in the Vercel environment
+#
+# GitHub delays scheduled runs under load, so treat 15 minutes as a floor rather
+# than a guarantee.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+# A late run should not pile up behind the next one.
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger scheduled checks
+        env:
+          MONITOR_ENDPOINT: ${{ secrets.MONITOR_ENDPOINT }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$MONITOR_ENDPOINT" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning::MONITOR_ENDPOINT or CRON_SECRET is not set - skipping."
+            exit 0
+          fi
+
+          status=$(curl --silent --show-error \
+            --max-time 120 --retry 2 --retry-delay 10 \
+            --output response.json --write-out '%{http_code}' \
+            --request POST "$MONITOR_ENDPOINT" \
+            --header "Authorization: Bearer $CRON_SECRET")
+
+          echo "HTTP $status"
+
+          if jq -e . response.json > /dev/null 2>&1; then
+            jq . response.json
+            {
+              if jq -e '.checks' response.json > /dev/null 2>&1; then
+                echo "### $(jq -r '.targets') target(s) checked - $(jq -r '.down') down"
+                echo
+                echo '| Target | State | Status | Response |'
+                echo '| --- | --- | --- | --- |'
+                jq -r '.checks[] | "| \(.id) | \(.state // "?") | \(.status // "-") | \(.responseTimeMs // "-") ms |"' response.json
+                transitions=$(jq -r '(.transitions // []) | join(", ")' response.json)
+                if [ -n "$transitions" ]; then
+                  echo
+                  echo "**Changed state:** $transitions"
+                fi
+              else
+                echo '```'
+                jq . response.json
+                echo '```'
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Response was not JSON:"
+            head -c 2000 response.json || true
+          fi
+
+          # A monitored site being down is not a workflow failure; only the
+          # scheduler itself failing is.
+          case "$status" in
+            2*) exit 0 ;;
+            *) echo "::error::Scheduler returned HTTP $status"; exit 1 ;;
+          esac

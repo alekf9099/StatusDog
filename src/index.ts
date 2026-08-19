@@ -12,6 +12,7 @@
  */
 export * from './config/index.js';
 export * from './monitor/index.js';
+export * from './store/index.js';
 export * from './fallback/index.js';
 export * from './dashboard/index.js';
 export { attachNotifiers, createNotifier, createNotifiers } from './notify/index.js';

@@ -1,0 +1,27 @@
+{
+  "//": "The 24/7 monitor roster for the hosted site. Edit this file to change what is watched; the scheduler reads it on every run. Same schema as statusdog.config.json.",
+  "defaults": {
+    "timeoutMs": 15000,
+    "failureThreshold": 2,
+    "recoveryThreshold": 1,
+    "expectStatus": ["2xx"]
+  },
+  "targets": [
+    {
+      "id": "statusdog",
+      "name": "StatusDog itself",
+      "url": "https://status-dog.vercel.app/healthz",
+      "expectBody": "\"status\":\"ok\""
+    },
+    {
+      "id": "example-com",
+      "name": "Example.com",
+      "url": "https://example.com"
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "url": "https://github.com"
+    }
+  ]
+}

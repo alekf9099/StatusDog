@@ -2,8 +2,9 @@ import { EventEmitter } from 'node:events';
 import type { ProbeResult, ResolvedConfig, ResolvedTarget } from '../config/types.js';
 import { probe } from './probe.js';
 import { HistoryStore, type HistoryRecord, type TargetStats } from './store.js';
+import { applyResult, INITIAL_STATE, type StateSnapshot, type TargetState } from './transition.js';
 
-export type TargetState = 'up' | 'down' | 'unknown';
+export type { TargetState };
 
 export interface TargetStatus {
   id: string;
@@ -34,11 +35,7 @@ export interface CheckEvent {
   record: HistoryRecord;
 }
 
-interface InternalState {
-  state: TargetState;
-  since: string | null;
-  consecutiveFailures: number;
-  consecutiveSuccesses: number;
+interface InternalState extends StateSnapshot {
   lastResult: ProbeResult | null;
   timer: NodeJS.Timeout | null;
   inFlight: Promise<ProbeResult> | null;
@@ -73,10 +70,7 @@ export class Monitor extends EventEmitter {
     for (const target of config.targets) {
       this.targets.set(target.id, target);
       this.states.set(target.id, {
-        state: 'unknown',
-        since: null,
-        consecutiveFailures: 0,
-        consecutiveSuccesses: 0,
+        ...INITIAL_STATE,
         lastResult: null,
         timer: null,
         inFlight: null,
@@ -197,33 +191,25 @@ export class Monitor extends EventEmitter {
     const previous = state.state;
     state.lastResult = result;
 
-    if (result.ok) {
-      state.consecutiveSuccesses++;
-      state.consecutiveFailures = 0;
-    } else {
-      state.consecutiveFailures++;
-      state.consecutiveSuccesses = 0;
-    }
+    const { next, transitioned } = applyResult(state, result, target);
+    state.state = next.state;
+    state.since = next.since;
+    state.consecutiveFailures = next.consecutiveFailures;
+    state.consecutiveSuccesses = next.consecutiveSuccesses;
 
     const record = this.store.add(target.id, result);
     this.emit('check', { target, result, record } satisfies CheckEvent);
 
-    let next = previous;
-    if (!result.ok && state.consecutiveFailures >= target.failureThreshold) next = 'down';
-    else if (result.ok && state.consecutiveSuccesses >= target.recoveryThreshold) next = 'up';
+    if (!transitioned) return;
 
-    if (next === previous) return;
-
-    state.state = next;
-    state.since = result.checkedAt;
     const event: TransitionEvent = {
       target,
       from: previous,
-      to: next,
+      to: next.state,
       result,
       at: result.checkedAt,
     };
-    this.emit(next === 'up' ? 'up' : 'down', event);
+    this.emit(next.state === 'up' ? 'up' : 'down', event);
   }
 }
 
