@@ -222,6 +222,32 @@ Requests pass through untouched while the target is up. Once it is confirmed dow
 — after `failureThreshold` consecutive failures — everything except `allowPaths`
 gets the maintenance page instead.
 
+### On Vercel
+
+A maintenance page hosted on your own infrastructure is down exactly when you
+need it. This repo therefore deploys as a Vercel project that answers every path
+with the fallback page — point your DNS or load balancer at it during an outage.
+
+1. Import the repository at <https://vercel.com/new>. [`vercel.json`](vercel.json)
+   already sets the build command and routes every path to
+   [`api/index.js`](api/index.js), so no further configuration is needed.
+2. Every push to `main` deploys to production, and every pull request gets its
+   own preview URL.
+3. Customise the page with environment variables in the Vercel dashboard:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `STATUSDOG_TEMPLATE` | `maintenance` | `maintenance`, `error` or `offline` |
+| `STATUSDOG_TITLE` | `We will be right back` | Page heading |
+| `STATUSDOG_MESSAGE` | generic apology | Body text |
+| `STATUSDOG_SERVICE_NAME` | `Service` | Name shown in the footer |
+| `STATUSDOG_SERVICE_URL` | — | URL of the service being stood in for |
+| `STATUSDOG_STATUS_CODE` | `503` | Status served with the page |
+| `STATUSDOG_RETRY_AFTER` | `120` | `Retry-After` header and auto-refresh interval |
+
+`/healthz` answers `200` so an uptime check can tell the fallback apart from the
+service it is standing in for.
+
 ### Custom templates
 
 Any HTML file works. Placeholders are `{{name}}`:
@@ -281,9 +307,14 @@ src/
   dashboard/        Status UI and JSON API
   notify/           Console and webhook notifiers
   util/             Logging and time formatting
+api/index.js        Vercel serverless entry point for the fallback page
+public/             Static assets served by Vercel
 templates/          Example custom fallback template
 test/               node:test suites
 ```
+
+Every push and pull request runs typecheck, tests and build on Node 18, 20 and 22
+via [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Development
 
