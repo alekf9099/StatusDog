@@ -174,6 +174,8 @@ app.use(createFallbackMiddleware(monitor, {
     <table class="kv">
       <tr><th>CRON_SECRET</th><td>Shared secret. Sent as <code>Authorization: Bearer …</code> or <code>x-cron-secret</code>. Unset means the route is closed, not open.</td></tr>
       <tr><th>KV_REST_API_URL<br>KV_REST_API_TOKEN</th><td>A Redis-compatible REST store. <code>UPSTASH_REDIS_REST_*</code> and <code>REDIS_REST_*</code> also work.</td></tr>
+      <tr><th>STATUSDOG_WEBHOOK_URL</th><td>Optional. One or more alert webhooks, comma-separated.</td></tr>
+      <tr><th>STATUSDOG_WEBHOOK_ON</th><td>Optional. <code>down</code>, <code>up</code>, or <code>down,up</code> (default: both).</td></tr>
     </table>
     <p>
       GitHub Actions does the waking up, every 15 minutes, from
@@ -198,13 +200,46 @@ app.use(createFallbackMiddleware(monitor, {
   </section>
 
   <section class="block">
+    <h2>Alerts</h2>
+    <p>
+      Set <code>STATUSDOG_WEBHOOK_URL</code> and every confirmed up/down change
+      posts JSON to it. <strong>Confirmed</strong> is the important word: a
+      transition only happens after <code>failureThreshold</code> consecutive
+      failures, and only the change fires — a target that stays down for a day
+      alerts once, not ninety-six times.
+    </p>
+    <p>
+      The payload carries both <code>text</code> and <code>content</code>, so a
+      Slack or Discord incoming webhook renders it with no adapter:
+    </p>
+    <pre><code>{
+  "event": "down",
+  "previousState": "up",
+  "target": { "id": "api", "name": "Public API", "url": "https://example.com/health" },
+  "result": { "ok": false, "status": 503, "responseTimeMs": 31, "reason": "status", ... },
+  "at": "2026-08-19T07:00:00.000Z",
+  "text": "Down: Public API (https://example.com/health) — Unexpected status 503",
+  "content": "Down: Public API (https://example.com/health) — Unexpected status 503"
+}</code></pre>
+    <p class="small muted">
+      Delivery happens after results are persisted and never fails the run: an
+      unreachable webhook is reported in the response and as a warning on the
+      workflow run, not as a lost check. Only the webhook's origin is ever logged,
+      because the path is the credential.
+    </p>
+    <p>
+      Running the CLI instead? Put notifiers in <code>statusdog.config.json</code>
+      under <code>notifiers</code> — <code>console</code> and <code>webhook</code>
+      are built in.
+    </p>
+  </section>
+
+  <section class="block">
     <h2>Roadmap</h2>
     <p>
-      Alerting on transitions is next: the engine already emits
-      <code>up</code>/<code>down</code> events and ships console and webhook
-      notifiers for the CLI, but the scheduled endpoint does not yet fan them out.
-      Retention is currently the last 480 checks per target — about five days at a
-      15-minute interval.
+      Retention is the last 480 checks per target — about five days at a 15-minute
+      interval. Longer history, per-target alert routing, and a public status page
+      per monitor are the obvious next steps.
     </p>
   </section>
 

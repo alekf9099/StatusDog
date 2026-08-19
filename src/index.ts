@@ -16,6 +16,8 @@ export * from './store/index.js';
 export * from './fallback/index.js';
 export * from './dashboard/index.js';
 export { attachNotifiers, createNotifier, createNotifiers } from './notify/index.js';
+export { dispatchTransitions, notifierConfigsFromEnv, notifiersFromEnv } from './notify/dispatch.js';
+export type { DispatchOutcome, DispatchSummary } from './notify/dispatch.js';
 export type { Notifier } from './notify/index.js';
 export { createLogger, color } from './util/log.js';
 export type { Logger } from './util/log.js';

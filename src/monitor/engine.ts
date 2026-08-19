@@ -2,9 +2,15 @@ import { EventEmitter } from 'node:events';
 import type { ProbeResult, ResolvedConfig, ResolvedTarget } from '../config/types.js';
 import { probe } from './probe.js';
 import { HistoryStore, type HistoryRecord, type TargetStats } from './store.js';
-import { applyResult, INITIAL_STATE, type StateSnapshot, type TargetState } from './transition.js';
+import {
+  applyResult,
+  INITIAL_STATE,
+  type StateSnapshot,
+  type TargetState,
+  type TransitionEvent,
+} from './transition.js';
 
-export type { TargetState };
+export type { TargetState, TransitionEvent };
 
 export interface TargetStatus {
   id: string;
@@ -19,14 +25,6 @@ export interface TargetStatus {
   lastResult: ProbeResult | null;
   stats: TargetStats;
   intervalMs: number;
-}
-
-export interface TransitionEvent {
-  target: ResolvedTarget;
-  from: TargetState;
-  to: TargetState;
-  result: ProbeResult;
-  at: string;
 }
 
 export interface CheckEvent {

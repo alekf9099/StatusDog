@@ -135,6 +135,8 @@ the file out of the deployment.
 | --- | --- |
 | `CRON_SECRET` | Shared secret, sent as `Authorization: Bearer …` or `x-cron-secret`. **Unset closes the route rather than opening it.** |
 | `KV_REST_API_URL` + `KV_REST_API_TOKEN` | A Redis-compatible REST store. `UPSTASH_REDIS_REST_*` and `REDIS_REST_*` are also accepted. |
+| `STATUSDOG_WEBHOOK_URL` | Optional. Alert webhooks, comma-separated. |
+| `STATUSDOG_WEBHOOK_ON` | Optional. `down`, `up`, or `down,up` (default: both). |
 
 [`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) calls it every 15
 minutes and needs two repository secrets, `MONITOR_ENDPOINT` and `CRON_SECRET`.
@@ -146,6 +148,42 @@ floor and not a guarantee.
 Nothing here is required. With no store configured, `/api/monitors` returns
 `storage: "none"`, the dashboard says as much, and the rest of the site is
 unaffected.
+
+### Alerts
+
+Every confirmed up/down change posts JSON to each configured webhook. *Confirmed*
+carries the weight: a transition only happens after `failureThreshold`
+consecutive failures, and only the change fires — a target down for a day alerts
+once, not ninety-six times.
+
+The payload carries both `text` (what Slack renders) and `content` (what Discord
+renders), so either provider works with no adapter:
+
+```json
+{
+  "event": "down",
+  "previousState": "up",
+  "target": { "id": "api", "name": "Public API", "url": "https://example.com/health" },
+  "result": { "ok": false, "status": 503, "responseTimeMs": 31, "reason": "status" },
+  "at": "2026-08-19T07:00:00.000Z",
+  "text": "Down: Public API (https://example.com/health) — Unexpected status 503",
+  "content": "Down: Public API (https://example.com/health) — Unexpected status 503"
+}
+```
+
+Delivery runs after results are persisted and never fails the run — an
+unreachable webhook comes back in the response and as a warning on the workflow
+run, not as a lost check. Only a webhook's **origin** is ever logged or returned,
+since the path is the credential.
+
+For the CLI, notifiers come from `statusdog.config.json` instead:
+
+```json
+"notifiers": [
+  { "type": "console" },
+  { "type": "webhook", "url": "https://hooks.example.com/statusdog", "on": ["down"] }
+]
+```
 
 Storage keeps the last 480 checks per target — about five days at a 15-minute
 interval — under `statusdog:v1:target:<id>`. The client is ~100 lines of `fetch`
@@ -374,6 +412,7 @@ monitor.start();
 | `startFallbackServer(opts)` / `createFallbackMiddleware(monitor, opts)` | Serve one |
 | `startDashboard(monitor, opts)` | Status UI and JSON API |
 | `createNotifiers(configs, logger)` / `attachNotifiers(...)` | Alerting |
+| `notifiersFromEnv(env?)` / `dispatchTransitions(notifiers, events)` | Env-configured webhooks and settle-not-throw delivery |
 | `applyResult(state, result, thresholds)` | The up/down threshold rule, as a pure function |
 | `kvFromEnv()` / `createKvClient(opts)` | Redis-over-REST client, or `null` when unconfigured |
 | `applyCheck(kv, target, result)` / `readAll(kv, targets)` | Persist and read scheduled-check state |

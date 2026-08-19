@@ -2,15 +2,16 @@ import http from 'node:http';
 import https from 'node:https';
 import { USER_AGENT } from '../config/defaults.js';
 import type { NotifierConfig, WebhookNotifierConfig } from '../config/types.js';
-import type { Monitor, TransitionEvent } from '../monitor/engine.js';
-import { color, type Logger } from '../util/log.js';
+import type { Monitor } from '../monitor/engine.js';
+import type { TransitionEvent } from '../monitor/transition.js';
+import { color, createLogger, type Logger } from '../util/log.js';
 
 export interface Notifier {
   readonly name: string;
   notify(event: TransitionEvent): Promise<void>;
 }
 
-export function createNotifier(config: NotifierConfig, logger: Logger): Notifier {
+export function createNotifier(config: NotifierConfig, logger: Logger = createLogger('info')): Notifier {
   switch (config.type) {
     case 'console':
       return createConsoleNotifier(logger);
@@ -23,7 +24,10 @@ export function createNotifier(config: NotifierConfig, logger: Logger): Notifier
   }
 }
 
-export function createNotifiers(configs: NotifierConfig[], logger: Logger): Notifier[] {
+export function createNotifiers(
+  configs: NotifierConfig[],
+  logger: Logger = createLogger('info'),
+): Notifier[] {
   return configs.map((config) => createNotifier(config, logger));
 }
 
@@ -58,23 +62,44 @@ function createConsoleNotifier(logger: Logger): Notifier {
 
 function createWebhookNotifier(config: WebhookNotifierConfig, logger: Logger): Notifier {
   const events = config.on ?? ['up', 'down'];
+  // A webhook URL's path is the credential, so only the origin is ever named.
+  // Delivery outcomes are returned over HTTP by the scheduled endpoint.
+  const label = `webhook(${originOf(config.url)})`;
+
   return {
-    name: `webhook(${config.url})`,
+    name: label,
     async notify(event) {
       if (!events.includes(event.to === 'up' ? 'up' : 'down')) return;
+
+      const summary =
+        `${event.to === 'up' ? 'Recovered' : 'Down'}: ${event.target.name} (${event.target.url})` +
+        (event.result.message ? ` — ${event.result.message}` : '');
+
       const payload = JSON.stringify({
         event: event.to,
         target: { id: event.target.id, name: event.target.name, url: event.target.url },
         previousState: event.from,
         result: event.result,
         at: event.at,
-        text: `${event.to === 'up' ? 'Recovered' : 'Down'}: ${event.target.name} (${event.target.url})` +
-          (event.result.message ? ` — ${event.result.message}` : ''),
+        // `text` is what Slack renders, `content` is what Discord renders. Both
+        // ignore the keys they do not know, so one payload serves either without
+        // needing a per-provider notifier.
+        text: summary,
+        content: summary,
       });
+
       await postJson(config.url, payload, config.method ?? 'POST', config.headers ?? {});
-      logger.debug(`webhook delivered to ${config.url}`);
+      logger.debug(`webhook delivered to ${label}`);
     },
   };
+}
+
+function originOf(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return 'invalid-url';
+  }
 }
 
 function postJson(
