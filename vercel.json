@@ -6,8 +6,20 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/healthz", "destination": "/api/healthz" },
-    { "source": "/preview", "destination": "/api/preview" },
-    { "source": "/preview/:template", "destination": "/api/preview?template=:template" }
+    {
+      "source": "/healthz",
+      "destination": "/api/healthz"
+    },
+    {
+      "source": "/preview",
+      "destination": "/api/preview"
+    },
+    {
+      "source": "/preview/:template",
+      "destination": "/api/preview?template=:template"
+    }
+  ],
+  "regions": [
+    "icn1"
   ]
 }
