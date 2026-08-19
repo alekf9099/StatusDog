@@ -70,6 +70,12 @@ behind a web front end.
 | `/dashboard` | Watch a list of URLs, with uptime and response-time history |
 | `/docs` | Usage docs |
 | `/preview/:template` | Live previews of the fallback screens |
+
+The site is available in English and Korean. It follows the browser language by
+default; `?lang=en` or `?lang=ko` overrides it and makes a link shareable in that
+language. Strings live in [`public/assets/locales.js`](public/assets/locales.js) —
+a test asserts the two tables have identical keys and placeholders, so a missing
+translation fails CI rather than showing up as English text on a Korean page.
 | `/api/check?url=…` | JSON API for a single check |
 | `/api/monitors` | The 24/7 roster with stored state and history |
 | `/api/cron/check` | Scheduler entry point (authenticated) |
