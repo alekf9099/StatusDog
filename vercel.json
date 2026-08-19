@@ -18,7 +18,7 @@
     },
     {
       "source": "/status/:target",
-      "destination": "/status.html?target=:target"
+      "destination": "/status?target=:target"
     },
     {
       "source": "/preview",
