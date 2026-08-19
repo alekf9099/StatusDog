@@ -63,6 +63,17 @@ export interface ConsoleNotifierConfig {
   type: 'console';
 }
 
+/**
+ * Body shape a webhook receives.
+ *
+ * `full` sends the whole event — the state change, the target and the raw probe
+ * result — which is what a custom endpoint wants. `text` sends only a one-line
+ * summary, which is what strict chat APIs require: Google Chat validates against
+ * its Message resource and rejects the request outright on an unknown field, so
+ * a rich body there fails with 400 rather than posting a degraded message.
+ */
+export type WebhookFormat = 'full' | 'text';
+
 export interface WebhookNotifierConfig {
   type: 'webhook';
   url: string;
@@ -70,6 +81,8 @@ export interface WebhookNotifierConfig {
   headers?: Record<string, string>;
   /** Only notify on these transitions. Defaults to both. */
   on?: Array<'up' | 'down'>;
+  /** Defaults to `text` for hosts known to reject unknown fields, else `full`. */
+  format?: WebhookFormat;
 }
 
 export type NotifierConfig = ConsoleNotifierConfig | WebhookNotifierConfig;

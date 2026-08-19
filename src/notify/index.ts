@@ -1,7 +1,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import { USER_AGENT } from '../config/defaults.js';
-import type { NotifierConfig, WebhookNotifierConfig } from '../config/types.js';
+import type { NotifierConfig, WebhookFormat, WebhookNotifierConfig } from '../config/types.js';
 import type { Monitor } from '../monitor/engine.js';
 import type { TransitionEvent } from '../monitor/transition.js';
 import { color, createLogger, type Logger } from '../util/log.js';
@@ -60,8 +60,23 @@ function createConsoleNotifier(logger: Logger): Notifier {
   };
 }
 
+/**
+ * Hosts whose APIs reject a request outright when it carries fields they do not
+ * recognise, so only the one-line summary can be sent.
+ */
+const TEXT_ONLY_HOSTS = new Set(['chat.googleapis.com']);
+
+export function defaultWebhookFormat(url: string): WebhookFormat {
+  try {
+    return TEXT_ONLY_HOSTS.has(new URL(url).hostname) ? 'text' : 'full';
+  } catch {
+    return 'full';
+  }
+}
+
 function createWebhookNotifier(config: WebhookNotifierConfig, logger: Logger): Notifier {
   const events = config.on ?? ['up', 'down'];
+  const format = config.format ?? defaultWebhookFormat(config.url);
   // A webhook URL's path is the credential, so only the origin is ever named.
   // Delivery outcomes are returned over HTTP by the scheduled endpoint.
   const label = `webhook(${originOf(config.url)})`;
@@ -75,21 +90,24 @@ function createWebhookNotifier(config: WebhookNotifierConfig, logger: Logger): N
         `${event.to === 'up' ? 'Recovered' : 'Down'}: ${event.target.name} (${event.target.url})` +
         (event.result.message ? ` — ${event.result.message}` : '');
 
-      const payload = JSON.stringify({
-        event: event.to,
-        target: { id: event.target.id, name: event.target.name, url: event.target.url },
-        previousState: event.from,
-        result: event.result,
-        at: event.at,
-        // `text` is what Slack renders, `content` is what Discord renders. Both
-        // ignore the keys they do not know, so one payload serves either without
-        // needing a per-provider notifier.
-        text: summary,
-        content: summary,
-      });
+      const payload = JSON.stringify(
+        format === 'text'
+          ? { text: summary }
+          : {
+              event: event.to,
+              target: { id: event.target.id, name: event.target.name, url: event.target.url },
+              previousState: event.from,
+              result: event.result,
+              at: event.at,
+              // `text` is what Slack renders, `content` is what Discord renders.
+              // Both ignore keys they do not know, so one body serves either.
+              text: summary,
+              content: summary,
+            },
+      );
 
       await postJson(config.url, payload, config.method ?? 'POST', config.headers ?? {});
-      logger.debug(`webhook delivered to ${label}`);
+      logger.debug(`webhook delivered to ${label} (${format})`);
     },
   };
 }

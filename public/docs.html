@@ -176,6 +176,7 @@ app.use(createFallbackMiddleware(monitor, {
       <tr><th>KV_REST_API_URL<br>KV_REST_API_TOKEN</th><td>A Redis-compatible REST store. <code>UPSTASH_REDIS_REST_*</code> and <code>REDIS_REST_*</code> also work.</td></tr>
       <tr><th>STATUSDOG_WEBHOOK_URL</th><td>Optional. One or more alert webhooks, comma-separated.</td></tr>
       <tr><th>STATUSDOG_WEBHOOK_ON</th><td>Optional. <code>down</code>, <code>up</code>, or <code>down,up</code> (default: both).</td></tr>
+      <tr><th>STATUSDOG_WEBHOOK_FORMAT</th><td>Optional. <code>full</code> or <code>text</code>; a per-host default applies otherwise.</td></tr>
     </table>
     <p>
       GitHub Actions does the waking up, every 15 minutes, from
@@ -208,9 +209,11 @@ app.use(createFallbackMiddleware(monitor, {
       failures, and only the change fires — a target that stays down for a day
       alerts once, not ninety-six times.
     </p>
+    <h3>Payload</h3>
     <p>
-      The payload carries both <code>text</code> and <code>content</code>, so a
-      Slack or Discord incoming webhook renders it with no adapter:
+      Two shapes, picked per host. <code>full</code> is the default and carries the
+      whole event, including both <code>text</code> (what Slack renders) and
+      <code>content</code> (what Discord renders), so either works with no adapter:
     </p>
     <pre><code>{
   "event": "down",
@@ -221,11 +224,32 @@ app.use(createFallbackMiddleware(monitor, {
   "text": "Down: Public API (https://example.com/health) — Unexpected status 503",
   "content": "Down: Public API (https://example.com/health) — Unexpected status 503"
 }</code></pre>
+    <p>
+      <code>text</code> sends only the summary — <code>{"text": "Down: …"}</code> —
+      which strict chat APIs require.
+    </p>
+
+    <h3>Google Chat</h3>
+    <p>
+      Google Chat validates the body against its Message resource and answers
+      <code>400 Unknown name "event"</code> on any field it does not recognise, so a
+      rich body fails outright instead of posting a degraded message.
+      <code>chat.googleapis.com</code> therefore defaults to <code>text</code> and
+      needs no extra configuration.
+    </p>
+    <p>
+      To get the URL: in the space, <strong>space name → Apps &amp; integrations →
+      Webhooks → Add webhooks</strong>, name it, copy the URL. The
+      <code>?key=…&amp;token=…</code> query string is the credential and is preserved
+      on delivery.
+    </p>
+
+    <h3>Delivery</h3>
     <p class="small muted">
-      Delivery happens after results are persisted and never fails the run: an
-      unreachable webhook is reported in the response and as a warning on the
-      workflow run, not as a lost check. Only the webhook's origin is ever logged,
-      because the path is the credential.
+      Happens after results are persisted and never fails the run: an unreachable
+      webhook is reported in the response and as a warning on the workflow run, not
+      as a lost check. Only the webhook's origin is ever logged, because the path
+      and query string are the credential.
     </p>
     <p>
       Running the CLI instead? Put notifiers in <code>statusdog.config.json</code>

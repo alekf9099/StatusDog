@@ -1,4 +1,4 @@
-import type { NotifierConfig, WebhookNotifierConfig } from '../config/types.js';
+import type { NotifierConfig, WebhookFormat, WebhookNotifierConfig } from '../config/types.js';
 import type { TransitionEvent } from '../monitor/transition.js';
 import { createNotifiers, type Notifier } from './index.js';
 
@@ -27,8 +27,9 @@ export interface DispatchSummary {
 /**
  * Read webhook notifiers from the environment.
  *
- * `STATUSDOG_WEBHOOK_URL`  one or more URLs, comma-separated
- * `STATUSDOG_WEBHOOK_ON`   `down`, `up`, or `down,up` (default: both)
+ * `STATUSDOG_WEBHOOK_URL`     one or more URLs, comma-separated
+ * `STATUSDOG_WEBHOOK_ON`      `down`, `up`, or `down,up` (default: both)
+ * `STATUSDOG_WEBHOOK_FORMAT`  `full` or `text`; per-host default otherwise
  *
  * Returns an empty array when nothing is configured, which is not an error —
  * scheduled checks still run and still record history without alerting.
@@ -38,6 +39,7 @@ export function notifierConfigsFromEnv(env: NodeJS.ProcessEnv = process.env): No
   if (!raw) return [];
 
   const on = parseEvents(env.STATUSDOG_WEBHOOK_ON);
+  const format = parseFormat(env.STATUSDOG_WEBHOOK_FORMAT);
   return raw
     .split(',')
     .map((url) => url.trim())
@@ -51,7 +53,18 @@ export function notifierConfigsFromEnv(env: NodeJS.ProcessEnv = process.env): No
         return false;
       }
     })
-    .map((url): WebhookNotifierConfig => ({ type: 'webhook', url, on }));
+    .map((url): WebhookNotifierConfig => ({
+      type: 'webhook',
+      url,
+      on,
+      // Left undefined so the notifier applies its per-host default.
+      ...(format ? { format } : {}),
+    }));
+}
+
+function parseFormat(raw: string | undefined): WebhookFormat | undefined {
+  const value = raw?.trim().toLowerCase();
+  return value === 'full' || value === 'text' ? value : undefined;
 }
 
 function parseEvents(raw: string | undefined): Array<'up' | 'down'> | undefined {

@@ -3,7 +3,7 @@ import { after, test } from 'node:test';
 import { resolveConfig } from '../src/config/index.js';
 import type { ProbeResult, ResolvedTarget } from '../src/config/types.js';
 import type { TransitionEvent } from '../src/monitor/transition.js';
-import { createNotifier } from '../src/notify/index.js';
+import { createNotifier, defaultWebhookFormat } from '../src/notify/index.js';
 import {
   dispatchTransitions,
   notifierConfigsFromEnv,
@@ -210,4 +210,81 @@ test('one dead notifier does not stop a healthy one', async () => {
   assert.equal(summary.failed, 1);
   assert.equal(received.length, 1);
   assert.equal(received[0]!.path, '/alive');
+});
+
+/* ---------------- google chat / payload format ---------------- */
+
+test('chat.googleapis.com defaults to the text-only body', () => {
+  assert.equal(
+    defaultWebhookFormat('https://chat.googleapis.com/v1/spaces/AAA/messages?key=k&token=t'),
+    'text',
+  );
+  assert.equal(defaultWebhookFormat('https://hooks.slack.com/services/T/B/X'), 'full');
+  assert.equal(defaultWebhookFormat('not a url'), 'full');
+});
+
+test('the text format sends only the summary, so a strict API cannot 400', async () => {
+  received.length = 0;
+  respondWith = 200;
+
+  const notifier = createNotifier(
+    { type: 'webhook', url: `${hook.url}/v1/spaces/AAA/messages`, format: 'text' },
+    silent,
+  );
+  await notifier.notify(event('down', 'up'));
+
+  const payload = received[0]!.body as Record<string, unknown>;
+  assert.deepEqual(Object.keys(payload), ['text'], 'no field a chat API could reject');
+  assert.equal(
+    payload.text,
+    'Down: Public API (https://example.com/health) — Unexpected status 503 (expected 2xx)',
+  );
+});
+
+test('an explicit format overrides the per-host default', async () => {
+  received.length = 0;
+  const notifier = createNotifier(
+    { type: 'webhook', url: `${hook.url}/hook`, format: 'text' },
+    silent,
+  );
+  await notifier.notify(event('up', 'down'));
+  assert.deepEqual(Object.keys(received[0]!.body as object), ['text']);
+});
+
+test('the webhook query string survives — Google Chat carries its auth there', async () => {
+  received.length = 0;
+  const notifier = createNotifier(
+    { type: 'webhook', url: `${hook.url}/v1/spaces/AAA/messages?key=abc&token=xyz` },
+    silent,
+  );
+  await notifier.notify(event('down', 'up'));
+
+  assert.equal(received[0]!.path, '/v1/spaces/AAA/messages?key=abc&token=xyz');
+});
+
+test('STATUSDOG_WEBHOOK_FORMAT is read from the environment', () => {
+  const explicit = notifierConfigsFromEnv({
+    STATUSDOG_WEBHOOK_URL: 'https://a.example/hook',
+    STATUSDOG_WEBHOOK_FORMAT: ' TEXT ',
+  });
+  assert.equal((explicit[0] as { format?: string }).format, 'text');
+
+  const nonsense = notifierConfigsFromEnv({
+    STATUSDOG_WEBHOOK_URL: 'https://a.example/hook',
+    STATUSDOG_WEBHOOK_FORMAT: 'yaml',
+  });
+  assert.equal(
+    (nonsense[0] as { format?: string }).format,
+    undefined,
+    'left unset so the per-host default applies',
+  );
+
+  const chat = notifierConfigsFromEnv({
+    STATUSDOG_WEBHOOK_URL: 'https://chat.googleapis.com/v1/spaces/A/messages?key=k',
+  });
+  assert.equal((chat[0] as { format?: string }).format, undefined);
+  assert.equal(
+    createNotifier(chat[0]!, silent).name,
+    'webhook(https://chat.googleapis.com)',
+  );
 });
