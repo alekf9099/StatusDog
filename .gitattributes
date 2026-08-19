@@ -1,0 +1,5 @@
+# Keep the repository on LF regardless of the checkout platform.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,66 @@
+{
+  "defaults": {
+    "intervalMs": 60000,
+    "timeoutMs": 10000,
+    "failureThreshold": 2,
+    "recoveryThreshold": 1,
+    "expectStatus": ["2xx", "3xx"]
+  },
+  "targets": [
+    {
+      "id": "marketing-site",
+      "name": "Marketing site",
+      "url": "https://example.com",
+      "expectStatus": ["2xx"],
+      "maxResponseTimeMs": 3000,
+      "fallback": {
+        "template": "maintenance",
+        "title": "We will be right back",
+        "message": "The site is undergoing scheduled maintenance."
+      }
+    },
+    {
+      "id": "api-health",
+      "name": "Public API",
+      "url": "https://example.com/health",
+      "method": "GET",
+      "intervalMs": 30000,
+      "headers": { "authorization": "Bearer replace-me" },
+      "expectStatus": [200],
+      "expectBody": "\"status\":\"ok\"",
+      "failureThreshold": 3,
+      "fallback": {
+        "template": "templates/maintenance.html",
+        "title": "API unavailable",
+        "message": "Our API is having a rough moment. Requests will resume shortly.",
+        "statusCode": 503,
+        "retryAfterSeconds": 60,
+        "vars": { "supportEmail": "support@example.com" }
+      }
+    },
+    {
+      "id": "legacy-admin",
+      "name": "Legacy admin",
+      "url": "https://example.com/admin",
+      "enabled": false
+    }
+  ],
+  "storage": {
+    "file": "data/history.json",
+    "historyLimit": 500
+  },
+  "dashboard": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 4321
+  },
+  "notifiers": [
+    { "type": "console" },
+    {
+      "type": "webhook",
+      "url": "https://hooks.example.com/statusdog",
+      "on": ["down", "up"]
+    }
+  ],
+  "logLevel": "info"
+}
