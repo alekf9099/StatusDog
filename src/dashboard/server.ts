@@ -2,6 +2,7 @@ import http from 'node:http';
 import type { Monitor } from '../monitor/engine.js';
 import { renderFallbackPage } from '../fallback/render.js';
 import { DASHBOARD_HTML } from './html.js';
+import { parseIntParam } from '../util/params.js';
 
 export interface DashboardOptions {
   host?: string;
@@ -70,7 +71,11 @@ async function handle(
   }
 
   if (method === 'GET' && url.pathname === '/api/status') {
-    const historyLimit = clampInt(url.searchParams.get('history'), 0, 1000, 40);
+    const historyLimit = parseIntParam(url.searchParams.get('history'), {
+      min: 0,
+      max: 1000,
+      fallback: 40,
+    });
     sendJson(res, 200, {
       generatedAt: new Date().toISOString(),
       targets: monitor.getStatuses().map((status) => ({
@@ -87,7 +92,11 @@ async function handle(
       sendJson(res, 404, { error: `Unknown target "${id ?? ''}".` });
       return;
     }
-    const limit = clampInt(url.searchParams.get('limit'), 1, 5000, 200);
+    const limit = parseIntParam(url.searchParams.get('limit'), {
+      min: 1,
+      max: 5000,
+      fallback: 200,
+    });
     sendJson(res, 200, { target: id, records: monitor.history(id, limit) });
     return;
   }
@@ -142,15 +151,4 @@ function sendHtml(res: http.ServerResponse, status: number, html: string): void 
     'cache-control': 'no-store',
   });
   res.end(html);
-}
-
-function clampInt(
-  raw: string | null,
-  min: number,
-  max: number,
-  fallback: number,
-): number {
-  const value = Number(raw);
-  if (raw === null || !Number.isFinite(value)) return fallback;
-  return Math.min(max, Math.max(min, Math.trunc(value)));
 }

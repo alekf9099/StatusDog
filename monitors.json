@@ -1,27 +1,33 @@
 {
   "//": "The 24/7 monitor roster for the hosted site. Edit this file to change what is watched; the scheduler reads it on every run. Same schema as statusdog.config.json.",
   "defaults": {
-    "timeoutMs": 15000,
+    "timeoutMs": 30000,
     "failureThreshold": 2,
     "recoveryThreshold": 1,
     "expectStatus": ["2xx"]
   },
   "targets": [
     {
+      "id": "copykiller",
+      "name": "CopyKiller",
+      "url": "https://www.copykiller.com/",
+      "//": "Measured 2.4-3.1s consistently, so maxResponseTimeMs is set well above that: it should catch real degradation, not the normal baseline. Pointed at www directly because the apex redirect took 17s.",
+      "maxResponseTimeMs": 12000
+    },
+    {
+      "id": "copykiller-apex",
+      "name": "CopyKiller (apex redirect)",
+      "url": "https://copykiller.com/",
+      "//": "Watches that copykiller.com still redirects to www and resolves. Slower than www by design, so no response-time limit.",
+      "followRedirects": true
+    },
+    {
       "id": "statusdog",
       "name": "StatusDog itself",
       "url": "https://status-dog.vercel.app/healthz",
-      "expectBody": "\"status\":\"ok\""
-    },
-    {
-      "id": "example-com",
-      "name": "Example.com",
-      "url": "https://example.com"
-    },
-    {
-      "id": "github",
-      "name": "GitHub",
-      "url": "https://github.com"
+      "expectBody": "\"status\":\"ok\"",
+      "timeoutMs": 15000,
+      "maxResponseTimeMs": 5000
     }
   ]
 }
