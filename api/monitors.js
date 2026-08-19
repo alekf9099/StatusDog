@@ -46,6 +46,8 @@ export default async function handler(req, res) {
         url: target.url,
         state: 'unknown',
         since: null,
+        consecutiveFailures: 0,
+        maxResponseTimeMs: target.maxResponseTimeMs,
         lastResult: null,
         stats: null,
         history: [],
@@ -56,6 +58,7 @@ export default async function handler(req, res) {
 
   try {
     const entries = await readAll(kv, targets);
+    const limits = new Map(targets.map((target) => [target.id, target.maxResponseTimeMs]));
     res.status(200).json({
       storage: 'kv',
       generatedAt: new Date().toISOString(),
@@ -65,6 +68,10 @@ export default async function handler(req, res) {
         url: entry.url,
         state: entry.state,
         since: entry.since,
+        // Failures that have happened but not yet crossed failureThreshold.
+        consecutiveFailures: entry.consecutiveFailures,
+        // Roster config, not a secret: lets a client say "close to your limit".
+        maxResponseTimeMs: limits.get(entry.id) ?? 0,
         lastResult: entry.lastResult,
         stats: statsFor(entry),
         history: historyLimit > 0 ? entry.history.slice(-historyLimit) : [],

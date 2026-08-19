@@ -67,6 +67,7 @@ behind a web front end.
 | --- | --- |
 | `/` | Paste a URL, get an instant verdict |
 | `/check?url=…` | Full report: status, timing, redirect chain, TLS certificate, headers |
+| `/office` | The same monitors as dog colleagues, one per site |
 | `/dashboard` | Watch a list of URLs, with uptime and response-time history |
 | `/docs` | Usage docs |
 | `/preview/:template` | Live previews of the fallback screens |
@@ -74,6 +75,43 @@ behind a web front end.
 | `/api/monitors` | The 24/7 roster with stored state and history |
 | `/api/cron/check` | Scheduler entry point (authenticated) |
 | `/healthz` | Liveness probe for the site itself |
+
+### The office
+
+[`/office`](https://status-dog.vercel.app/office) draws one dog per monitored site
+and lets its behaviour carry the status. It reads the same data as the dashboard;
+what it adds is a mood the table has no column for.
+
+| Mood | Meaning |
+| --- | --- |
+| **On it** | Up, answering at its usual speed |
+| **Server is panting** | Up, but far slower than usual, or past 70% of its configured `maxResponseTimeMs` |
+| **Something twitched** | A check failed, but not enough times in a row to be an outage |
+| **Down** | Confirmed down; the wall siren comes on |
+| **Not started** | No check has run yet |
+
+*Straining* is the useful one. It compares the last check against **this target's
+own median**, not a fixed threshold: more than 2× and at least 150ms above it. A
+site that normally answers in 96ms and suddenly takes 400ms is in trouble; one
+that always takes 3s is not, and its dog stays calm. Roster targets are permanent
+staff; browser-local monitors are badged **interns**, because they only work while
+the tab is open.
+
+Clicking a desk opens that site's report — status, response time against its
+usual, TLS expiry, headers, recent history. Desks are buttons, so the keyboard
+works and <kbd>Esc</kbd> closes the panel.
+
+| File | Role |
+| --- | --- |
+| [`office/mood.js`](public/assets/office/mood.js) | Mood derivation and stable dog identity — pure, and unit-tested |
+| [`office/DogWorkerCard.js`](public/assets/office/DogWorkerCard.js) | One desk: the inline-SVG dog, its props, its nameplate |
+| [`office/ServerReportModal.js`](public/assets/office/ServerReportModal.js) | The report slide-over |
+| [`office/OfficeDashboard.js`](public/assets/office/OfficeDashboard.js) | The floor: data loading, layout, click routing |
+
+Each dog's name, coat and accessory come from a hash of its target id, so a site
+is always greeted by the same colleague. Everything is inline SVG and CSS — no
+images, nothing fetched — and `prefers-reduced-motion` gets a still version where
+posture, colour and props still tell the states apart.
 
 The site is available in English and Korean. It follows the browser language by
 default; `?lang=en` or `?lang=ko` overrides it and makes a link shareable in that
