@@ -140,6 +140,33 @@ export type FailureReason =
   | 'network'
   | 'invalid-url';
 
+export interface TlsInfo {
+  subject: string | null;
+  issuer: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+  /** Days until the certificate expires; negative once it already has. */
+  daysRemaining: number | null;
+  protocol: string | null;
+}
+
+export interface RedirectHop {
+  url: string;
+  status: number;
+  location: string;
+}
+
+/**
+ * Extra context gathered on every probe. The history store ignores it, so it
+ * costs nothing to keep around for the diagnostic report.
+ */
+export interface ProbeDetail {
+  /** Curated response headers; anything credential-bearing is dropped. */
+  headers: Record<string, string>;
+  tls: TlsInfo | null;
+  chain: RedirectHop[];
+}
+
 export interface ProbeResult {
   url: string;
   /** URL the probe ended on, after redirects. */
@@ -152,4 +179,6 @@ export interface ProbeResult {
   reason: FailureReason | null;
   /** Human-readable explanation when `ok` is false. */
   message: string | null;
+  /** Absent when the request never produced a response. */
+  detail: ProbeDetail | null;
 }

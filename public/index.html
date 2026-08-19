@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StatusDog — is your site up?</title>
+<meta name="description" content="Check any website's status, response time, redirects and SSL certificate. Then keep watching it, and serve a maintenance page when it goes down.">
+<link rel="stylesheet" href="/assets/statusdog.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <nav class="site-nav">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/docs">Docs</a>
+      <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="block wrap">
+    <h1>Is your site actually up?</h1>
+    <p class="lede">
+      Paste a URL. StatusDog checks it from the outside — status code, response
+      time, redirect chain and SSL certificate — and tells you what a visitor
+      would see right now.
+    </p>
+
+    <form class="check-form" id="check-form">
+      <input
+        type="text"
+        id="url"
+        name="url"
+        placeholder="example.com"
+        autocomplete="url"
+        spellcheck="false"
+        required
+        aria-label="URL to check">
+      <button type="submit" id="submit">Check now</button>
+    </form>
+
+    <p class="small muted" style="margin-top:10px">
+      No sign-up. Nothing is stored on our side.
+    </p>
+
+    <div id="result" style="margin-top:28px" hidden></div>
+  </section>
+
+  <section class="block wrap">
+    <h2>What you get</h2>
+    <div class="grid cols-3">
+      <div class="card">
+        <h3>Honest up/down</h3>
+        <p class="muted small" style="margin:0">
+          A single blip is not an outage. StatusDog only calls a target down after
+          a configurable number of consecutive failures, so you are not paged for
+          one dropped packet.
+        </p>
+      </div>
+      <div class="card">
+        <h3>The whole request</h3>
+        <p class="muted small" style="margin:0">
+          Every redirect hop, the final destination, response headers, and how
+          many days are left on the TLS certificate.
+        </p>
+      </div>
+      <div class="card">
+        <h3>A page for when it is down</h3>
+        <p class="muted small" style="margin:0">
+          Ship a real maintenance screen instead of a connection error —
+          standalone, as middleware, or hosted here.
+          <a href="/preview/maintenance">See an example →</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block wrap">
+    <h2>Watch it continuously</h2>
+    <p class="lede" style="margin-bottom:18px">
+      Add a URL to your <a href="/dashboard">dashboard</a> and this browser
+      re-checks it on an interval, tracking uptime and response time.
+    </p>
+    <div class="notice">
+      <strong>Where the history lives.</strong> Monitors are stored in this
+      browser, and checks only run while a tab is open. For 24/7 monitoring that
+      keeps running without you, use the CLI on a server you control — see
+      <a href="/docs">the docs</a>.
+    </div>
+  </section>
+
+  <section class="block wrap">
+    <h2>Or run it yourself</h2>
+    <p class="lede" style="margin-bottom:18px">
+      StatusDog is an MIT-licensed Node package with zero runtime dependencies.
+      The same engine that powers this page runs on your own machine.
+    </p>
+    <pre><code>npm install &amp;&amp; npm run build
+node dist/cli.js check https://example.com --expect 200
+node dist/cli.js init &amp;&amp; node dist/cli.js start</code></pre>
+    <p class="small muted" style="margin:0">
+      <code>start</code> runs the check loop and opens a local dashboard at
+      <code>127.0.0.1:4321</code>.
+    </p>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>StatusDog · MIT</span>
+    <span class="spacer"></span>
+    <a href="/docs">Docs</a>
+    <a href="/preview/maintenance">Fallback previews</a>
+    <a href="/healthz">Health</a>
+    <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import { check, escapeHtml, formatMs, prettyUrl, statusBadge } from '/assets/statusdog.js';
+
+const form = document.getElementById('check-form');
+const input = document.getElementById('url');
+const submit = document.getElementById('submit');
+const output = document.getElementById('result');
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const url = input.value.trim();
+  if (!url) return;
+
+  submit.disabled = true;
+  submit.textContent = 'Checking…';
+  output.hidden = false;
+  output.innerHTML = '<div class="card muted">Running the check…</div>';
+
+  try {
+    const result = await check(url);
+    output.innerHTML = renderResult(result);
+  } catch (err) {
+    output.innerHTML = `<div class="notice error">${escapeHtml(err.message)}</div>`;
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'Check now';
+  }
+});
+
+function renderResult(result) {
+  const tls = result.detail?.tls;
+  const reportHref = `/check?url=${encodeURIComponent(result.url)}`;
+  return `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+        ${statusBadge(result)}
+        <strong style="word-break:break-all">${escapeHtml(prettyUrl(result.url))}</strong>
+      </div>
+      ${result.ok ? '' : `<div class="notice error" style="margin-bottom:16px">${escapeHtml(result.message ?? 'Check failed')}</div>`}
+      <div class="metrics">
+        <div class="metric"><span class="label">Status</span><span class="value">${result.status ?? '–'}</span></div>
+        <div class="metric"><span class="label">Response</span><span class="value">${formatMs(result.responseTimeMs)}</span></div>
+        <div class="metric"><span class="label">Redirects</span><span class="value">${result.redirects}</span></div>
+        <div class="metric"><span class="label">SSL expires</span><span class="value">${
+          tls?.daysRemaining === null || tls?.daysRemaining === undefined
+            ? '–'
+            : `${tls.daysRemaining}d`
+        }</span></div>
+      </div>
+      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <a href="${escapeHtml(reportHref)}"><button type="button" class="secondary">Full report</button></a>
+        <a href="/dashboard?add=${encodeURIComponent(result.url)}"><button type="button" class="secondary">Keep watching it</button></a>
+      </div>
+    </div>`;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docs — StatusDog</title>
+<meta name="description" content="How to use StatusDog: the check API, the CLI, configuration, fallback pages and self-hosting.">
+<link rel="stylesheet" href="/assets/statusdog.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <nav class="site-nav">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/docs">Docs</a>
+      <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding:36px 0 56px;max-width:820px">
+
+  <h1 style="font-size:28px">Docs</h1>
+  <p class="lede">
+    StatusDog is an MIT-licensed Node package with zero runtime dependencies.
+    This site is the hosted front end; everything here also runs on your machine.
+  </p>
+
+  <section class="block" style="padding-top:8px">
+    <h2>What this site can and cannot do</h2>
+    <table class="kv">
+      <tr><th>Status &amp; availability</th><td>Yes — status code, failure reason, what a visitor sees</td></tr>
+      <tr><th>Response time</th><td>Yes — total time including redirects</td></tr>
+      <tr><th>Redirect chain</th><td>Yes — every hop and the final destination</td></tr>
+      <tr><th>SSL certificate</th><td>Yes — issuer, validity window, days remaining</td></tr>
+      <tr><th>Body content check</th><td>Yes — require a string to be present</td></tr>
+      <tr><th>Uptime history</th><td>Only while a dashboard tab is open</td></tr>
+      <tr><th>Traffic / visitor counts</th><td>No — that needs access to the site's own analytics or server logs, not an external probe</td></tr>
+    </table>
+  </section>
+
+  <section class="block">
+    <h2>Check API</h2>
+    <p>One request, one probe. Nothing is stored.</p>
+    <pre><code>GET /api/check?url=example.com</code></pre>
+    <table class="kv">
+      <tr><th>url</th><td>required · http(s); a bare host gets <code>https://</code> prepended</td></tr>
+      <tr><th>expect</th><td><code>200</code>, <code>2xx,3xx</code>, <code>200-299</code>, <code>*</code> · default <code>2xx,3xx</code></td></tr>
+      <tr><th>contains</th><td>response body must contain this text</td></tr>
+      <tr><th>method</th><td>default <code>GET</code></td></tr>
+      <tr><th>timeout</th><td>milliseconds, 1000–30000 · default <code>15000</code></td></tr>
+      <tr><th>redirects</th><td><code>false</code> to stop following redirects</td></tr>
+    </table>
+    <p class="small muted">
+      Private, loopback and link-local addresses are rejected.
+    </p>
+    <pre><code>curl "https://status-dog.vercel.app/api/check?url=example.com&amp;expect=200"</code></pre>
+  </section>
+
+  <section class="block">
+    <h2>24/7 monitoring with the CLI</h2>
+    <p>
+      This browser stops checking when you close the tab. To keep watching a site
+      around the clock, run StatusDog on a machine that stays on.
+    </p>
+    <pre><code>git clone https://github.com/alekf9099/StatusDog.git
+cd StatusDog &amp;&amp; npm install &amp;&amp; npm run build
+node dist/cli.js init
+node dist/cli.js start</code></pre>
+    <p>
+      <code>start</code> runs the check loop, persists history to
+      <code>data/history.json</code>, and serves a local dashboard on
+      <code>127.0.0.1:4321</code>.
+    </p>
+    <table class="kv">
+      <tr><th>start</th><td>Run the check loop and the local dashboard</td></tr>
+      <tr><th>status</th><td>Check every target once; exits non-zero if any failed</td></tr>
+      <tr><th>check &lt;url&gt;</th><td>One-off check, no config file needed</td></tr>
+      <tr><th>list</th><td>List configured targets</td></tr>
+      <tr><th>fallback</th><td>Serve a maintenance page on its own port</td></tr>
+      <tr><th>init</th><td>Write a starter config file</td></tr>
+    </table>
+    <p class="small muted">
+      <code>status</code> and <code>check</code> exit non-zero on failure, so they
+      drop straight into CI or a cron job.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>Configuration</h2>
+    <p>
+      <code>statusdog.config.json</code> is discovered from the working directory
+      upwards. <code>//</code> and <code>/* */</code> comments are allowed.
+    </p>
+    <pre><code>{
+  "defaults": { "intervalMs": 60000, "failureThreshold": 2 },
+  "targets": [
+    {
+      "id": "api",
+      "name": "Public API",
+      "url": "https://example.com/health",
+      "expectStatus": [200],
+      "expectBody": "\"status\":\"ok\"",
+      "maxResponseTimeMs": 3000,
+      "fallback": { "template": "maintenance", "title": "API unavailable" }
+    }
+  ],
+  "notifiers": [{ "type": "console" }]
+}</code></pre>
+    <p>
+      A target flips to <strong>down</strong> only after
+      <code>failureThreshold</code> consecutive failures, so one dropped request
+      does not trigger an alert. Full option tables are in the
+      <a href="https://github.com/alekf9099/StatusDog#configuration">README</a>.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>Fallback pages</h2>
+    <p>
+      When a service is down, serve a real maintenance screen instead of a
+      connection error. Three built-in templates, plus your own HTML:
+    </p>
+    <p>
+      <a href="/preview/maintenance">maintenance</a> ·
+      <a href="/preview/error">error</a> ·
+      <a href="/preview/offline">offline</a>
+    </p>
+    <p>Standalone, on its own port:</p>
+    <pre><code>node dist/cli.js fallback --port 8080 --template maintenance</code></pre>
+    <p>Or inside your own app, gated on a monitored dependency:</p>
+    <pre><code>import { loadConfig, Monitor, createFallbackMiddleware } from 'statusdog';
+
+const monitor = new Monitor(await loadConfig());
+monitor.start();
+
+app.use(createFallbackMiddleware(monitor, {
+  targetId: 'payments-api',
+  allowPaths: ['/healthz', /^\/webhooks\//],
+}));</code></pre>
+    <p class="small muted">
+      Requests pass through while the target is up. Once it is confirmed down,
+      everything except <code>allowPaths</code> gets the maintenance page.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>Roadmap</h2>
+    <p>
+      Persistent server-side monitoring — uptime history that keeps accruing with
+      no browser open — needs a database and a scheduler. That is the next step;
+      the engine, the API and this front end are already in place for it.
+    </p>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>StatusDog · MIT</span>
+    <span class="spacer"></span>
+    <a href="/">Home</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/healthz">Health</a>
+    <a href="https://github.com/alekf9099/StatusDog">GitHub</a>
+  </div>
+</footer>
+
+<script type="module" src="/assets/statusdog.js"></script>
+
+</body>
+</html>

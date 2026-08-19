@@ -22,6 +22,14 @@ const server = await startTestServer((req, res) => {
       res.writeHead(302, { location: '/loop' });
       res.end();
       return;
+    case '/cookie':
+      res.writeHead(200, {
+        'content-type': 'text/plain',
+        'set-cookie': 'session=super-secret; HttpOnly',
+        authorization: 'Bearer leaked',
+      });
+      res.end('ok');
+      return;
     case '/slow':
       setTimeout(() => {
         res.writeHead(200);
@@ -59,12 +67,35 @@ test('a 404 fails against the default expectations', async () => {
   assert.equal(result.reason, 'status');
 });
 
-test('redirects are followed', async () => {
+test('redirects are followed and recorded as a chain', async () => {
   const result = await probeUrl(`${server.url}/redirect`);
   assert.equal(result.ok, true);
   assert.equal(result.status, 200);
   assert.equal(result.redirects, 1);
   assert.equal(result.finalUrl, `${server.url}/ok`);
+  assert.deepEqual(result.detail?.chain, [
+    { url: `${server.url}/redirect`, status: 302, location: '/ok' },
+  ]);
+});
+
+test('detail reports headers, and no TLS over plain http', async () => {
+  const result = await probeUrl(`${server.url}/ok`);
+  assert.equal(result.detail?.headers['content-type'], 'application/json');
+  assert.equal(result.detail?.tls, null);
+});
+
+test('detail never leaks credential-bearing headers', async () => {
+  const result = await probeUrl(`${server.url}/cookie`, { expectStatus: ['*'] });
+  const names = Object.keys(result.detail?.headers ?? {});
+  assert.ok(names.includes('content-type'), 'curated headers are still present');
+  assert.ok(!names.includes('set-cookie'));
+  assert.ok(!names.includes('authorization'));
+});
+
+test('a failed probe has no detail to report', async () => {
+  const result = await probeUrl('http://127.0.0.1:1/', { timeoutMs: 2000 });
+  assert.equal(result.ok, false);
+  assert.equal(result.detail, null);
 });
 
 test('redirects can be disabled', async () => {

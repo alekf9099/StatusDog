@@ -11,9 +11,8 @@ meantime — either as standalone server or as middleware inside your own app.
 - **Self-contained pages.** The dashboard and fallback templates are single HTML
   documents with no external requests — they still render when everything else is down.
 
-**Live fallback page:** <https://status-dog.vercel.app> — the maintenance screen
-this repo deploys to Vercel. It answers every path with `503` + `Retry-After`;
-`/healthz` stays `200` so an uptime check can tell it apart from the real service.
+**Live site:** <https://status-dog.vercel.app> — paste a URL and get a report on
+what a visitor would see right now.
 
 ---
 
@@ -56,6 +55,44 @@ statusdog init && statusdog start
 
 `init` writes a starter `statusdog.config.json`; `start` begins the check loop and
 opens the dashboard on <http://127.0.0.1:4321>.
+
+---
+
+## Hosted site
+
+<https://status-dog.vercel.app> is this repo deployed to Vercel — the same engine
+behind a web front end.
+
+| Route | What it does |
+| --- | --- |
+| `/` | Paste a URL, get an instant verdict |
+| `/check?url=…` | Full report: status, timing, redirect chain, TLS certificate, headers |
+| `/dashboard` | Watch a list of URLs, with uptime and response-time history |
+| `/docs` | Usage docs |
+| `/preview/:template` | Live previews of the fallback screens |
+| `/api/check?url=…` | JSON API for a single check |
+| `/healthz` | Liveness probe for the site itself |
+
+```bash
+curl "https://status-dog.vercel.app/api/check?url=example.com&expect=200"
+```
+
+`/api/check` accepts `url` (required), `expect`, `contains`, `method`, `timeout`
+(1000–30000 ms) and `redirects`. Private, loopback and link-local addresses are
+rejected, and only a curated set of response headers is reported — never cookies
+or credentials.
+
+**What the site cannot do.** Traffic and visitor counts are not measurable from
+outside; that needs the site's own analytics or server logs. And the dashboard
+stores monitors in your browser, checking them only while a tab is open — uptime
+history that accrues around the clock needs the CLI on a machine that stays on,
+or a database-backed deployment (not built yet).
+
+Run the site locally with:
+
+```bash
+npm run dev:web
+```
 
 ---
 
@@ -226,33 +263,12 @@ Requests pass through untouched while the target is up. Once it is confirmed dow
 — after `failureThreshold` consecutive failures — everything except `allowPaths`
 gets the maintenance page instead.
 
-### On Vercel
+### Live previews
 
-A maintenance page hosted on your own infrastructure is down exactly when you
-need it. This repo therefore deploys as a Vercel project that answers every path
-with the fallback page — point your DNS or load balancer at it during an outage.
-
-This repo is deployed at <https://status-dog.vercel.app>. To set up your own:
-
-1. Import the repository at <https://vercel.com/new>. [`vercel.json`](vercel.json)
-   already sets the build command and routes every path to
-   [`api/index.js`](api/index.js), so no further configuration is needed.
-2. Every push to `main` deploys to production, and every pull request gets its
-   own preview URL.
-3. Customise the page with environment variables in the Vercel dashboard:
-
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `STATUSDOG_TEMPLATE` | `maintenance` | `maintenance`, `error` or `offline` |
-| `STATUSDOG_TITLE` | `We will be right back` | Page heading |
-| `STATUSDOG_MESSAGE` | generic apology | Body text |
-| `STATUSDOG_SERVICE_NAME` | `Service` | Name shown in the footer |
-| `STATUSDOG_SERVICE_URL` | — | URL of the service being stood in for |
-| `STATUSDOG_STATUS_CODE` | `503` | Status served with the page |
-| `STATUSDOG_RETRY_AFTER` | `120` | `Retry-After` header and auto-refresh interval |
-
-`/healthz` answers `200` so an uptime check can tell the fallback apart from the
-service it is standing in for.
+The hosted site renders each built-in template so you can see it before wiring
+it up: [maintenance](https://status-dog.vercel.app/preview/maintenance) ·
+[error](https://status-dog.vercel.app/preview/error) ·
+[offline](https://status-dog.vercel.app/preview/offline).
 
 ### Custom templates
 
@@ -293,6 +309,7 @@ monitor.start();
 | `loadConfig(path?)` / `resolveConfig(obj)` | Read and validate configuration |
 | `Monitor` | Scheduling, up/down state, history; emits `check`, `up`, `down`, `error` |
 | `probe(target)` / `probeUrl(url, overrides?)` | Run a single check; never throws |
+| `normalizeCheckUrl(input)` / `isBlockedHost(host)` | Validate user-supplied URLs and reject private address space |
 | `HistoryStore` | Ring buffer of results with optional JSON persistence |
 | `renderFallbackPage(opts)` / `renderTemplate(html, vars)` | Build a fallback page |
 | `startFallbackServer(opts)` / `createFallbackMiddleware(monitor, opts)` | Serve one |
@@ -313,8 +330,9 @@ src/
   dashboard/        Status UI and JSON API
   notify/           Console and webhook notifiers
   util/             Logging and time formatting
-api/index.js        Vercel serverless entry point for the fallback page
-public/             Static assets served by Vercel
+api/                Vercel functions — check, preview, healthz
+public/             The hosted site: landing, report, dashboard, docs
+scripts/dev-web.mjs Local server that mirrors the Vercel routing
 templates/          Example custom fallback template
 test/               node:test suites
 ```
