@@ -5,6 +5,7 @@ import {
   type StateSnapshot,
   type TargetState,
 } from '../monitor/transition.js';
+import { evaluateCertExpiry, EMPTY_CERT_STATE, type CertEvaluation, type CertNotifyState } from '../monitor/cert.js';
 import type { KvClient } from './kv.js';
 
 /** Bump when the stored shape changes so old records are simply ignored. */
@@ -32,6 +33,8 @@ export interface UptimeEntry extends StateSnapshot {
   url: string;
   lastResult: ProbeResult | null;
   history: UptimeRecord[];
+  /** Which certificate expiry warnings have already gone out, and for which cert. */
+  cert: CertNotifyState;
 }
 
 export interface UptimeStats {
@@ -67,7 +70,15 @@ function keyFor(targetId: string): string {
 }
 
 function blankEntry(target: Pick<ResolvedTarget, 'id' | 'name' | 'url'>): UptimeEntry {
-  return { ...INITIAL_STATE, id: target.id, name: target.name, url: target.url, lastResult: null, history: [] };
+  return {
+    ...INITIAL_STATE,
+    id: target.id,
+    name: target.name,
+    url: target.url,
+    lastResult: null,
+    history: [],
+    cert: { ...EMPTY_CERT_STATE },
+  };
 }
 
 /** Read one target's stored state. Corrupt or absent values read as blank. */
@@ -89,6 +100,8 @@ export async function readEntry(
       name: target.name,
       url: target.url,
       history: Array.isArray(parsed.history) ? parsed.history.slice(-HISTORY_LIMIT) : [],
+      // Absent on entries written before expiry warnings existed.
+      cert: parsed.cert ?? { ...EMPTY_CERT_STATE },
     };
   } catch {
     return blankEntry(target);
@@ -102,6 +115,8 @@ export async function writeEntry(kv: KvClient, entry: UptimeEntry): Promise<void
 export interface AppliedCheck {
   entry: UptimeEntry;
   transitioned: boolean;
+  /** Whether this check crossed a certificate expiry threshold. */
+  cert: CertEvaluation;
   /**
    * The state this check moved away from.
    *
@@ -126,6 +141,11 @@ export async function applyCheck(
 ): Promise<AppliedCheck> {
   const previous = await readEntry(kv, target);
   const { next, transitioned } = applyResult(previous, result, target);
+  const cert = evaluateCertExpiry(
+    result.detail?.tls ?? null,
+    target.certExpiryWarnDays,
+    previous.cert,
+  );
 
   const entry: UptimeEntry = {
     ...previous,
@@ -135,10 +155,11 @@ export async function applyCheck(
       ...previous.history,
       { t: result.checkedAt, ok: result.ok, status: result.status, ms: result.responseTimeMs, reason: result.reason },
     ].slice(-HISTORY_LIMIT),
+    cert: cert.state,
   };
 
   await writeEntry(kv, entry);
-  return { entry, transitioned, previousState: previous.state };
+  return { entry, transitioned, previousState: previous.state, cert };
 }
 
 /** Read every roster target's state, in roster order. */

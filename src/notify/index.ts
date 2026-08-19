@@ -6,9 +6,29 @@ import type { Monitor } from '../monitor/engine.js';
 import type { TransitionEvent } from '../monitor/transition.js';
 import { color, createLogger, type Logger } from '../util/log.js';
 
+/**
+ * An alert that is not an up/down change — a certificate about to expire, a
+ * scheduler that has gone quiet.
+ *
+ * Kept as a separate method rather than folded into `notify` so the transition
+ * payload, which is documented and consumed by other people's endpoints, does not
+ * change shape.
+ */
+export interface Alert {
+  kind: 'cert-expiry' | 'monitor-stale';
+  severity: 'info' | 'warning' | 'critical';
+  /** One line, which is all a chat client shows. */
+  summary: string;
+  target?: { id: string; name: string; url: string } | null;
+  at: string;
+  /** Kind-specific detail, included only in the `full` payload. */
+  data?: Record<string, unknown>;
+}
+
 export interface Notifier {
   readonly name: string;
   notify(event: TransitionEvent): Promise<void>;
+  notifyAlert(alert: Alert): Promise<void>;
 }
 
 export function createNotifier(config: NotifierConfig, logger: Logger = createLogger('info')): Notifier {
@@ -56,6 +76,10 @@ function createConsoleNotifier(logger: Logger): Notifier {
       const label = event.to === 'up' ? color.green('RECOVERED') : color.red('DOWN');
       const detail = event.result.message ?? `HTTP ${event.result.status ?? '-'}`;
       logger.info(`${label} ${event.target.name} (${event.target.url}) — ${detail}`);
+    },
+    async notifyAlert(alert) {
+      const paint = alert.severity === 'critical' ? color.red : color.yellow;
+      logger.info(`${paint(alert.kind.toUpperCase())} ${alert.summary}`);
     },
   };
 }
@@ -108,6 +132,27 @@ function createWebhookNotifier(config: WebhookNotifierConfig, logger: Logger): N
 
       await postJson(config.url, payload, config.method ?? 'POST', config.headers ?? {});
       logger.debug(`webhook delivered to ${label} (${format})`);
+    },
+
+    async notifyAlert(alert) {
+      // Expiry and staleness are not up/down changes, so the `on` filter — which
+      // names transitions — does not apply to them.
+      const payload = JSON.stringify(
+        format === 'text'
+          ? { text: alert.summary }
+          : {
+              kind: alert.kind,
+              severity: alert.severity,
+              target: alert.target ?? null,
+              at: alert.at,
+              data: alert.data ?? {},
+              text: alert.summary,
+              content: alert.summary,
+            },
+      );
+
+      await postJson(config.url, payload, config.method ?? 'POST', config.headers ?? {});
+      logger.debug(`alert delivered to ${label} (${format})`);
     },
   };
 }

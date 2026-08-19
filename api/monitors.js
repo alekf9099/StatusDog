@@ -10,6 +10,11 @@
 import { resolveRoster } from '../dist/store/roster.js';
 import { readAll, statsFor } from '../dist/store/uptime.js';
 import { kvEnvNames, kvFromEnv } from '../dist/store/kv.js';
+import {
+  DEFAULT_STALE_AFTER_MS,
+  evaluateStaleness,
+  readSchedulerState,
+} from '../dist/store/scheduler.js';
 import { parseIntParam } from '../dist/util/params.js';
 import { ROSTER } from '../dist/roster.data.js';
 
@@ -40,6 +45,7 @@ export default async function handler(req, res) {
       storage: 'none',
       hint: `Set one of these credential pairs to persist history: ${kvEnvNames().join(', ')}`,
       generatedAt: new Date().toISOString(),
+      scheduler: null,
       monitors: targets.map((target) => ({
         id: target.id,
         name: target.name,
@@ -57,11 +63,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const entries = await readAll(kv, targets);
+    const [entries, schedulerState] = await Promise.all([
+      readAll(kv, targets),
+      readSchedulerState(kv),
+    ]);
     const limits = new Map(targets.map((target) => [target.id, target.maxResponseTimeMs]));
+    const staleAfterMs = parseIntParam(process.env.STATUSDOG_STALE_AFTER_MINUTES, {
+      min: 5,
+      max: 24 * 60,
+      fallback: DEFAULT_STALE_AFTER_MS / 60_000,
+    }) * 60_000;
+
     res.status(200).json({
       storage: 'kv',
       generatedAt: new Date().toISOString(),
+      // So a reader is never shown last Tuesday's numbers as if they were current.
+      scheduler: evaluateStaleness(schedulerState, Date.now(), staleAfterMs),
       monitors: entries.map((entry) => ({
         id: entry.id,
         name: entry.name,

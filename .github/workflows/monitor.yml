@@ -53,6 +53,12 @@ jobs:
                 echo '| Target | State | Status | Response |'
                 echo '| --- | --- | --- | --- |'
                 jq -r '.checks[] | "| \(.id) | \(.state // "?") | \(.status // "-") | \(.responseTimeMs // "-") ms |"' response.json
+                certs=$(jq -r '(.certWarnings // []) | join(", ")' response.json)
+                if [ -n "$certs" ]; then
+                  echo
+                  echo "**Certificate warnings:** $certs"
+                fi
+
                 transitions=$(jq -r '(.transitions // []) | join(", ")' response.json)
                 if [ -n "$transitions" ]; then
                   echo

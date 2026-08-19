@@ -11,3 +11,15 @@ export {
 } from './uptime.js';
 export type { AppliedCheck, UptimeEntry, UptimeRecord, UptimeStats } from './uptime.js';
 export { loadRoster, resolveRoster, ROSTER_FILENAME } from './roster.js';
+export {
+  DEFAULT_STALE_AFTER_MS,
+  describeStaleness,
+  EMPTY_SCHEDULER_STATE,
+  evaluateStaleness,
+  readSchedulerState,
+  recordRun,
+  stalenessAlertKind,
+  wasReportedStale,
+  writeSchedulerState,
+} from './scheduler.js';
+export type { SchedulerState, Staleness } from './scheduler.js';
