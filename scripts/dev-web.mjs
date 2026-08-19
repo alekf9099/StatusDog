@@ -34,8 +34,9 @@ function rewrite(pathname) {
   if (pathname === '/healthz') return { module: 'healthz.js', query: '' };
   if (pathname === '/preview') return { module: 'preview.js', query: '' };
 
-  // Mirrors the /status/:target rewrite. A static page with a query parameter
-  // rather than a function, so it stays cacheable.
+  // Mirrors the /status/:target rewrite in vercel.json. That rewrite points at
+  // /status rather than /status.html on purpose: with cleanUrls on, Vercel
+  // 308-redirects the .html form, so naming it there made the route 404.
   const status = /^\/status\/([^/]+)$/.exec(pathname);
   if (status) return { staticFile: 'status.html', query: `target=${status[1]}` };
 
