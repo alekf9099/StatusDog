@@ -1,7 +1,7 @@
 {
-  "//": "The 24/7 monitor roster for the hosted site. Edit this file to change what is watched; the scheduler reads it on every run. Same schema as statusdog.config.json.",
+  "//": "The 24/7 monitor roster for the hosted site. Edit this file to change what is watched; the scheduler reads it on every run. Same schema as statusdog.config.json. Thresholds assume checks run from the Seoul region (vercel.json `regions`) - moving that region invalidates them.",
   "defaults": {
-    "timeoutMs": 30000,
+    "timeoutMs": 10000,
     "failureThreshold": 2,
     "recoveryThreshold": 1,
     "expectStatus": ["2xx"]
@@ -11,23 +11,22 @@
       "id": "copykiller",
       "name": "CopyKiller",
       "url": "https://www.copykiller.com/",
-      "//": "Measured 2.4-3.1s consistently, so maxResponseTimeMs is set well above that: it should catch real degradation, not the normal baseline. Pointed at www directly because the apex redirect took 17s.",
-      "maxResponseTimeMs": 12000
+      "//": "Measured 175-225ms from Seoul. 2000ms is roughly ten times the baseline: slow enough not to alert on a bad moment, fast enough that real degradation shows up.",
+      "maxResponseTimeMs": 2000
     },
     {
       "id": "copykiller-apex",
       "name": "CopyKiller (apex redirect)",
       "url": "https://copykiller.com/",
-      "//": "Watches that copykiller.com still redirects to www and resolves. Slower than www by design, so no response-time limit.",
-      "followRedirects": true
+      "//": "Watches that copykiller.com still redirects to www. Measured 184-236ms from Seoul, so the extra hop costs almost nothing.",
+      "maxResponseTimeMs": 2500
     },
     {
       "id": "statusdog",
       "name": "StatusDog itself",
       "url": "https://status-dog.vercel.app/healthz",
       "expectBody": "\"status\":\"ok\"",
-      "timeoutMs": 15000,
-      "maxResponseTimeMs": 5000
+      "maxResponseTimeMs": 3000
     }
   ]
 }
