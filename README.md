@@ -72,7 +72,9 @@ behind a web front end.
 | `/docs` | Usage docs |
 | `/preview/:template` | Live previews of the fallback screens |
 | `/api/check?url=…` | JSON API for a single check |
+| `/status`, `/status/:id` | Public status page: uptime, day-by-day, past incidents |
 | `/api/monitors` | The 24/7 roster with stored state and history |
+| `/api/stats` | Period summaries, daily buckets and incidents |
 | `/api/cron/check` | Scheduler entry point (authenticated) |
 | `/healthz` | Liveness probe for the site itself |
 
@@ -307,6 +309,40 @@ within a day beats one never found at all.
 The banner is the part that matters most in practice: a stale view says so in
 plain words instead of presenting old numbers as current.
 
+## Statistics
+
+[`/status`](https://status-dog.vercel.app/status) reports uptime and response time
+over **24 hours, 7 days, 30 days and 90 days**, one bar per day, and a list of past
+incidents. Each site has a shareable page of its own at `/status/<id>`.
+
+### How a month of history fits in a few kilobytes
+
+Raw checks are capped at 480 per target — five days at a fifteen-minute cadence —
+which is fine for a sparkline and useless for "how did last month go". So each
+check is *also* folded into a **daily bucket**: counts, failures, downtime, and a
+latency histogram. Thirteen months of those is tiny.
+
+Percentiles come from that histogram rather than stored samples, which makes them
+**mergeable**: a weekly p95 is the sum of seven days of counters, something a
+stored average could never give you. They are accurate to a bucket, and the buckets
+are deliberately fine below one second — with coarse ones, a site sitting between
+90ms and 160ms had an identical p50 and p95, which is true and useless.
+
+### Where it refuses to guess
+
+- A window with no data reports **`no data`, not `0%`** — those are different things.
+- Every summary carries `daysWithData`, so a 100% figure drawn from two days is not
+  mistaken for a full month.
+- Downtime counts **only intervals that were actually observed**, capped per
+  interval, so restarting a paused scheduler cannot invent an outage nobody measured.
+- A day boundary follows `stats.timezoneOffsetMinutes` in
+  [`monitors.json`](monitors.json) (`540` here), so "the 19th" means the 19th in
+  Seoul. The offset is stored *with* the buckets, so changing it later cannot
+  silently relabel history.
+
+```bash
+curl "https://status-dog.vercel.app/api/stats?target=copykiller&days=90"
+```
 Storage keeps the last 480 checks per target — about five days at a 15-minute
 interval — under `statusdog:v1:target:<id>`. The client is ~100 lines of `fetch`
 in [`src/store/kv.ts`](src/store/kv.ts); a monitoring tool that needs a

@@ -23,7 +23,8 @@
  */
 import { probe } from '../../dist/monitor/probe.js';
 import { resolveRoster } from '../../dist/store/roster.js';
-import { applyCheck } from '../../dist/store/uptime.js';
+import { applyCheck, readEntry } from '../../dist/store/uptime.js';
+import { recordCheck } from '../../dist/store/stats-store.js';
 import { kvEnvNames, kvFromEnv } from '../../dist/store/kv.js';
 import {
   describeStaleness,
@@ -80,8 +81,10 @@ export default async function handler(req, res) {
   }
 
   let targets;
+  let offsetMinutes = 0;
   try {
     targets = resolveRoster(ROSTER);
+    offsetMinutes = Number(ROSTER?.stats?.timezoneOffsetMinutes) || 0;
   } catch (err) {
     res.status(500).json({ error: `Invalid monitors.json: ${err.message}` });
     return;
@@ -101,6 +104,9 @@ export default async function handler(req, res) {
     };
 
     try {
+      // Captured before applyCheck overwrites them: the rollup needs to know how
+      // long the target had been in its previous state to attribute downtime.
+      const before = await readEntry(kv, target);
       const { entry, transitioned, previousState, cert } = await applyCheck(kv, target, result);
       if (transitioned) {
         transitions.push({
@@ -128,11 +134,26 @@ export default async function handler(req, res) {
         });
       }
 
+      // Rollups are a separate key, so a failure here loses a data point rather
+      // than the check itself.
+      let rolled = true;
+      try {
+        await recordCheck(kv, target, result, {
+          offsetMinutes,
+          previousState: before.state,
+          previousCheckedAt: before.lastResult?.checkedAt ?? null,
+          transitionedTo: transitioned ? entry.state : null,
+        });
+      } catch {
+        rolled = false;
+      }
+
       return {
         ...base,
         state: entry.state,
         transitioned,
         stored: true,
+        rolled,
         certDaysRemaining: cert.daysRemaining,
       };
     } catch (err) {

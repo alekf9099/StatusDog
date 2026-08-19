@@ -100,6 +100,35 @@ export function formatRelative(iso) {
   return t('time.daysAgo', { n: Math.round(delta / 86_400_000) });
 }
 
+/**
+ * A span of milliseconds as something readable: `45m`, `2h 15m`, `3d 4h`.
+ *
+ * Distinct from formatMs, which reports one response time. Downtime is measured in
+ * minutes and hours, and "2700000 ms" tells nobody anything.
+ */
+export function formatDurationMs(ms) {
+  const value = Number(ms);
+  if (!Number.isFinite(value) || value <= 0) return t('duration.none');
+
+  const totalMinutes = Math.round(value / 60_000);
+  if (totalMinutes < 1) return t('duration.underMinute');
+  if (totalMinutes < 60) return t('duration.minutes', { n: totalMinutes });
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours < 24) {
+    return minutes === 0
+      ? t('duration.hours', { n: hours })
+      : t('duration.hoursMinutes', { h: hours, m: minutes });
+  }
+
+  const days = Math.floor(hours / 24);
+  const restHours = hours % 24;
+  return restHours === 0
+    ? t('duration.days', { n: days })
+    : t('duration.daysHours', { d: days, h: restHours });
+}
+
 /** `https://example.com/path` → `example.com/path` */
 export function prettyUrl(url) {
   return String(url ?? '').replace(/^https?:\/\//, '').replace(/\/$/, '');

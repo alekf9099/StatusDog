@@ -101,6 +101,9 @@ export function resolveConfig(
   const storageFile = config.storage?.file;
   return {
     targets,
+    stats: {
+      timezoneOffsetMinutes: config.stats?.timezoneOffsetMinutes ?? 0,
+    },
     storage: {
       file:
         storageFile === null

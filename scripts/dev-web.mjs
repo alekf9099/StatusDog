@@ -33,6 +33,12 @@ const MIME = {
 function rewrite(pathname) {
   if (pathname === '/healthz') return { module: 'healthz.js', query: '' };
   if (pathname === '/preview') return { module: 'preview.js', query: '' };
+
+  // Mirrors the /status/:target rewrite. A static page with a query parameter
+  // rather than a function, so it stays cacheable.
+  const status = /^\/status\/([^/]+)$/.exec(pathname);
+  if (status) return { staticFile: 'status.html', query: `target=${status[1]}` };
+
   const preview = /^\/preview\/([^/]+)$/.exec(pathname);
   if (preview) return { module: 'preview.js', query: `template=${preview[1]}` };
   const api = /^\/api\/([\w/-]+)$/.exec(pathname);
@@ -83,6 +89,14 @@ const server = http.createServer(async (req, res) => {
   const pathname = url.pathname.replace(/\/+$/, '') || '/';
 
   const route = rewrite(pathname);
+
+  if (route?.staticFile) {
+    // The query is only for the browser; serving the file is all this side does.
+    if (serveStatic(`/${route.staticFile}`, res)) return;
+    res.writeHead(404).end('Not found');
+    return;
+  }
+
   if (route) {
     const query = route.query ? `${route.query}&${url.searchParams}` : url.searchParams.toString();
     req.url = `${pathname}${query ? `?${query}` : ''}`;

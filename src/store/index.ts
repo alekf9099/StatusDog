@@ -23,3 +23,17 @@ export {
   writeSchedulerState,
 } from './scheduler.js';
 export type { SchedulerState, Staleness } from './scheduler.js';
+export {
+  applyTransition,
+  bucketIndexOf,
+  DAILY_LIMIT,
+  dayKeyOf,
+  emptyStats,
+  foldCheck,
+  INCIDENT_LIMIT,
+  LATENCY_BUCKETS,
+  shiftDay,
+  summarize,
+} from './rollup.js';
+export type { DailyBucket, Incident, PeriodSummary, TargetStats as TargetRollupStats } from './rollup.js';
+export { clearStats, readAllStats, readStats, recordCheck, writeStats } from './stats-store.js';

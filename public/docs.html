@@ -17,6 +17,7 @@
       <a href="/" data-i18n="nav.home">Home</a>
       <a href="/office" data-i18n="nav.office">Office</a>
       <a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/status" data-i18n="nav.status">Status</a>
       <a href="/docs" data-i18n="nav.docs">Docs</a>
       <a href="https://github.com/alekf9099/StatusDog" data-i18n="nav.github">GitHub</a>
       <span class="lang-switch" role="group" data-i18n-aria-label="lang.switchLabel" aria-label="Language">
@@ -162,6 +163,7 @@ app.use(createFallbackMiddleware(monitor, {
       <tr><th>STATUSDOG_WEBHOOK_URL</th><td data-i18n="docs.sched.env.webhook"></td></tr>
       <tr><th>STATUSDOG_WEBHOOK_ON</th><td data-i18n="docs.sched.env.on"></td></tr>
       <tr><th>STATUSDOG_WEBHOOK_FORMAT</th><td data-i18n="docs.sched.env.format"></td></tr>
+      <tr><th>STATUSDOG_STALE_AFTER_MINUTES</th><td data-i18n="docs.sched.env.stale"></td></tr>
     </table>
     <p data-i18n-html="docs.sched.actionsHtml"></p>
     <div class="notice" data-i18n-html="docs.sched.regionHtml"></div>
@@ -170,6 +172,17 @@ app.use(createFallbackMiddleware(monitor, {
     <h3 data-i18n="docs.sched.read.h3">Read the results</h3>
     <pre><code>GET /api/monitors?history=60</code></pre>
     <p class="small muted" data-i18n-html="docs.sched.read.noteHtml"></p>
+  </section>
+
+  <section class="block">
+    <h2 data-i18n="docs.stats.h2">Statistics and the status page</h2>
+    <p data-i18n-html="docs.stats.pHtml"></p>
+    <p data-i18n-html="docs.stats.rollupHtml"></p>
+    <p data-i18n-html="docs.stats.percentileHtml"></p>
+    <div class="notice" data-i18n-html="docs.stats.honestHtml"></div>
+    <p style="margin-top:16px" data-i18n-html="docs.stats.tzHtml"></p>
+    <pre><code>GET /api/stats?target=copykiller&amp;days=90</code></pre>
+    <p class="small muted" data-i18n-html="docs.stats.apiHtml"></p>
   </section>
 
   <section class="block">

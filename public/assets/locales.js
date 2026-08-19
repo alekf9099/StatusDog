@@ -230,6 +230,7 @@ export const LOCALES = {
     'docs.sched.env.webhook': 'Optional. One or more alert webhooks, comma-separated.',
     'docs.sched.env.on': 'Optional. down, up, or down,up (default: both).',
     'docs.sched.env.format': 'Optional. full or text; a per-host default applies otherwise.',
+    'docs.sched.env.stale': 'Optional. Minutes without a check before the scheduler counts as stale. Default 45.',
     'docs.sched.actionsHtml':
       "GitHub Actions does the waking up, every 15 minutes, from <code>.github/workflows/monitor.yml</code>. Vercel's Hobby plan caps cron jobs at once a day, which is useless for uptime monitoring; on a Pro plan you can add a <code>crons</code> entry to <code>vercel.json</code> instead and drop the workflow. GitHub delays scheduled runs under load, so treat 15 minutes as a floor rather than a guarantee.",
     'docs.sched.regionHtml':
@@ -239,6 +240,19 @@ export const LOCALES = {
     'docs.sched.read.h3': 'Read the results',
     'docs.sched.read.noteHtml':
       "Returns each roster target's state, <code>since</code>, last result, uptime and response-time stats, and recent checks. Public and read-only.",
+    'docs.stats.h2': 'Statistics and the status page',
+    'docs.stats.pHtml':
+      'The <a href="/status">status page</a> reports uptime and response time over 24 hours, 7 days, 30 days and 90 days, with a bar per day and a list of past incidents. Each site also has its own shareable page at <code>/status/&lt;id&gt;</code>.',
+    'docs.stats.rollupHtml':
+      'Raw checks are capped at 480 per target — about five days at a fifteen-minute cadence — which is fine for a sparkline and useless for "how did last month go". So each check is also folded into a <strong>daily bucket</strong>: counts, failures, downtime and a latency histogram. Thirteen months of those is a few kilobytes.',
+    'docs.stats.percentileHtml':
+      'Percentiles come from that histogram rather than stored samples, which makes them <strong>mergeable</strong>: a weekly p95 is the sum of seven days of counters. They are accurate to a bucket, and the buckets are deliberately fine below one second because that is where most monitored sites live.',
+    'docs.stats.honestHtml':
+      'A window with no data reports <code>no data</code> rather than <code>0%</code> — those are different things — and every summary carries <code>daysWithData</code>, so a 100% figure drawn from two days is not mistaken for a full month. Downtime only counts intervals that were actually observed, capped per interval, so restarting a paused scheduler cannot invent an outage nobody measured.',
+    'docs.stats.tzHtml':
+      'A day boundary follows <code>stats.timezoneOffsetMinutes</code> in <code>monitors.json</code> — set to <code>540</code> here, so "the 19th" means the 19th in Seoul rather than in UTC. The offset is stored with the buckets, so changing it later cannot silently relabel history.',
+    'docs.stats.apiHtml':
+      '<code>GET /api/stats?target=&lt;id&gt;&amp;days=90</code> returns the same data as JSON: per-period summaries, daily buckets and incidents. Public and read-only.',
     'docs.alerts.h2': 'Alerts',
     'docs.alerts.pHtml':
       'Set <code>STATUSDOG_WEBHOOK_URL</code> and every confirmed up/down change posts JSON to it. <strong>Confirmed</strong> is the important word: a transition only happens after <code>failureThreshold</code> consecutive failures, and only the change fires — a target that stays down for a day alerts once, not ninety-six times.',
@@ -326,6 +340,42 @@ export const LOCALES = {
     'office.board.noStorageHtml':
       '<strong>The permanent staff are not clocked in.</strong> No store is connected, so roster results are not being kept — see <a href="/docs">the docs</a>.',
 
+    'nav.status': 'Status',
+    'duration.none': 'none',
+    'duration.underMinute': 'under a minute',
+    'duration.minutes': '{n}m',
+    'duration.hours': '{n}h',
+    'duration.hoursMinutes': '{h}h {m}m',
+    'duration.days': '{n}d',
+    'duration.daysHours': '{d}d {h}h',
+    'status.pageTitle': 'Status — StatusDog',
+    'status.metaDescription':
+      'Uptime, response times and past incidents for every monitored site.',
+    'status.h1': 'Service status',
+    'status.lede': 'Uptime over the last 30 days. Pick a site for the full history.',
+    'status.empty': 'No sites are on the roster yet.',
+    'status.noStorageHtml':
+      '<strong>No statistics yet.</strong> Connect a store and the scheduler will start keeping daily figures — see <a href="/docs">the docs</a>.',
+    'status.allTargets': 'All sites',
+    'status.periods': 'Uptime and response time',
+    'status.period.day': 'Last 24 hours',
+    'status.period.week': 'Last 7 days',
+    'status.period.month': 'Last 30 days',
+    'status.period.quarter': 'Last 90 days',
+    'status.p50': 'Median',
+    'status.p95': '95th pct',
+    'status.downtime': 'Downtime',
+    'status.incidentCount': 'Incidents',
+    'status.checks': 'checks',
+    'status.noData': 'no data',
+    'status.daily': 'Day by day',
+    'status.dailyNote': 'One bar per day, coloured by that day\'s uptime. Days start at midnight {tz}.',
+    'status.incidents': 'Past incidents',
+    'status.noIncidents': 'No incidents recorded.',
+    'status.startedAt': 'Started',
+    'status.duration': 'Lasted',
+    'status.detail': 'Detail',
+    'status.ongoing': 'ongoing',
     'stale.bannerHtml':
       '<strong>Nothing is being checked right now.</strong> The last check was {ago}, and checks are expected every 15 minutes. Everything below is history, not the current state.',
     'stale.bannerNever':
@@ -583,6 +633,7 @@ export const LOCALES = {
     'docs.sched.env.webhook': '선택. 알림 웹훅 주소, 쉼표로 여러 개.',
     'docs.sched.env.on': '선택. down, up, 또는 down,up (기본값: 둘 다).',
     'docs.sched.env.format': '선택. full 또는 text. 지정하지 않으면 호스트별 기본값이 적용됩니다.',
+    'docs.sched.env.stale': '선택. 확인이 없는 상태가 몇 분 지나면 정지로 볼지. 기본값 45.',
     'docs.sched.actionsHtml':
       '깨우는 일은 GitHub Actions가 15분마다 <code>.github/workflows/monitor.yml</code>로 합니다. Vercel Hobby 플랜은 cron이 하루 1회 제한이라 가동률 감시에 쓸 수 없습니다. Pro 플랜이라면 <code>vercel.json</code>에 <code>crons</code>를 추가하고 워크플로를 지워도 됩니다. GitHub은 부하가 있을 때 예약 실행을 늦추므로, 15분은 보장이 아니라 최소 간격으로 보시면 됩니다.',
     'docs.sched.regionHtml':
@@ -592,6 +643,19 @@ export const LOCALES = {
     'docs.sched.read.h3': '결과 조회',
     'docs.sched.read.noteHtml':
       '감시 목록 각 대상의 상태, <code>since</code>, 마지막 결과, 가동률과 응답 시간 통계, 최근 확인 기록을 반환합니다. 공개 읽기 전용입니다.',
+    'docs.stats.h2': '통계와 상태 페이지',
+    'docs.stats.pHtml':
+      '<a href="/status">상태 페이지</a>는 24시간·7일·30일·90일 가동률과 응답 시간을 보여주고, 하루당 막대 하나와 과거 장애 목록을 함께 표시합니다. 사이트별로 <code>/status/&lt;id&gt;</code> 주소가 있어 공유할 수 있습니다.',
+    'docs.stats.rollupHtml':
+      '원본 확인 기록은 대상별 480회로 제한되며, 15분 간격 기준 약 5일입니다. 스파크라인에는 충분하지만 "지난달은 어땠나"에는 쓸 수 없습니다. 그래서 확인마다 <strong>일별 버킷</strong>에도 접어 넣습니다 — 횟수, 실패, 다운타임, 응답 시간 히스토그램. 13개월분이 수 킬로바이트입니다.',
+    'docs.stats.percentileHtml':
+      '백분위수는 저장된 샘플이 아니라 그 히스토그램에서 계산하므로 <strong>합칠 수 있습니다</strong> — 주간 p95는 7일치 카운터의 합입니다. 구간 단위로 근사되며, 감시 대상 대부분이 1초 이하에 있으므로 저구간을 의도적으로 촘촘하게 잡았습니다.',
+    'docs.stats.honestHtml':
+      '데이터가 없는 기간은 <code>0%</code>가 아니라 <code>데이터 없음</code>으로 표시합니다 — 둘은 다른 것입니다. 모든 요약에 <code>daysWithData</code>가 포함되어, 이틀치로 계산된 100%를 한 달치로 오해하지 않게 합니다. 다운타임은 실제로 관측된 구간만 세고 구간별 상한이 있어, 멈췄던 스케줄러를 다시 켜도 아무도 측정하지 않은 장애가 만들어지지 않습니다.',
+    'docs.stats.tzHtml':
+      '하루의 경계는 <code>monitors.json</code>의 <code>stats.timezoneOffsetMinutes</code>를 따릅니다. 여기서는 <code>540</code>으로 설정해서 "19일"이 UTC가 아니라 서울의 19일을 뜻합니다. 이 값은 버킷과 함께 저장되므로 나중에 바꿔도 과거 기록이 조용히 다시 라벨링되지 않습니다.',
+    'docs.stats.apiHtml':
+      '<code>GET /api/stats?target=&lt;id&gt;&amp;days=90</code>이 같은 데이터를 JSON으로 돌려줍니다 — 기간별 요약, 일별 버킷, 장애 목록. 공개 읽기 전용입니다.',
     'docs.alerts.h2': '알림',
     'docs.alerts.pHtml':
       '<code>STATUSDOG_WEBHOOK_URL</code>을 설정하면 확정된 상태 변화마다 JSON을 보냅니다. <strong>확정</strong>이라는 말이 중요합니다. 상태 변화는 <code>failureThreshold</code>만큼 연속 실패한 뒤에만 일어나고, 변화 시점에만 발송되므로 하루 종일 죽어 있어도 알림은 96번이 아니라 한 번입니다.',
@@ -679,6 +743,42 @@ export const LOCALES = {
     'office.board.noStorageHtml':
       '<strong>정규직 직원들이 출근하지 못했습니다.</strong> 저장소가 연결되지 않아 감시 목록 결과가 보관되지 않습니다 — <a href="/docs">문서</a>를 참고하세요.',
 
+    'nav.status': '상태',
+    'duration.none': '없음',
+    'duration.underMinute': '1분 미만',
+    'duration.minutes': '{n}분',
+    'duration.hours': '{n}시간',
+    'duration.hoursMinutes': '{h}시간 {m}분',
+    'duration.days': '{n}일',
+    'duration.daysHours': '{d}일 {h}시간',
+    'status.pageTitle': '상태 — StatusDog',
+    'status.metaDescription':
+      '감시 중인 모든 사이트의 가동률, 응답 시간, 과거 장애 기록.',
+    'status.h1': '서비스 상태',
+    'status.lede': '최근 30일 가동률입니다. 사이트를 선택하면 전체 이력을 볼 수 있습니다.',
+    'status.empty': '아직 감시 목록에 사이트가 없습니다.',
+    'status.noStorageHtml':
+      '<strong>아직 통계가 없습니다.</strong> 저장소를 연결하면 스케줄러가 일별 수치를 쌓기 시작합니다 — <a href="/docs">문서</a>를 참고하세요.',
+    'status.allTargets': '전체 사이트',
+    'status.periods': '가동률과 응답 시간',
+    'status.period.day': '최근 24시간',
+    'status.period.week': '최근 7일',
+    'status.period.month': '최근 30일',
+    'status.period.quarter': '최근 90일',
+    'status.p50': '중앙값',
+    'status.p95': '95 백분위',
+    'status.downtime': '다운타임',
+    'status.incidentCount': '장애 횟수',
+    'status.checks': '확인 횟수',
+    'status.noData': '데이터 없음',
+    'status.daily': '일별 추이',
+    'status.dailyNote': '막대 하나가 하루이고, 그날 가동률에 따라 색이 정해집니다. 하루는 {tz} 자정에 시작합니다.',
+    'status.incidents': '과거 장애',
+    'status.noIncidents': '기록된 장애가 없습니다.',
+    'status.startedAt': '시작',
+    'status.duration': '지속',
+    'status.detail': '상세',
+    'status.ongoing': '진행 중',
     'stale.bannerHtml':
       '<strong>지금 아무것도 확인되지 않고 있습니다.</strong> 마지막 확인이 {ago}이고, 원래는 15분마다 확인해야 합니다. 아래 내용은 현재 상태가 아니라 과거 기록입니다.',
     'stale.bannerNever':
