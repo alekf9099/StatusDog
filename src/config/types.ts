@@ -105,8 +105,17 @@ export interface DashboardConfig {
   port?: number;
 }
 
+export interface StatsConfig {
+  /**
+   * Minutes to shift a timestamp before cutting it into a day, so "19 August" can
+   * mean 19 August where the team is. `540` is KST; `0` is UTC.
+   */
+  timezoneOffsetMinutes?: number;
+}
+
 export interface StatusDogConfig {
   targets: TargetConfig[];
+  stats?: StatsConfig;
   defaults?: TargetDefaults;
   storage?: StorageConfig;
   dashboard?: DashboardConfig;
@@ -140,6 +149,7 @@ export interface ResolvedTarget {
 
 export interface ResolvedConfig {
   targets: ResolvedTarget[];
+  stats: Required<StatsConfig>;
   storage: Required<StorageConfig>;
   dashboard: Required<DashboardConfig>;
   notifiers: NotifierConfig[];

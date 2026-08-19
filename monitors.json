@@ -1,5 +1,9 @@
 {
   "//": "The 24/7 monitor roster for the hosted site. Edit this file to change what is watched; the scheduler reads it on every run. Same schema as statusdog.config.json. Thresholds assume checks run from the Seoul region (vercel.json `regions`) - moving that region invalidates them.",
+  "stats": {
+    "//": "540 = KST, so a day boundary falls at midnight in Seoul rather than UTC.",
+    "timezoneOffsetMinutes": 540
+  },
   "defaults": {
     "timeoutMs": 10000,
     "failureThreshold": 2,

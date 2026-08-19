@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="status.pageTitle">Status — StatusDog</title>
+<meta name="description" data-i18n-content="status.metaDescription" content="Uptime, response times and past incidents.">
+<link rel="stylesheet" href="/assets/statusdog.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <nav class="site-nav">
+      <a href="/" data-i18n="nav.home">Home</a>
+      <a href="/office" data-i18n="nav.office">Office</a>
+      <a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/status" data-i18n="nav.status">Status</a>
+      <a href="/docs" data-i18n="nav.docs">Docs</a>
+      <span class="lang-switch" role="group" data-i18n-aria-label="lang.switchLabel" aria-label="Language">
+        <button type="button" data-lang="en" data-i18n="lang.en">EN</button>
+        <button type="button" data-lang="ko" data-i18n="lang.ko">한국어</button>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding:32px 0 56px;max-width:900px">
+
+  <div class="stale-banner" id="stale-banner" role="status" aria-live="polite" data-visible="false"></div>
+
+  <div id="status-head" style="margin-bottom:24px"></div>
+  <div id="status-body"></div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span data-i18n="footer.license">StatusDog · MIT</span>
+    <span class="spacer"></span>
+    <a href="/office" data-i18n="nav.office">Office</a>
+    <a href="/dashboard" data-i18n="footer.dashboard">Dashboard</a>
+    <a href="/api/stats" data-i18n="footer.api">API</a>
+    <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import { initI18n, t } from '/assets/i18n.js';
+import {
+  escapeHtml, formatDurationMs, formatMs, formatRelative, markCurrentNav,
+  prettyUrl, renderStaleBanner, stateBadge,
+} from '/assets/statusdog.js';
+
+initI18n();
+markCurrentNav();
+
+const head = document.getElementById('status-head');
+const body = document.getElementById('status-body');
+/**
+ * Which target to show.
+ *
+ * Vercel rewrites /status/<id> to status.html?target=<id> server-side, but the
+ * browser URL keeps the pretty path — so the query is empty on exactly the links
+ * people share. Read the path too.
+ */
+// Match /status/<id>, with or without a trailing slash.
+const pathTarget = location.pathname.match(/^\/status\/([^/]+)\/?$/)?.[1];
+const wanted = new URLSearchParams(location.search).get('target')
+  ?? (pathTarget ? decodeURIComponent(pathTarget) : null);
+
+/** Keep the payloads so a language switch re-renders without refetching. */
+let stats = null;
+let monitors = null;
+
+async function load() {
+  try {
+    const [statsRes, monitorsRes] = await Promise.all([
+      fetch(`/api/stats?days=90${wanted ? `&target=${encodeURIComponent(wanted)}` : ''}`, { cache: 'no-store' }),
+      fetch('/api/monitors?history=0', { cache: 'no-store' }),
+    ]);
+    const statsBody = await statsRes.json();
+    if (!statsRes.ok) throw new Error(statsBody.error ?? t('error.requestFailed', { status: statsRes.status }));
+    stats = statsBody;
+    monitors = monitorsRes.ok ? await monitorsRes.json() : null;
+    render();
+  } catch (err) {
+    head.innerHTML = '';
+    body.innerHTML = `<div class="notice error">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+document.addEventListener('statusdog:languagechange', () => {
+  if (stats) render();
+});
+
+function render() {
+  renderStaleBanner(document.getElementById('stale-banner'), monitors?.scheduler ?? null);
+
+  const targets = stats.targets ?? [];
+  if (targets.length === 0) {
+    head.innerHTML = `<h1 style="font-size:26px;margin:0">${escapeHtml(t('status.h1'))}</h1>`;
+    body.innerHTML = `<div class="empty">${escapeHtml(t('status.empty'))}</div>`;
+    return;
+  }
+
+  if (stats.storage === 'none') {
+    head.innerHTML = `<h1 style="font-size:26px;margin:0 0 8px">${escapeHtml(t('status.h1'))}</h1>`;
+    body.innerHTML = `<div class="notice">${t('status.noStorageHtml')}</div>`;
+    return;
+  }
+
+  if (wanted) renderDetail(targets[0]);
+  else renderOverview(targets);
+}
+
+/* ---------------- overview ---------------- */
+
+function renderOverview(targets) {
+  head.innerHTML = `
+    <h1 style="font-size:26px;margin:0 0 6px">${escapeHtml(t('status.h1'))}</h1>
+    <p class="small muted" style="margin:0">${escapeHtml(t('status.lede'))}</p>`;
+
+  body.innerHTML = targets.map((target) => {
+    const month = target.periods?.month;
+    const state = stateOf(target.id);
+    return `
+      <a class="status-target" href="/status/${encodeURIComponent(target.id)}">
+        <div class="row">
+          ${stateBadge(state)}
+          <span class="name">${escapeHtml(target.name)}</span>
+          <span style="flex:1"></span>
+          <span class="${uptimeClass(month?.uptimePct)}" style="font-weight:650">${uptimeText(month?.uptimePct)}</span>
+        </div>
+        <div class="url">${escapeHtml(prettyUrl(target.url))}</div>
+        ${dayChart(target.daily ?? [], 30)}
+      </a>`;
+  }).join('');
+}
+
+/* ---------------- one target ---------------- */
+
+function renderDetail(target) {
+  const state = stateOf(target.id);
+  head.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      ${stateBadge(state)}
+      <h1 style="font-size:26px;margin:0">${escapeHtml(target.name)}</h1>
+      <span style="flex:1"></span>
+      <a href="/status" class="small">${escapeHtml(t('status.allTargets'))}</a>
+    </div>
+    <p class="small muted" style="margin:0">
+      <a href="${escapeHtml(target.url)}" target="_blank" rel="noreferrer noopener">${escapeHtml(prettyUrl(target.url))}</a>
+    </p>`;
+
+  body.innerHTML = `
+    <h2 style="font-size:15px;margin:26px 0 12px">${escapeHtml(t('status.periods'))}</h2>
+    <div class="period-grid">
+      ${periodCard('status.period.day', target.periods?.day)}
+      ${periodCard('status.period.week', target.periods?.week)}
+      ${periodCard('status.period.month', target.periods?.month)}
+      ${periodCard('status.period.quarter', target.periods?.quarter)}
+    </div>
+
+    <h2 style="font-size:15px;margin:30px 0 4px">${escapeHtml(t('status.daily'))}</h2>
+    <p class="small muted" style="margin:0 0 4px">${escapeHtml(t('status.dailyNote', { tz: tzLabel() }))}</p>
+    <div class="card">${dayChart(target.daily ?? [], 90)}</div>
+
+    <h2 style="font-size:15px;margin:30px 0 12px">${escapeHtml(t('status.incidents'))}</h2>
+    ${incidentTable(target.incidents ?? [])}`;
+}
+
+function periodCard(labelKey, summary) {
+  if (!summary || summary.checks === 0) {
+    return `
+      <div class="period-card">
+        <h3>${escapeHtml(t(labelKey))}</h3>
+        <div class="period-uptime none">${escapeHtml(t('status.noData'))}</div>
+      </div>`;
+  }
+
+  return `
+    <div class="period-card">
+      <h3>${escapeHtml(t(labelKey))}</h3>
+      <div class="period-uptime ${uptimeClass(summary.uptimePct)}">${uptimeText(summary.uptimePct)}</div>
+      <div class="period-rows">
+        <div><span>${escapeHtml(t('status.p50'))}</span><b>${formatMs(summary.p50Ms)}</b></div>
+        <div><span>${escapeHtml(t('status.p95'))}</span><b>${formatMs(summary.p95Ms)}</b></div>
+        <div><span>${escapeHtml(t('status.downtime'))}</span><b>${escapeHtml(formatDurationMs(summary.downtimeMs))}</b></div>
+        <div><span>${escapeHtml(t('status.incidentCount'))}</span><b>${summary.incidents}</b></div>
+        <div><span>${escapeHtml(t('status.checks'))}</span><b>${summary.checks}</b></div>
+      </div>
+    </div>`;
+}
+
+/** One bar per day, coloured by that day's uptime. */
+function dayChart(daily, days) {
+  const window = daily.slice(-days);
+  if (window.length === 0) {
+    return `<div class="small muted">${escapeHtml(t('status.noData'))}</div>`;
+  }
+
+  const bars = window.map((bucket) => {
+    const uptime = bucket.checks > 0
+      ? ((bucket.checks - bucket.failures) / bucket.checks) * 100
+      : null;
+    const title = uptime === null
+      ? bucket.day
+      : `${bucket.day} · ${Math.round(uptime * 100) / 100}% · ${bucket.checks} ${t('status.checks')}`;
+    return `<i class="${uptimeClass(uptime)}" title="${escapeHtml(title)}"></i>`;
+  }).join('');
+
+  return `
+    <div class="day-chart">${bars}</div>
+    <div class="day-axis">
+      <span>${escapeHtml(window[0].day)}</span>
+      <span>${escapeHtml(window[window.length - 1].day)}</span>
+    </div>`;
+}
+
+function incidentTable(incidents) {
+  if (incidents.length === 0) {
+    return `<div class="empty">${escapeHtml(t('status.noIncidents'))}</div>`;
+  }
+
+  const rows = incidents.map((incident) => {
+    const ongoing = incident.endedAt === null;
+    const duration = ongoing
+      ? t('status.ongoing')
+      : formatDurationMs(incident.durationMs ?? 0);
+    return `
+      <tr class="${ongoing ? 'ongoing' : ''}">
+        <td>${escapeHtml(new Date(incident.startedAt).toLocaleString())}</td>
+        <td>${escapeHtml(duration)}</td>
+        <td class="reason">${escapeHtml(incident.reason ?? '–')}</td>
+        <td>${escapeHtml(incident.message ?? '')}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="card scroll-x">
+      <table class="incidents">
+        <thead>
+          <tr>
+            <th>${escapeHtml(t('status.startedAt'))}</th>
+            <th>${escapeHtml(t('status.duration'))}</th>
+            <th>${escapeHtml(t('metric.failure'))}</th>
+            <th>${escapeHtml(t('status.detail'))}</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ---------------- helpers ---------------- */
+
+function stateOf(id) {
+  return monitors?.monitors?.find((monitor) => monitor.id === id)?.state ?? 'unknown';
+}
+
+function uptimeClass(pct) {
+  if (pct === null || pct === undefined) return 'empty';
+  if (pct >= 99.5) return 'good';
+  if (pct >= 97) return 'fair';
+  return 'poor';
+}
+
+function uptimeText(pct) {
+  return pct === null || pct === undefined ? t('status.noData') : `${pct}%`;
+}
+
+function tzLabel() {
+  const minutes = stats?.timezoneOffsetMinutes ?? 0;
+  if (minutes === 0) return 'UTC';
+  const sign = minutes > 0 ? '+' : '-';
+  const abs = Math.abs(minutes);
+  return `UTC${sign}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
+}
+
+load();
+setInterval(load, 120_000);
+</script>
+
+</body>
+</html>

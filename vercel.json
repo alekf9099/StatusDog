@@ -17,6 +17,10 @@
       "destination": "/api/healthz"
     },
     {
+      "source": "/status/:target",
+      "destination": "/status.html?target=:target"
+    },
+    {
       "source": "/preview",
       "destination": "/api/preview"
     },
