@@ -10,9 +10,11 @@
 import { resolveRoster } from '../dist/store/roster.js';
 import { readAll, statsFor } from '../dist/store/uptime.js';
 import { kvEnvNames, kvFromEnv } from '../dist/store/kv.js';
+import { parseIntParam } from '../dist/util/params.js';
 import { ROSTER } from '../dist/roster.data.js';
 
 const MAX_HISTORY = 480;
+const DEFAULT_HISTORY = 60;
 
 export default async function handler(req, res) {
   res.setHeader('cache-control', 'no-store');
@@ -25,10 +27,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  const requested = Number(new URL(req.url ?? '/', 'http://localhost').searchParams.get('history'));
-  const historyLimit = Number.isFinite(requested)
-    ? Math.min(MAX_HISTORY, Math.max(0, Math.trunc(requested)))
-    : 60;
+  const query = new URL(req.url ?? '/', 'http://localhost').searchParams;
+  const historyLimit = parseIntParam(query.get('history'), {
+    min: 0,
+    max: MAX_HISTORY,
+    fallback: DEFAULT_HISTORY,
+  });
 
   const kv = kvFromEnv();
   if (!kv) {

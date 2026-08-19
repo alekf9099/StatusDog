@@ -14,18 +14,13 @@
  */
 import { probeUrl } from '../dist/monitor/probe.js';
 import { normalizeCheckUrl, UnsafeUrlError } from '../dist/monitor/target-url.js';
+import { parseIntParam } from '../dist/util/params.js';
 
 const MIN_TIMEOUT_MS = 1_000;
 const MAX_TIMEOUT_MS = 30_000;
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
-
-function clampTimeout(raw) {
-  const value = Number(raw);
-  if (!Number.isFinite(value)) return DEFAULT_TIMEOUT_MS;
-  return Math.min(MAX_TIMEOUT_MS, Math.max(MIN_TIMEOUT_MS, Math.trunc(value)));
-}
 
 export default async function handler(req, res) {
   res.setHeader('cache-control', 'no-store');
@@ -53,7 +48,11 @@ export default async function handler(req, res) {
   try {
     const result = await probeUrl(url, {
       method,
-      timeoutMs: clampTimeout(query.get('timeout')),
+      timeoutMs: parseIntParam(query.get('timeout'), {
+        min: MIN_TIMEOUT_MS,
+        max: MAX_TIMEOUT_MS,
+        fallback: DEFAULT_TIMEOUT_MS,
+      }),
       expectStatus: expect
         ? expect.split(',').map((value) => value.trim()).filter(Boolean)
         : ['2xx', '3xx'],

@@ -22,3 +22,5 @@ export type { Notifier } from './notify/index.js';
 export { createLogger, color } from './util/log.js';
 export type { Logger } from './util/log.js';
 export { formatDuration, formatRelative, formatTimestamp } from './util/time.js';
+export { parseIntParam } from './util/params.js';
+export type { IntParamOptions } from './util/params.js';
