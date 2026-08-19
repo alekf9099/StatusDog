@@ -38,7 +38,7 @@
       <tr><th>Redirect chain</th><td>Yes — every hop and the final destination</td></tr>
       <tr><th>SSL certificate</th><td>Yes — issuer, validity window, days remaining</td></tr>
       <tr><th>Body content check</th><td>Yes — require a string to be present</td></tr>
-      <tr><th>Uptime history</th><td>Only while a dashboard tab is open</td></tr>
+      <tr><th>Uptime history</th><td>Yes for roster targets, checked on a schedule and stored; your own browser list only accrues while a tab is open</td></tr>
       <tr><th>Traffic / visitor counts</th><td>No — that needs access to the site's own analytics or server logs, not an external probe</td></tr>
     </table>
   </section>
@@ -149,11 +149,62 @@ app.use(createFallbackMiddleware(monitor, {
   </section>
 
   <section class="block">
+    <h2>Scheduled monitoring, hosted</h2>
+    <p>
+      The <a href="/dashboard">dashboard</a>'s <strong>Monitored 24/7</strong>
+      section is checked by the server and stored, so history accrues with nothing
+      open. Two pieces make that work.
+    </p>
+
+    <h3>The roster</h3>
+    <p>
+      What gets watched lives in
+      <a href="https://github.com/alekf9099/StatusDog/blob/main/monitors.json">monitors.json</a>,
+      a committed file using the same schema as <code>statusdog.config.json</code>.
+      It is a file rather than a form on purpose: this site has no accounts, so a
+      public write endpoint would let anyone point StatusDog at a URL of their
+      choosing every 15 minutes. Editing the repo is reviewable; a form is not.
+    </p>
+
+    <h3>The scheduler</h3>
+    <p>
+      <code>POST /api/cron/check</code> probes every roster target and writes the
+      results. It needs a secret, and something has to call it:
+    </p>
+    <table class="kv">
+      <tr><th>CRON_SECRET</th><td>Shared secret. Sent as <code>Authorization: Bearer …</code> or <code>x-cron-secret</code>. Unset means the route is closed, not open.</td></tr>
+      <tr><th>KV_REST_API_URL<br>KV_REST_API_TOKEN</th><td>A Redis-compatible REST store. <code>UPSTASH_REDIS_REST_*</code> and <code>REDIS_REST_*</code> also work.</td></tr>
+    </table>
+    <p>
+      GitHub Actions does the waking up, every 15 minutes, from
+      <code>.github/workflows/monitor.yml</code>. Vercel's Hobby plan caps cron
+      jobs at once a day, which is useless for uptime monitoring; on a Pro plan you
+      can add a <code>crons</code> entry to <code>vercel.json</code> instead and
+      drop the workflow. GitHub delays scheduled runs under load, so treat 15
+      minutes as a floor rather than a guarantee.
+    </p>
+    <p class="small muted">
+      Until a store is connected, <code>/api/monitors</code> reports
+      <code>storage: "none"</code> and the dashboard says so — the rest of the site
+      keeps working.
+    </p>
+
+    <h3>Read the results</h3>
+    <pre><code>GET /api/monitors?history=60</code></pre>
+    <p class="small muted">
+      Returns each roster target's state, <code>since</code>, last result, uptime
+      and response-time stats, and recent checks. Public and read-only.
+    </p>
+  </section>
+
+  <section class="block">
     <h2>Roadmap</h2>
     <p>
-      Persistent server-side monitoring — uptime history that keeps accruing with
-      no browser open — needs a database and a scheduler. That is the next step;
-      the engine, the API and this front end are already in place for it.
+      Alerting on transitions is next: the engine already emits
+      <code>up</code>/<code>down</code> events and ships console and webhook
+      notifiers for the CLI, but the scheduled endpoint does not yet fan them out.
+      Retention is currently the last 480 checks per target — about five days at a
+      15-minute interval.
     </p>
   </section>
 

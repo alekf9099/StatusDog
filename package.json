@@ -25,15 +25,16 @@
   "files": [
     "dist",
     "templates",
+    "monitors.json",
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/generate-roster.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/cli.ts",
     "dev:web": "npm run build && node scripts/dev-web.mjs",
     "start": "node dist/cli.js start",
-    "test": "node --import tsx --test test/matchers.test.ts test/probe.test.ts test/target-url.test.ts test/fallback.test.ts test/engine.test.ts",
+    "test": "node --import tsx --test test/matchers.test.ts test/probe.test.ts test/target-url.test.ts test/transition.test.ts test/store.test.ts test/fallback.test.ts test/engine.test.ts",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

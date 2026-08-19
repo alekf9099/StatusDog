@@ -35,7 +35,7 @@ function rewrite(pathname) {
   if (pathname === '/preview') return { module: 'preview.js', query: '' };
   const preview = /^\/preview\/([^/]+)$/.exec(pathname);
   if (preview) return { module: 'preview.js', query: `template=${preview[1]}` };
-  const api = /^\/api\/([\w-]+)$/.exec(pathname);
+  const api = /^\/api\/([\w/-]+)$/.exec(pathname);
   if (api && existsSync(path.join(root, 'api', `${api[1]}.js`))) {
     return { module: `${api[1]}.js`, query: '' };
   }

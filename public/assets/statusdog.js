@@ -113,6 +113,12 @@ export function statusBadge(result) {
   return `<span class="badge ${cls}"><span class="dot"></span>${label}</span>`;
 }
 
+/** Badge from a stored state string rather than a single result. */
+export function stateBadge(state) {
+  const known = state === 'up' || state === 'down';
+  return `<span class="badge ${known ? state : ''}"><span class="dot"></span>${known ? state : 'unknown'}</span>`;
+}
+
 export function sparkline(history = []) {
   if (history.length === 0) {
     return '<div class="spark"><span class="empty-note">No checks yet</span></div>';
