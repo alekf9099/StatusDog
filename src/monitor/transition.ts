@@ -1,4 +1,4 @@
-import type { ProbeResult } from '../config/types.js';
+import type { ProbeResult, ResolvedTarget } from '../config/types.js';
 
 export type TargetState = 'up' | 'down' | 'unknown';
 
@@ -14,6 +14,20 @@ export interface StateSnapshot {
 export interface Thresholds {
   failureThreshold: number;
   recoveryThreshold: number;
+}
+
+/**
+ * A confirmed up/down change, as handed to notifiers.
+ *
+ * It lives here rather than in the engine so alerting can be wired up from a
+ * serverless function without dragging in the scheduler.
+ */
+export interface TransitionEvent {
+  target: ResolvedTarget;
+  from: TargetState;
+  to: TargetState;
+  result: ProbeResult;
+  at: string;
 }
 
 export const INITIAL_STATE: StateSnapshot = {

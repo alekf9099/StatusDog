@@ -57,6 +57,15 @@ jobs:
                 if [ -n "$transitions" ]; then
                   echo
                   echo "**Changed state:** $transitions"
+                  echo
+                  echo "Alerts: $(jq -r '.alerts.delivered // 0') delivered, $(jq -r '.alerts.failed // 0') failed, across $(jq -r '.alerts.notifiers // 0') notifier(s)"
+                  jq -r '(.alerts.outcomes // [])[] | select(.delivered == false) | "- FAILED \(.notifier): \(.error)"' response.json
+                fi
+
+                # A webhook that cannot be reached is worth surfacing even though
+                # it does not fail the run - otherwise alerting rots unnoticed.
+                if [ "$(jq -r '.alerts.failed // 0' response.json)" != "0" ]; then
+                  echo "::warning::$(jq -r '.alerts.failed' response.json) alert delivery/deliveries failed"
                 fi
               else
                 echo '```'

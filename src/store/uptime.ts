@@ -1,5 +1,10 @@
 import type { ProbeResult, ResolvedTarget } from '../config/types.js';
-import { applyResult, INITIAL_STATE, type StateSnapshot } from '../monitor/transition.js';
+import {
+  applyResult,
+  INITIAL_STATE,
+  type StateSnapshot,
+  type TargetState,
+} from '../monitor/transition.js';
 import type { KvClient } from './kv.js';
 
 /** Bump when the stored shape changes so old records are simply ignored. */
@@ -97,6 +102,14 @@ export async function writeEntry(kv: KvClient, entry: UptimeEntry): Promise<void
 export interface AppliedCheck {
   entry: UptimeEntry;
   transitioned: boolean;
+  /**
+   * The state this check moved away from.
+   *
+   * Callers building an alert need it and cannot infer it: the previous state may
+   * have been `unknown`, so "the opposite of the new state" is wrong on a
+   * target's very first check.
+   */
+  previousState: TargetState;
 }
 
 /**
@@ -125,7 +138,7 @@ export async function applyCheck(
   };
 
   await writeEntry(kv, entry);
-  return { entry, transitioned };
+  return { entry, transitioned, previousState: previous.state };
 }
 
 /** Read every roster target's state, in roster order. */

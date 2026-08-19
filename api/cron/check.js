@@ -1,5 +1,6 @@
 /**
- * `POST /api/cron/check` — probe every roster target and persist the results.
+ * `POST /api/cron/check` — probe every roster target, persist the results, and
+ * alert on confirmed up/down transitions.
  *
  * This is the 24/7 half of StatusDog: something has to call it on a schedule.
  * Two ways, both configured in the repo:
@@ -9,17 +10,20 @@
  *   - Vercel Cron — add a `crons` entry to vercel.json on a Pro plan. Vercel
  *     sends `Authorization: Bearer $CRON_SECRET`, which this accepts as-is.
  *
- * Requires two environment variables:
- *   CRON_SECRET                     shared secret; without it the route is closed
- *   KV_REST_API_URL / _TOKEN        (or the Upstash equivalents) for storage
+ * Environment:
+ *   CRON_SECRET                shared secret; unset closes the route
+ *   KV_REST_API_URL / _TOKEN   (or the Upstash equivalents) for storage
+ *   STATUSDOG_WEBHOOK_URL      optional; comma-separated alert webhooks
+ *   STATUSDOG_WEBHOOK_ON       optional; `down`, `up`, or `down,up`
  */
 import { probe } from '../../dist/monitor/probe.js';
 import { resolveRoster } from '../../dist/store/roster.js';
 import { applyCheck } from '../../dist/store/uptime.js';
 import { kvEnvNames, kvFromEnv } from '../../dist/store/kv.js';
+import { dispatchTransitions, notifiersFromEnv } from '../../dist/notify/dispatch.js';
 import { ROSTER } from '../../dist/roster.data.js';
 
-/** Constant-time-ish comparison so the secret cannot be probed byte by byte. */
+/** Constant-time comparison so the secret cannot be probed byte by byte. */
 function secretMatches(provided, expected) {
   if (typeof provided !== 'string' || provided.length !== expected.length) return false;
   let diff = 0;
@@ -70,39 +74,53 @@ export default async function handler(req, res) {
   }
 
   const startedAt = Date.now();
+  const transitions = [];
+
   const checks = await Promise.all(targets.map(async (target) => {
     const result = await probe(target);
+    const base = {
+      id: target.id,
+      ok: result.ok,
+      status: result.status,
+      responseTimeMs: result.responseTimeMs,
+    };
+
     try {
-      const { entry, transitioned } = await applyCheck(kv, target, result);
-      return {
-        id: target.id,
-        ok: result.ok,
-        status: result.status,
-        responseTimeMs: result.responseTimeMs,
-        state: entry.state,
-        transitioned,
-        stored: true,
-      };
+      const { entry, transitioned, previousState } = await applyCheck(kv, target, result);
+      if (transitioned) {
+        transitions.push({
+          target,
+          from: previousState,
+          to: entry.state,
+          result,
+          at: result.checkedAt,
+        });
+      }
+      return { ...base, state: entry.state, transitioned, stored: true };
     } catch (err) {
       // A storage failure must not hide the check itself.
-      return {
-        id: target.id,
-        ok: result.ok,
-        status: result.status,
-        responseTimeMs: result.responseTimeMs,
-        stored: false,
-        storeError: err.message,
-      };
+      return { ...base, stored: false, storeError: err.message };
     }
   }));
 
-  const failedToStore = checks.filter((check) => !check.stored);
-  res.status(failedToStore.length === checks.length && checks.length > 0 ? 502 : 200).json({
+  // Alerting comes last and never fails the run: a dead webhook is not an
+  // outage, and the check results are already safely persisted by this point.
+  const notifiers = notifiersFromEnv();
+  const { attempted, delivered, failed, outcomes } = await dispatchTransitions(
+    notifiers,
+    transitions,
+  );
+
+  const unstored = checks.filter((check) => !check.stored);
+  const everythingFailed = checks.length > 0 && unstored.length === checks.length;
+
+  res.status(everythingFailed ? 502 : 200).json({
     checkedAt: new Date(startedAt).toISOString(),
     durationMs: Date.now() - startedAt,
     targets: checks.length,
     down: checks.filter((check) => !check.ok).length,
-    transitions: checks.filter((check) => check.transitioned).map((check) => check.id),
+    transitions: transitions.map((event) => `${event.target.id}:${event.from}->${event.to}`),
+    alerts: { notifiers: notifiers.length, attempted, delivered, failed, outcomes },
     checks,
   });
 }
