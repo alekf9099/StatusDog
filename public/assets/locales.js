@@ -230,7 +230,7 @@ export const LOCALES = {
     'docs.sched.env.webhook': 'Optional. One or more alert webhooks, comma-separated.',
     'docs.sched.env.on': 'Optional. down, up, or down,up (default: both).',
     'docs.sched.env.format': 'Optional. full or text; a per-host default applies otherwise.',
-    'docs.sched.env.stale': 'Optional. Minutes without a check before the scheduler counts as stale. Default 45.',
+    'docs.sched.env.stale': 'Optional. Overrides the staleness threshold. Left unset, it is three times the cadence this deployment actually runs at.',
     'docs.sched.actionsHtml':
       "GitHub Actions does the waking up, every 15 minutes, from <code>.github/workflows/monitor.yml</code>. Vercel's Hobby plan caps cron jobs at once a day, which is useless for uptime monitoring; on a Pro plan you can add a <code>crons</code> entry to <code>vercel.json</code> instead and drop the workflow. GitHub delays scheduled runs under load, so treat 15 minutes as a floor rather than a guarantee.",
     'docs.sched.regionHtml':
@@ -377,7 +377,7 @@ export const LOCALES = {
     'status.detail': 'Detail',
     'status.ongoing': 'ongoing',
     'stale.bannerHtml':
-      '<strong>Nothing is being checked right now.</strong> The last check was {ago}, and checks are expected every 15 minutes. Everything below is history, not the current state.',
+      '<strong>Nothing is being checked right now.</strong> The last check was {ago}, and this deployment normally checks every {interval} minutes. Everything below is history, not the current state.',
     'stale.bannerNever':
       'No check has run yet. Numbers will appear once the scheduler has been set up.',
     'office.hire.urlLabel': 'Website to watch',
@@ -633,7 +633,7 @@ export const LOCALES = {
     'docs.sched.env.webhook': '선택. 알림 웹훅 주소, 쉼표로 여러 개.',
     'docs.sched.env.on': '선택. down, up, 또는 down,up (기본값: 둘 다).',
     'docs.sched.env.format': '선택. full 또는 text. 지정하지 않으면 호스트별 기본값이 적용됩니다.',
-    'docs.sched.env.stale': '선택. 확인이 없는 상태가 몇 분 지나면 정지로 볼지. 기본값 45.',
+    'docs.sched.env.stale': '선택. 정지 판정 임계값을 직접 지정합니다. 비워두면 이 배포가 실제로 도는 주기의 3배가 쓰입니다.',
     'docs.sched.actionsHtml':
       '깨우는 일은 GitHub Actions가 15분마다 <code>.github/workflows/monitor.yml</code>로 합니다. Vercel Hobby 플랜은 cron이 하루 1회 제한이라 가동률 감시에 쓸 수 없습니다. Pro 플랜이라면 <code>vercel.json</code>에 <code>crons</code>를 추가하고 워크플로를 지워도 됩니다. GitHub은 부하가 있을 때 예약 실행을 늦추므로, 15분은 보장이 아니라 최소 간격으로 보시면 됩니다.',
     'docs.sched.regionHtml':
@@ -780,7 +780,7 @@ export const LOCALES = {
     'status.detail': '상세',
     'status.ongoing': '진행 중',
     'stale.bannerHtml':
-      '<strong>지금 아무것도 확인되지 않고 있습니다.</strong> 마지막 확인이 {ago}이고, 원래는 15분마다 확인해야 합니다. 아래 내용은 현재 상태가 아니라 과거 기록입니다.',
+      '<strong>지금 아무것도 확인되지 않고 있습니다.</strong> 마지막 확인이 {ago}이고, 이 배포는 보통 {interval}분마다 확인합니다. 아래 내용은 현재 상태가 아니라 과거 기록입니다.',
     'stale.bannerNever':
       '아직 확인이 실행되지 않았습니다. 스케줄러를 설정하면 숫자가 채워집니다.',
     'office.hire.urlLabel': '감시할 웹사이트',

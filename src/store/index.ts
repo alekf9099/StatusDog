@@ -12,8 +12,8 @@ export {
 export type { AppliedCheck, UptimeEntry, UptimeRecord, UptimeStats } from './uptime.js';
 export { loadRoster, resolveRoster, ROSTER_FILENAME } from './roster.js';
 export {
-  DEFAULT_STALE_AFTER_MS,
   describeStaleness,
+  observedIntervalMs,
   EMPTY_SCHEDULER_STATE,
   evaluateStaleness,
   readSchedulerState,

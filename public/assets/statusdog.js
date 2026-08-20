@@ -196,7 +196,11 @@ export function renderStaleBanner(element, scheduler) {
   }
 
   element.dataset.visible = 'true';
-  element.innerHTML = t('stale.bannerHtml', { ago: escapeHtml(formatRelative(scheduler.lastRunAt)) });
+  element.innerHTML = t('stale.bannerHtml', {
+    ago: escapeHtml(formatRelative(scheduler.lastRunAt)),
+    // The measured cadence, not the one the cron expression asks for.
+    interval: Math.round((scheduler.intervalMs ?? 30 * 60_000) / 60_000),
+  });
 }
 
 /** Mark the current page in the header nav. Called by each page after initI18n. */
