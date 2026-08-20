@@ -799,3 +799,14 @@
   .desk:hover { transform: none; }
   .desk[data-arriving="true"] { animation: none; }
 }
+
+/* ---------- desk streak ---------- */
+
+.desk-streak {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  letter-spacing: -.01em;
+}
+.desk-streak.record { color: var(--up); font-weight: 600; }
+

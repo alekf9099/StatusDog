@@ -85,7 +85,7 @@
 import { initI18n, t } from '/assets/i18n.js';
 import {
   check, escapeHtml, formatMs, formatRelative, markCurrentNav, prettyUrl,
-  renderStaleBanner, sparkline, stateBadge, statusBadge, store, uptimePct,
+  reflectStateInTab, renderStaleBanner, sparkline, stateBadge, statusBadge, store, uptimePct,
 } from '/assets/statusdog.js';
 
 const INTERVAL_MS = 60_000;
@@ -119,6 +119,7 @@ function renderServerMonitors() {
   if (!serverPayload) return;
   const monitors = serverPayload.monitors ?? [];
   renderStaleBanner(document.getElementById('stale-banner'), serverPayload.scheduler ?? null);
+  reflectStateInTab(serverPayload.monitors ?? []);
 
   if (serverPayload.storage === 'none') {
     serverSummary.textContent = t('dash.server.noStorage');

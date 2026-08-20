@@ -485,3 +485,24 @@ ul.changed code {
 .status-target .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
 .status-target .name { font-weight: 650; }
 .status-target .url { font-size: 12.5px; color: var(--muted); word-break: break-all; }
+
+/* ---------- subscribe and badge ---------- */
+
+.share-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; margin-top: 8px; }
+.share-box { flex: 1 1 260px; min-width: 0; }
+.share-box h3 { font-size: 12.5px; margin: 0 0 4px; font-weight: 600; }
+.share-field { display: flex; gap: 6px; align-items: stretch; margin-top: 6px; }
+.share-field input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+.share-field button { padding: 6px 12px; font-size: 12px; white-space: nowrap; }
+.share-preview { margin-top: 8px; }
+.share-preview img { display: block; height: 20px; }

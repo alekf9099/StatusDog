@@ -293,6 +293,24 @@ export class ServerReportModal {
     const message = monitor.lastResult && !monitor.lastResult.ok ? monitor.lastResult.message : null;
     if (message) rows.push([t('office.report.lastError'), message]);
 
+    const tenure = monitor.tenure;
+    if (tenure?.tenure !== null && tenure?.tenure !== undefined) {
+      rows.push([t('office.report.tenure'), t('office.report.tenureV', { n: tenure.tenure })]);
+    }
+    if (tenure) {
+      // A run that has just been broken says so rather than reporting zero days.
+      rows.push([
+        t('office.report.streak'),
+        tenure.streak === null
+          ? t('office.report.streakNone')
+          : t('office.report.streakV', { n: tenure.streak })
+            + (tenure.record ? ` — ${t('office.report.recordNow')}` : ''),
+      ]);
+      if (tenure.longest !== null && !tenure.record) {
+        rows.push([t('office.report.longest'), t('office.report.longestV', { n: tenure.longest })]);
+      }
+    }
+
     // The dog is calm because nothing was concluded, not because nothing happened.
     const dispute = monitor.lastDispute;
     if (dispute && (!monitor.lastResult || dispute.at > monitor.lastResult.checkedAt)) {

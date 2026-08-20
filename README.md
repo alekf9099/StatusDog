@@ -349,6 +349,41 @@ A missing, empty or malformed body is simply no second opinion: the primary stan
 alone and alerts exactly as it did before. The improvement can never be a
 prerequisite for the check.
 
+### Taking it with you
+
+Four things that need no account, because there are none.
+
+**A badge.** `GET /api/badge?target=<id>` returns one self-contained SVG — no
+script, no webfont, no second request — so it renders anywhere:
+
+```markdown
+[![CopyKiller](https://status-dog.vercel.app/api/badge?target=copykiller)](https://status-dog.vercel.app/status/copykiller)
+```
+
+`metric=state` shows up/down instead of a percentage, `days` sets the uptime window
+and `label` overrides the left-hand text. Thresholds match the status page, so a
+badge and the page it links to never disagree. It is cached for five minutes and it
+always renders: an unknown target, a missing store or a failed read all produce a
+grey badge saying so, because a broken image in someone's README is worse than an
+honest "no data".
+
+**A feed.** `GET /api/feed?target=<id>` is RSS 2.0, and it is the only way to
+subscribe today: email needs an address and therefore an account, a feed needs
+nothing but a URL. Items carry the whole incident report — timeline, detection
+delay, the failing status, the page excerpt, whether the alerts landed, and what was
+observably different on recovery — so a reader is not just told that something broke.
+
+**The browser tab.** With a StatusDog page open in a background tab, the title
+becomes `(2 down) Dashboard` and the favicon takes a coloured dot. Anything
+unchecked shows amber rather than green, because "we have not looked" is not "it is
+fine".
+
+**Clean-run records.** Each roster dog's desk shows how long since it last had a
+bad day, and its report adds how long it has been on the job and its best run.
+Computed from `since` and the incident list — no new storage. A dog with no history
+says nothing rather than claiming a clean sheet it has not earned, and a dog that is
+down right now has no streak at all, which is not the same as zero days.
+
 ### Alerts
 
 Every confirmed up/down change posts JSON to each configured webhook. *Confirmed*

@@ -245,6 +245,62 @@ export function renderStaleBanner(element, scheduler) {
 }
 
 /** Mark the current page in the header nav. Called by each page after initI18n. */
+/* ---------------- the browser tab ---------------- */
+
+/** The document title before anything was prefixed onto it. */
+let baseTitle = null;
+/** What the tab currently shows, so an unchanged state does no DOM work. */
+let tabState = null;
+
+/**
+ * The favicon, drawn as a data URI.
+ *
+ * The dog stays; a coloured dot goes over its shoulder. Built as a string rather
+ * than on a canvas because it has to work before first paint and a canvas would
+ * need a load cycle for the emoji.
+ */
+function faviconFor(dot) {
+  const badge = dot
+    ? `<circle cx="74" cy="74" r="26" fill="${dot}" stroke="%23000" stroke-opacity=".25" stroke-width="4"/>`
+    : '';
+  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>`
+    + `<text y='.9em' font-size='90'>🐕</text>${badge}</svg>`;
+}
+
+const TAB_DOTS = { down: '%23cf222e', unknown: '%23bf8700', up: null };
+
+/**
+ * Reflect the worst state across a set of monitors in the tab itself.
+ *
+ * Somebody who keeps StatusDog open in a background tab should not have to look at
+ * it to find out something broke. The title says how many are down and the favicon
+ * carries a coloured dot, which is the part visible when the tab is narrow.
+ *
+ * The down count is what matters; anything unchecked shows amber rather than green,
+ * because "we have not looked" is not "it is fine".
+ */
+export function reflectStateInTab(monitors) {
+  if (baseTitle === null) baseTitle = document.title;
+
+  const list = Array.isArray(monitors) ? monitors : [];
+  const down = list.filter((monitor) => monitor?.state === 'down').length;
+  const unknown = list.filter((monitor) => !monitor?.state || monitor.state === 'unknown').length;
+  const state = down > 0 ? 'down' : unknown > 0 ? 'unknown' : 'up';
+  const next = `${state}:${down}`;
+  if (next === tabState) return;
+  tabState = next;
+
+  document.title = down > 0 ? `(${down}${t('tab.down')}) ${baseTitle}` : baseTitle;
+
+  let link = document.querySelector('link[rel="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.href = faviconFor(TAB_DOTS[state]);
+}
+
 export function markCurrentNav() {
   const path = location.pathname.replace(/\/$/, '') || '/';
   for (const link of document.querySelectorAll('.site-nav a')) {
