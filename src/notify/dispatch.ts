@@ -14,6 +14,14 @@ export interface DispatchOutcome {
   notifier: string;
   delivered: boolean;
   error?: string;
+  /**
+   * Which target this delivery was about, when it was about one at all.
+   *
+   * Without it the summary can say "one of two deliveries failed" and nothing
+   * about which outage went unreported — and an incident report that cannot say
+   * whether anyone was told is missing the part that matters most.
+   */
+  target?: string | null;
 }
 
 export interface DispatchSummary {
@@ -91,7 +99,12 @@ export async function dispatchTransitions(
   notifiers: Notifier[],
   events: TransitionEvent[],
 ): Promise<DispatchSummary> {
-  return fanOut(notifiers, events, (notifier, event) => notifier.notify(event));
+  return fanOut(
+    notifiers,
+    events,
+    (notifier, event) => notifier.notify(event),
+    (event) => event.target.id,
+  );
 }
 
 /** The same fan-out for alerts that are not up/down changes. */
@@ -99,13 +112,20 @@ export async function dispatchAlerts(
   notifiers: Notifier[],
   alerts: Alert[],
 ): Promise<DispatchSummary> {
-  return fanOut(notifiers, alerts, (notifier, alert) => notifier.notifyAlert(alert));
+  return fanOut(
+    notifiers,
+    alerts,
+    (notifier, alert) => notifier.notifyAlert(alert),
+    // A staleness alert is about the monitor itself and has no target.
+    (alert) => alert.target?.id ?? null,
+  );
 }
 
 async function fanOut<T>(
   notifiers: Notifier[],
   items: T[],
   deliver: (notifier: Notifier, item: T) => Promise<void>,
+  labelOf: (item: T) => string | null = () => null,
 ): Promise<DispatchSummary> {
   if (notifiers.length === 0 || items.length === 0) {
     return { transitions: items.length, attempted: 0, delivered: 0, failed: 0, outcomes: [] };
@@ -114,11 +134,17 @@ async function fanOut<T>(
   const outcomes = await Promise.all(
     items.flatMap((item) =>
       notifiers.map(async (notifier): Promise<DispatchOutcome> => {
+        const target = labelOf(item);
         try {
           await deliver(notifier, item);
-          return { notifier: notifier.name, delivered: true };
+          return { notifier: notifier.name, delivered: true, target };
         } catch (err) {
-          return { notifier: notifier.name, delivered: false, error: (err as Error).message };
+          return {
+            notifier: notifier.name,
+            delivered: false,
+            error: (err as Error).message,
+            target,
+          };
         }
       }),
     ),

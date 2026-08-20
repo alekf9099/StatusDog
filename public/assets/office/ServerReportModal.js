@@ -293,6 +293,12 @@ export class ServerReportModal {
     const message = monitor.lastResult && !monitor.lastResult.ok ? monitor.lastResult.message : null;
     if (message) rows.push([t('office.report.lastError'), message]);
 
+    // The dog is calm because nothing was concluded, not because nothing happened.
+    const dispute = monitor.lastDispute;
+    if (dispute && (!monitor.lastResult || dispute.at > monitor.lastResult.checkedAt)) {
+      rows.push([t('office.report.disputed'), t('office.report.disputedV', { time: formatRelative(dispute.at) })]);
+    }
+
     if (rows.length === 0) return '';
 
     return `
@@ -382,6 +388,8 @@ export class ServerReportModal {
           ${escapeHtml(this.busy ? t('office.report.checking') : t('office.report.recheck'))}
         </button>
         <a href="/check?url=${encodeURIComponent(monitor.url)}"><button type="button" class="secondary">${escapeHtml(t('home.fullReport'))}</button></a>
+        ${monitor.kind === 'staff' ? `
+          <a href="/status/${encodeURIComponent(monitor.id)}"><button type="button" class="secondary">${escapeHtml(t('office.report.incidents'))}</button></a>` : ''}
       </div>
       <div class="report-actions-secondary">
         <button type="button" class="secondary" data-report-reroll>${escapeHtml(t('office.reroll'))}</button>

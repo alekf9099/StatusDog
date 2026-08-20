@@ -180,6 +180,52 @@ export const LOCALES = {
     'docs.can.traffic': 'Traffic / visitor counts',
     'docs.can.trafficV':
       "No — that needs access to the site's own analytics or server logs, not an external probe",
+    'spark.disputed': 'unclear \u2014 the two vantage points disagreed',
+    'dash.disputed':
+      'Checked {time}, but the two vantage points disagreed \u2014 nothing was concluded from it, so the state above is the last check that counted.',
+    'office.report.disputed': 'Unclear check',
+    'office.report.disputedV': '{time} \u2014 the two vantage points disagreed, so it was not counted',
+    'docs.incident.h2': 'Incident reports',
+    'docs.incident.p1':
+      'Every confirmed outage writes a report, shown on that site\u2019s status page. An incident used to be a start time, a duration and a single word like "timeout" \u2014 which says one happened and nothing about it.',
+    'docs.incident.timeline': 'Timeline',
+    'docs.incident.timelineV':
+      'First failing check, when it was called down, first check that passed again, confirmed recovery \u2014 and the delay between the first failure and the call, which is what the failure threshold costs.',
+    'docs.incident.precursor': 'Leading up to it',
+    'docs.incident.precursorV':
+      'Response times from the checks before the first failure. A site that crept from 208ms to 1.6s failed differently from one that died instantly.',
+    'docs.incident.snapshots': 'What was seen',
+    'docs.incident.snapshotsV':
+      'Two snapshots \u2014 when it was called down and when it came back: status, latency, the address that answered, the server header, content type, response size, TLS version, and a short excerpt of the failing page.',
+    'docs.incident.alerts': 'Whether anyone was told',
+    'docs.incident.alertsV':
+      'Deliveries attempted and delivered, per outage. A webhook that quietly stopped working is otherwise invisible.',
+    'docs.incident.changed': 'Different on recovery',
+    'docs.incident.changedV':
+      'The fields that are observably different now that it works \u2014 an address that moved, a server header that changed, a page that went from 512 B to 85 KB.',
+    'docs.incident.limit':
+      'What fixed it is never claimed. StatusDog watches from outside the site and cannot see a service restarted or a deploy rolled back, so the differences above are evidence about the fix and not the fix itself. When there are none, it says so rather than inventing a cause.',
+    'docs.incident.note':
+      'Reports are kept per site and read only when one is opened, so nothing that polls on a timer carries them.',
+    'docs.vantage.h2': 'Two vantage points',
+    'docs.vantage.p1':
+      'One observer cannot tell "the site is down" from "the path to the site is down". Roster checks run from Seoul; a second look comes from GitHub\u2019s network before every scheduled run, so the two can be compared.',
+    'docs.vantage.p2':
+      'This is not hypothetical. A site that answers in 200ms from Seoul once took 30 seconds from a US region, and StatusDog reported an outage that was not happening.',
+    'docs.vantage.bothOk': 'Both saw it working',
+    'docs.vantage.bothOkV': 'Counted as up.',
+    'docs.vantage.bothBad': 'Both saw it failing',
+    'docs.vantage.bothBadV': 'Counted as down \u2014 an outage two networks agree on.',
+    'docs.vantage.split': 'Only the Seoul check failed',
+    'docs.vantage.splitV':
+      'Inconclusive. Recorded and visible, but kept out of the up/down decision and out of the statistics, and no alert is sent.',
+    'docs.vantage.reverse': 'Only the second look failed',
+    'docs.vantage.reverseV':
+      'Counted as up \u2014 Seoul serves this dashboard. Still recorded: it is the early warning for a routing problem elsewhere.',
+    'docs.vantage.limit':
+      'Only failures the network could have caused are ever set aside \u2014 a timeout, a refused connection, DNS, a handshake, or latency over the limit. A wrong status code, forbidden text in the body, a missing header or a changed redirect chain is the site\u2019s own answer, identical from anywhere, and always counts.',
+    'docs.vantage.guard':
+      'Three disagreements in a row and the second look stops being believed, until the two agree again. A broken runner delays an alert by three checks and no more.',
     'docs.api.h2': 'Check API',
     'docs.api.p': 'One request, one probe. Nothing is stored.',
     'docs.api.url': 'required · http(s); a bare host gets https:// prepended',
@@ -383,6 +429,54 @@ export const LOCALES = {
     'status.daily': 'Day by day',
     'status.dailyNote': 'One bar per day, coloured by that day\'s uptime. Days start at midnight {tz}.',
     'status.incidents': 'Past incidents',
+    'office.report.incidents': 'Past outages',
+    'status.report.lede':
+      'What was observed when each outage was called, and what was different when it came back.',
+    'status.report.summaryOnly': 'summary only',
+    'status.report.noDetail': 'No detailed report was recorded for this incident.',
+    'status.report.timeline': 'Timeline',
+    'status.report.firstFailure': 'First failing check',
+    'status.report.confirmed': 'Called down',
+    'status.report.detection': 'Detection delay',
+    'status.report.detectionValue': '{time} · {checks} failing check(s)',
+    'status.report.firstSuccess': 'First passing check',
+    'status.report.recovered': 'Called up',
+    'status.report.alerts': 'Alerts',
+    'status.report.alertsValue': '{delivered} of {attempted} delivered',
+    'status.report.alertsUnknown': 'not recorded',
+    'status.report.vantage': 'Second vantage point',
+    'status.report.vantage.confirmed-failed': 'agreed it was failing',
+    'status.report.vantage.dispute-exhausted': 'still reached it, and was no longer believed',
+    'status.report.vantage.content-failure': 'reached it, but the response itself was wrong',
+    'status.report.vantage.unwitnessed': 'no second opinion was available',
+    'status.report.vantage.confirmed-ok': 'agreed it was working',
+    'status.report.vantage.secondary-disagrees': 'could not reach it',
+    'status.report.vantage.disputed': 'reached it, so nothing was concluded',
+    'status.report.precursor': 'Leading up to it',
+    'status.report.precursorNote':
+      'The checks before the first failure, oldest first — {from} to {to}. A slow decline and a sudden death look different here.',
+    'status.report.snapshots': 'What was seen',
+    'status.report.whenFailing': 'When it was called down',
+    'status.report.whenRecovered': 'When it came back',
+    'status.report.stillOpen': 'Still going on.',
+    'status.report.at': 'Checked at',
+    'status.report.noAnswer': 'no answer',
+    'status.report.excerpt': 'From the page it returned:',
+    'status.report.changed': 'Different on recovery',
+    'status.report.noChange':
+      'Nothing observable changed. Whatever was fixed is not visible from outside the site.',
+    'status.report.evidenceNote':
+      'Observed differences, not a cause. StatusDog watches from outside and cannot see a service being restarted or a deploy rolled back.',
+    'status.report.absent': 'absent',
+    'status.field.peer': 'Answering address',
+    'status.field.server': 'Server header',
+    'status.field.contentType': 'Content type',
+    'status.field.bodySize': 'Response size',
+    'status.field.finalUrl': 'Final URL',
+    'status.field.redirects': 'Redirect hops',
+    'status.field.certFingerprint': 'Certificate',
+    'status.field.certIssuer': 'Certificate issuer',
+    'status.field.tlsProtocol': 'TLS version',
     'status.noIncidents': 'No incidents recorded.',
     'status.startedAt': 'Started',
     'status.duration': 'Lasted',
@@ -595,6 +689,52 @@ export const LOCALES = {
     'docs.can.traffic': '트래픽 · 방문자 수',
     'docs.can.trafficV':
       '불가능 — 외부에서 찔러보는 방식으로는 알 수 없고, 해당 사이트의 애널리틱스나 서버 로그에 접근해야 합니다',
+    'spark.disputed': '판단 보류 — 두 지점의 결과가 엇갈렸습니다',
+    'dash.disputed':
+      '{time} 확인했지만 두 지점의 결과가 엇갈려 판단을 보류했습니다. 위 상태는 집계에 반영된 마지막 확인 결과입니다.',
+    'office.report.disputed': '판단 보류된 확인',
+    'office.report.disputedV': '{time} \u2014 두 지점의 결과가 엇갈려 집계하지 않았습니다',
+    'docs.incident.h2': '장애 상세 기록',
+    'docs.incident.p1':
+      '장애가 확정될 때마다 상세 기록을 남기고, 해당 사이트의 상태 페이지에서 볼 수 있습니다. 전에는 시작 시각, 지속 시간, 그리고 "timeout" 같은 단어 하나뿐이었습니다 \u2014 장애가 있었다는 사실 외에는 아무것도 알 수 없었죠.',
+    'docs.incident.timeline': '경과',
+    'docs.incident.timelineV':
+      '첫 실패 확인, 장애 확정 시점, 다시 정상이 된 첫 확인, 복구 확정 \u2014 그리고 첫 실패부터 확정까지 걸린 시간. 실패 임계값 때문에 늦어진 만큼입니다.',
+    'docs.incident.precursor': '장애 직전',
+    'docs.incident.precursorV':
+      '첫 실패 직전 확인들의 응답 시간입니다. 208ms에서 1.6초로 서서히 느려진 경우와 즉시 끊긴 경우는 서로 다른 장애입니다.',
+    'docs.incident.snapshots': '관측된 내용',
+    'docs.incident.snapshotsV':
+      '장애 확정 시점과 복구 시점, 두 번의 스냅샷입니다. 상태 코드, 응답 시간, 응답한 주소, Server 헤더, 콘텐츠 타입, 응답 크기, TLS 버전, 그리고 실패한 페이지의 내용 일부.',
+    'docs.incident.alerts': '알림이 실제로 갔는지',
+    'docs.incident.alertsV':
+      '장애별로 알림을 몇 건 시도해 몇 건이 발송됐는지. 웹훅이 조용히 고장 나면 이것 말고는 알 방법이 없습니다.',
+    'docs.incident.changed': '복구 시 달라진 것',
+    'docs.incident.changedV':
+      '복구된 뒤 관측상 달라진 항목들입니다 \u2014 주소가 바뀌었거나, Server 헤더가 바뀌었거나, 페이지가 512 B에서 85 KB가 되었거나.',
+    'docs.incident.limit':
+      '무엇이 고쳤는지는 말하지 않습니다. StatusDog는 사이트 밖에서 지켜보기 때문에 서비스 재시작이나 배포 롤백을 볼 수 없고, 따라서 위 차이들은 조치에 대한 단서일 뿐 조치 자체가 아닙니다. 차이가 없으면 원인을 지어내지 않고 없다고 적습니다.',
+    'docs.incident.note':
+      '기록은 사이트별로 보관하고 열어볼 때만 읽습니다. 주기적으로 갱신되는 화면은 이 데이터를 가져가지 않습니다.',
+    'docs.vantage.h2': '두 지점에서 확인',
+    'docs.vantage.p1':
+      '한 곳에서만 보면 "사이트가 죽었다"와 "그 사이트로 가는 길이 죽었다"를 구분할 수 없습니다. 감시 목록 확인은 서울에서 실행되고, 예정된 확인마다 그 직전에 GitHub 쪽 네트워크에서 한 번 더 봅니다. 그래서 두 결과를 맞대볼 수 있습니다.',
+    'docs.vantage.p2':
+      '가정이 아닙니다. 서울에서 200ms에 응답하는 사이트가 미국 리전에서는 30초가 걸린 적이 있고, StatusDog는 일어나지도 않은 장애를 알렸습니다.',
+    'docs.vantage.bothOk': '양쪽 모두 정상',
+    'docs.vantage.bothOkV': '정상으로 집계합니다.',
+    'docs.vantage.bothBad': '양쪽 모두 실패',
+    'docs.vantage.bothBadV': '장애로 집계합니다 \u2014 두 네트워크가 같은 결론을 낸 경우입니다.',
+    'docs.vantage.split': '서울 확인만 실패',
+    'docs.vantage.splitV':
+      '판단 보류. 기록에는 남지만 정상·장애 판정과 통계에서 제외하고, 알림도 보내지 않습니다.',
+    'docs.vantage.reverse': '두 번째 확인만 실패',
+    'docs.vantage.reverseV':
+      '정상으로 집계합니다 \u2014 이 대시보드를 서비스하는 곳이 서울이기 때문입니다. 그래도 기록은 남깁니다. 다른 경로에 문제가 생겼다는 조기 신호입니다.',
+    'docs.vantage.limit':
+      '네트워크 때문일 수 있는 실패만 보류합니다 \u2014 타임아웃, 연결 거부, DNS, 핸드셰이크, 응답 시간 초과. 상태 코드가 틀렸거나 본문에 금지 문자열이 있거나 헤더가 빠졌거나 리다이렉트가 바뀐 경우는 사이트가 직접 내놓은 답이고 어디서 봐도 같으므로, 언제나 그대로 집계합니다.',
+    'docs.vantage.guard':
+      '세 번 연속 엇갈리면 두 번째 확인을 더 이상 믿지 않고, 양쪽이 다시 일치할 때까지 그 상태를 유지합니다. 실행기가 고장 나도 알림이 확인 세 번만큼 늦어질 뿐입니다.',
     'docs.api.h2': '확인 API',
     'docs.api.p': '요청 한 번에 확인 한 번. 아무것도 저장하지 않습니다.',
     'docs.api.url': '필수 · http(s). 호스트만 넣으면 https://가 붙습니다',
@@ -798,6 +938,54 @@ export const LOCALES = {
     'status.daily': '일별 추이',
     'status.dailyNote': '막대 하나가 하루이고, 그날 가동률에 따라 색이 정해집니다. 하루는 {tz} 자정에 시작합니다.',
     'status.incidents': '과거 장애',
+    'office.report.incidents': '지난 장애 기록',
+    'status.report.lede':
+      '장애가 확정될 때 관측된 내용과, 복구되었을 때 무엇이 달라졌는지입니다.',
+    'status.report.summaryOnly': '요약만 있음',
+    'status.report.noDetail': '이 장애에는 상세 기록이 남아 있지 않습니다.',
+    'status.report.timeline': '경과',
+    'status.report.firstFailure': '첫 실패 확인',
+    'status.report.confirmed': '장애 확정',
+    'status.report.detection': '확정까지 걸린 시간',
+    'status.report.detectionValue': '{time} · 실패 확인 {checks}회',
+    'status.report.firstSuccess': '첫 정상 확인',
+    'status.report.recovered': '복구 확정',
+    'status.report.alerts': '알림',
+    'status.report.alertsValue': '{attempted}건 중 {delivered}건 발송',
+    'status.report.alertsUnknown': '기록되지 않음',
+    'status.report.vantage': '두 번째 지점',
+    'status.report.vantage.confirmed-failed': '실패에 동의했습니다',
+    'status.report.vantage.dispute-exhausted': '접속에 성공했지만 더 이상 신뢰하지 않았습니다',
+    'status.report.vantage.content-failure': '접속은 됐지만 응답 자체가 잘못됐습니다',
+    'status.report.vantage.unwitnessed': '두 번째 의견이 없었습니다',
+    'status.report.vantage.confirmed-ok': '정상에 동의했습니다',
+    'status.report.vantage.secondary-disagrees': '접속하지 못했습니다',
+    'status.report.vantage.disputed': '접속에 성공해서 판단을 보류했습니다',
+    'status.report.precursor': '장애 직전',
+    'status.report.precursorNote':
+      '첫 실패 직전의 확인들입니다(오래된 순) — {from} → {to}. 서서히 느려진 경우와 즉시 끊긴 경우가 여기서 구분됩니다.',
+    'status.report.snapshots': '관측된 내용',
+    'status.report.whenFailing': '장애 확정 시점',
+    'status.report.whenRecovered': '복구 시점',
+    'status.report.stillOpen': '아직 진행 중입니다.',
+    'status.report.at': '확인 시각',
+    'status.report.noAnswer': '응답 없음',
+    'status.report.excerpt': '반환된 페이지 내용:',
+    'status.report.changed': '복구 시 달라진 것',
+    'status.report.noChange':
+      '관측된 차이가 없습니다. 무엇을 고쳤는지는 사이트 밖에서 알 수 없습니다.',
+    'status.report.evidenceNote':
+      '원인이 아니라 관측된 차이입니다. StatusDog는 사이트 밖에서 지켜보기 때문에 서비스 재시작이나 배포 롤백은 볼 수 없습니다.',
+    'status.report.absent': '없음',
+    'status.field.peer': '응답한 주소',
+    'status.field.server': 'Server 헤더',
+    'status.field.contentType': '콘텐츠 타입',
+    'status.field.bodySize': '응답 크기',
+    'status.field.finalUrl': '최종 URL',
+    'status.field.redirects': '리다이렉트 횟수',
+    'status.field.certFingerprint': '인증서',
+    'status.field.certIssuer': '인증서 발급자',
+    'status.field.tlsProtocol': 'TLS 버전',
     'status.noIncidents': '기록된 장애가 없습니다.',
     'status.startedAt': '시작',
     'status.duration': '지속',

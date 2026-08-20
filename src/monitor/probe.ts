@@ -66,6 +66,9 @@ interface RawResponse {
   headers: http.IncomingHttpHeaders;
   body: string;
   tls: TlsInfo | null;
+  /** The address that answered, and how many bytes it sent. */
+  peer: string | null;
+  bodySize: number;
 }
 
 /**
@@ -126,7 +129,7 @@ export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
         checkedAt,
         reason: failure?.reason ?? null,
         message: failure?.message ?? null,
-        detail: buildDetail(response, chain),
+        detail: buildDetail(response, chain, failure !== null && mayKeepExcerpt(target)),
       };
     }
   } catch (err) {
@@ -141,19 +144,67 @@ export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
       checkedAt,
       reason: probeError.reason,
       message: probeError.message,
-      detail: chain.length > 0 ? { headers: {}, tls: null, chain } : null,
+      // No response at all, so there is nothing to snapshot but the hops we did
+      // manage. Kept rather than nulled when there were any: a redirect chain that
+      // got partway is itself a clue about where the request died.
+      detail: chain.length > 0 ? emptyDetail(chain) : null,
     };
   }
 }
 
-function buildDetail(response: RawResponse, chain: RedirectHop[]): ProbeDetail {
+/** How much of a failing response is kept, in characters. */
+export const BODY_EXCERPT_CHARS = 400;
+
+function emptyDetail(chain: RedirectHop[]): ProbeDetail {
+  return { headers: {}, tls: null, chain, peer: null, bodySize: null, bodyExcerpt: null };
+}
+
+/**
+ * Squeeze an error page into something readable in a report.
+ *
+ * Markup and indentation are most of an error page and none of the information,
+ * so tags go and runs of whitespace collapse. What survives is the sentence a
+ * human would have read.
+ */
+export function excerptOf(body: string, limit = BODY_EXCERPT_CHARS): string | null {
+  const text = String(body ?? '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (text === '') return null;
+  return text.length > limit ? `${text.slice(0, limit)}…` : text;
+}
+
+/**
+ * Whether a failing response may be kept as an excerpt.
+ *
+ * A target configured with request headers or a request body is an authenticated
+ * or non-idempotent check, so its response is not something every visitor could
+ * see — and `/api/incidents` is public. Only plain public GETs get an excerpt; the
+ * status code, the curated headers and the size are kept either way.
+ */
+function mayKeepExcerpt(target: ResolvedTarget): boolean {
+  return Object.keys(target.headers ?? {}).length === 0 && target.body === null;
+}
+
+function buildDetail(response: RawResponse, chain: RedirectHop[], failed: boolean): ProbeDetail {
   const headers: Record<string, string> = {};
   for (const name of REPORTED_HEADERS) {
     const value = response.headers[name];
     if (value === undefined) continue;
     headers[name] = Array.isArray(value) ? value.join(', ') : String(value);
   }
-  return { headers, tls: response.tls, chain };
+  return {
+    headers,
+    tls: response.tls,
+    chain,
+    peer: response.peer,
+    bodySize: response.bodySize,
+    bodyExcerpt: failed ? excerptOf(response.body) : null,
+  };
 }
 
 /**
@@ -269,8 +320,9 @@ function requestOnce(
         },
       },
       (response) => {
-        // Read the certificate now: the socket may be pooled or torn down later.
+        // Read both of these now: the socket may be pooled or torn down later.
         const tls = readTlsInfo(response.socket);
+        const peerAddress = response.socket?.remoteAddress ?? null;
         const chunks: Buffer[] = [];
         let received = 0;
         response.on('data', (chunk: Buffer) => {
@@ -284,6 +336,10 @@ function requestOnce(
               headers: response.headers,
               body: Buffer.concat(chunks).subarray(0, MAX_BODY_BYTES).toString('utf8'),
               tls,
+              peer: peerAddress,
+              // What was sent, not what we kept: the cap above must not make a
+              // large page look small.
+              bodySize: received,
             }),
           );
         });
@@ -324,6 +380,7 @@ function readTlsInfo(socket: unknown): TlsInfo | null {
         ? Math.floor((expiry.getTime() - Date.now()) / 86_400_000)
         : null,
       protocol: tlsSocket.getProtocol?.() ?? null,
+      fingerprint: cert.fingerprint256 ?? null,
     };
   } catch {
     // Certificate details are a nice-to-have; never fail a check over them.

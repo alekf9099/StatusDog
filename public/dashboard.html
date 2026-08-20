@@ -153,6 +153,15 @@ function serverCard(monitor) {
   const problem = result && !result.ok
     ? `<div class="notice error small" style="margin-top:14px">${escapeHtml(result.message ?? t('error.checkFailed'))}</div>`
     : '';
+  // A check the two vantage points could not agree on. Shown as unclear rather
+  // than as a failure, because nothing was concluded from it — and shown at all
+  // rather than silently dropped.
+  const dispute = monitor.lastDispute
+    && (!result || monitor.lastDispute.at > result.checkedAt)
+    ? `<div class="notice small" style="margin-top:14px">${escapeHtml(t('dash.disputed', {
+        time: formatRelative(monitor.lastDispute.at),
+      }))}</div>`
+    : '';
   const since = monitor.since
     ? `<div class="small muted" style="margin-top:12px">${escapeHtml(t('dash.since', {
         state: t(`state.${monitor.state}`),
@@ -178,7 +187,7 @@ function serverCard(monitor) {
         <div class="metric"><span class="label">${escapeHtml(t('metric.avgResponse'))}</span><span class="value">${formatMs(stats?.avgResponseTimeMs ?? null)}</span></div>
         <div class="metric"><span class="label">${escapeHtml(t('metric.checks'))}</span><span class="value">${stats?.checks ?? 0}</span></div>
       </div>
-      ${problem}${since}
+      ${problem}${dispute}${since}
     </section>`;
 }
 

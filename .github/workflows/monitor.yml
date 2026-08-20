@@ -10,6 +10,12 @@ name: Monitor
 #
 # GitHub delays scheduled runs under load, so treat 15 minutes as a floor rather
 # than a guarantee.
+#
+# The runner also takes its own look at every target before waking the scheduler.
+# It sits on a different network to the Vercel region, so when the two disagree the
+# scheduler can tell "the site is down" from "the path to the site is down" and
+# stays quiet instead of paging. The runner only measures - whether a status counts
+# as healthy is decided server-side, against each target's own expectStatus.
 
 on:
   schedule:
@@ -24,8 +30,60 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # The second look adds up to 25s per target before the scheduler call, which
+    # itself retries twice with a 120s ceiling.
+    timeout-minutes: 8
     steps:
+      - name: Check out the roster
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: monitors.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      # A second opinion from GitHub's network. Deliberately dependency-free: no
+      # Node install, no npm, just curl and jq, so it adds seconds rather than
+      # minutes to a job that runs every quarter of an hour.
+      - name: Look at every target from this runner
+        id: vantage
+        # A second opinion is an improvement on the checks, never a prerequisite:
+        # if this step breaks, the run must still go ahead without it.
+        continue-on-error: true
+        run: |
+          if [ ! -f monitors.json ]; then
+            echo "::warning::monitors.json missing - skipping the second opinion."
+            exit 0
+          fi
+
+          # Tab-separated so a URL containing spaces cannot split a field.
+          jq -r '.targets[] | select(.enabled != false) | [.id, .url] | @tsv' monitors.json > targets.tsv
+
+          : > reports.ndjson
+          while IFS=$(printf '\t') read -r id url; do
+            [ -n "$id" ] || continue
+
+            # Generous timeout on purpose: this vantage exists to catch a slow path,
+            # so it must not report "unreachable" for merely being far away.
+            code=$(curl --silent --location --output /dev/null \
+              --max-time 25 --write-out '%{http_code}' \
+              --user-agent 'StatusDog-vantage/1.0 (+https://github.com/alekf9099/StatusDog)' \
+              "$url" 2>/dev/null) || code=""
+
+            if [ -n "$code" ] && [ "$code" != "000" ]; then
+              jq -nc --arg id "$id" --argjson status "$code" \
+                '{id: $id, reachable: true, status: $status}' >> reports.ndjson
+              echo "$id -> HTTP $code"
+            else
+              # curl could not complete the request at all: no DNS, no connection,
+              # no handshake, or it ran out of time.
+              jq -nc --arg id "$id" '{id: $id, reachable: false, status: null}' >> reports.ndjson
+              echo "$id -> unreachable from this runner"
+            fi
+          done < targets.tsv
+
+          jq -sc '{vantage: {name: "github-actions", checks: .}}' reports.ndjson > vantage.json
+          echo "reports=$(jq -r '.vantage.checks | length' vantage.json)" >> "$GITHUB_OUTPUT"
+
       - name: Trigger scheduled checks
         env:
           MONITOR_ENDPOINT: ${{ secrets.MONITOR_ENDPOINT }}
@@ -36,11 +94,19 @@ jobs:
             exit 0
           fi
 
+          # The second opinion is an optional improvement, so a missing file must
+          # not stop the checks from running.
+          if [ ! -s vantage.json ]; then
+            echo '{}' > vantage.json
+          fi
+
           status=$(curl --silent --show-error \
             --max-time 120 --retry 2 --retry-delay 10 \
             --output response.json --write-out '%{http_code}' \
             --request POST "$MONITOR_ENDPOINT" \
-            --header "Authorization: Bearer $CRON_SECRET")
+            --header "Authorization: Bearer $CRON_SECRET" \
+            --header 'content-type: application/json' \
+            --data @vantage.json)
 
           echo "HTTP $status"
 
@@ -53,6 +119,14 @@ jobs:
                 echo '| Target | State | Status | Response |'
                 echo '| --- | --- | --- | --- |'
                 jq -r '.checks[] | "| \(.id) | \(.state // "?") | \(.status // "-") | \(.responseTimeMs // "-") ms |"' response.json
+                # A disputed check is the interesting case: the two vantage points
+                # saw different things, so nothing was concluded and nobody was paged.
+                if [ "$(jq -r '(.disputes // []) | length' response.json)" != "0" ]; then
+                  echo
+                  echo '**Inconclusive - the two vantage points disagreed:**'
+                  jq -r '(.disputes // [])[] | "- \(.id): \(.note)"' response.json
+                fi
+
                 certs=$(jq -r '(.certWarnings // []) | join(", ")' response.json)
                 if [ -n "$certs" ]; then
                   echo

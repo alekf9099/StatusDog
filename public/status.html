@@ -50,8 +50,8 @@
 <script type="module">
 import { initI18n, t } from '/assets/i18n.js';
 import {
-  escapeHtml, formatDurationMs, formatMs, formatRelative, markCurrentNav,
-  prettyUrl, renderStaleBanner, stateBadge,
+  escapeHtml, formatBytes, formatDurationMs, formatMs, formatRelative, formatTimestamp,
+  markCurrentNav, prettyUrl, renderStaleBanner, stateBadge,
 } from '/assets/statusdog.js';
 
 initI18n();
@@ -74,17 +74,25 @@ const wanted = new URLSearchParams(location.search).get('target')
 /** Keep the payloads so a language switch re-renders without refetching. */
 let stats = null;
 let monitors = null;
+let reports = null;
 
 async function load() {
   try {
-    const [statsRes, monitorsRes] = await Promise.all([
+    const [statsRes, monitorsRes, reportsRes] = await Promise.all([
       fetch(`/api/stats?days=90${wanted ? `&target=${encodeURIComponent(wanted)}` : ''}`, { cache: 'no-store' }),
       fetch('/api/monitors?history=0', { cache: 'no-store' }),
+      // Only on a single target's page: the detailed reports carry snapshots and
+      // a page excerpt, which the overview has no use for.
+      wanted
+        ? fetch(`/api/incidents?target=${encodeURIComponent(wanted)}&limit=10`, { cache: 'no-store' })
+        : Promise.resolve(null),
     ]);
     const statsBody = await statsRes.json();
     if (!statsRes.ok) throw new Error(statsBody.error ?? t('error.requestFailed', { status: statsRes.status }));
     stats = statsBody;
     monitors = monitorsRes.ok ? await monitorsRes.json() : null;
+    // A missing report is a thinner incident list, never a broken page.
+    reports = reportsRes?.ok ? await reportsRes.json() : null;
     render();
   } catch (err) {
     head.innerHTML = '';
@@ -168,8 +176,9 @@ function renderDetail(target) {
     <p class="small muted" style="margin:0 0 4px">${escapeHtml(t('status.dailyNote', { tz: tzLabel() }))}</p>
     <div class="card">${dayChart(target.daily ?? [], 90)}</div>
 
-    <h2 style="font-size:15px;margin:30px 0 12px">${escapeHtml(t('status.incidents'))}</h2>
-    ${incidentTable(target.incidents ?? [])}`;
+    <h2 style="font-size:15px;margin:30px 0 4px">${escapeHtml(t('status.incidents'))}</h2>
+    <p class="small muted" style="margin:0 0 12px">${escapeHtml(t('status.report.lede'))}</p>
+    ${incidentList(target.incidents ?? [])}`;
 }
 
 function periodCard(labelKey, summary) {
@@ -220,40 +229,175 @@ function dayChart(daily, days) {
     </div>`;
 }
 
-function incidentTable(incidents) {
+/* ---------------- incidents ---------------- */
+
+/** The detailed report for an incident, when one was recorded. */
+function reportFor(startedAt) {
+  return reports?.targets?.[0]?.reports?.find((report) => report.confirmedAt === startedAt) ?? null;
+}
+
+function incidentList(incidents) {
   if (incidents.length === 0) {
     return `<div class="empty">${escapeHtml(t('status.noIncidents'))}</div>`;
   }
+  return incidents.map((incident) => incidentEntry(incident, reportFor(incident.startedAt))).join('');
+}
 
-  const rows = incidents.map((incident) => {
-    const ongoing = incident.endedAt === null;
-    const duration = ongoing
-      ? t('status.ongoing')
-      : formatDurationMs(incident.durationMs ?? 0);
-    return `
-      <tr class="${ongoing ? 'ongoing' : ''}">
-        <td>${escapeHtml(new Date(incident.startedAt).toLocaleString())}</td>
-        <td>${escapeHtml(duration)}</td>
-        <td class="reason">${escapeHtml(incident.reason ?? '–')}</td>
-        <td>${escapeHtml(incident.message ?? '')}</td>
-      </tr>`;
+function incidentEntry(incident, report) {
+  const ongoing = incident.endedAt === null;
+  const duration = ongoing ? t('status.ongoing') : formatDurationMs(incident.durationMs ?? 0);
+
+  const head = `
+    <summary>
+      <span class="when">${escapeHtml(formatTimestamp(incident.startedAt) ?? '')}</span>
+      <span class="dur">${escapeHtml(duration)}</span>
+      <span class="reason">${escapeHtml(incident.reason ?? '–')}</span>
+      ${report ? '' : `<span class="small muted">${escapeHtml(t('status.report.summaryOnly'))}</span>`}
+    </summary>`;
+
+  // Incidents from before reports existed keep the one line they always had.
+  const body = report
+    ? reportBody(report)
+    : `<p class="small muted">${escapeHtml(incident.message ?? t('status.report.noDetail'))}</p>`;
+
+  return `<details class="incident-report${ongoing ? ' ongoing' : ''}">${head}<div class="report-body">${body}</div></details>`;
+}
+
+function reportBody(report) {
+  return [
+    timelineOf(report),
+    precursorOf(report),
+    snapshotsOf(report),
+    changedOf(report),
+  ].filter(Boolean).join('');
+}
+
+function row(labelKey, value) {
+  if (value === null || value === undefined || value === '') return '';
+  return `<div><span>${escapeHtml(t(labelKey))}</span><b>${escapeHtml(String(value))}</b></div>`;
+}
+
+function timelineOf(report) {
+  const alerts = report.alerts
+    ? t('status.report.alertsValue', {
+        delivered: report.alerts.delivered,
+        attempted: report.alerts.attempted,
+      })
+    : t('status.report.alertsUnknown');
+
+  return `
+    <h4>${escapeHtml(t('status.report.timeline'))}</h4>
+    <div class="report-rows">
+      ${row('status.report.firstFailure', stamp(report.firstFailureAt))}
+      ${row('status.report.confirmed', stamp(report.confirmedAt))}
+      ${row('status.report.detection', t('status.report.detectionValue', {
+        time: formatDurationMs(report.detectionMs ?? 0),
+        checks: report.failureChecks,
+      }))}
+      ${row('status.report.firstSuccess', stamp(report.firstSuccessAt))}
+      ${row('status.report.recovered', stamp(report.recoveredAt))}
+      ${row('status.report.alerts', alerts)}
+      ${report.vantage ? row('status.report.vantage', t(`status.report.vantage.${report.vantage}`)) : ''}
+    </div>`;
+}
+
+/**
+ * The checks just before it fell over.
+ *
+ * A site that crept from 200ms to 1.9s failed differently from one that died
+ * instantly, and this is the only place that distinction is visible.
+ */
+function precursorOf(report) {
+  const points = report.precursor ?? [];
+  if (points.length === 0) return '';
+
+  const max = Math.max(...points.map((point) => point.ms || 0), 1);
+  const bars = points.map((point) => {
+    const height = Math.max(10, Math.round(((point.ms || 0) / max) * 100));
+    const unclear = point.reason === 'disputed';
+    const cls = unclear ? 'unclear' : point.ok ? '' : 'bad';
+    const label = unclear ? t('spark.disputed') : point.ok ? t('state.up') : point.reason || t('state.down');
+    return `<i class="${cls}" style="height:${height}%" title="${escapeHtml(`${point.t} · ${label} · ${formatMs(point.ms)}`)}"></i>`;
   }).join('');
 
   return `
-    <div class="card scroll-x">
-      <table class="incidents">
-        <thead>
-          <tr>
-            <th>${escapeHtml(t('status.startedAt'))}</th>
-            <th>${escapeHtml(t('status.duration'))}</th>
-            <th>${escapeHtml(t('metric.failure'))}</th>
-            <th>${escapeHtml(t('status.detail'))}</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+    <h4>${escapeHtml(t('status.report.precursor'))}</h4>
+    <div class="spark">${bars}</div>
+    <p class="small muted" style="margin:6px 0 0">${escapeHtml(t('status.report.precursorNote', {
+      from: formatMs(points[0].ms),
+      to: formatMs(points[points.length - 1].ms),
+    }))}</p>`;
+}
+
+function snapshotColumn(titleKey, snap) {
+  if (!snap) {
+    return `
+      <div class="snapshot">
+        <h5>${escapeHtml(t(titleKey))}</h5>
+        <p class="small muted">${escapeHtml(t('status.report.stillOpen'))}</p>
+      </div>`;
+  }
+
+  return `
+    <div class="snapshot">
+      <h5>${escapeHtml(t(titleKey))}</h5>
+      <div class="report-rows">
+        ${row('status.report.at', stamp(snap.at))}
+        ${row('metric.status', snap.status ?? t('status.report.noAnswer'))}
+        ${row('metric.response', formatMs(snap.responseTimeMs))}
+        ${row('status.field.peer', snap.peer)}
+        ${row('status.field.server', snap.server)}
+        ${row('status.field.contentType', snap.contentType)}
+        ${row('status.field.bodySize', snap.bodySize === null ? null : formatBytes(snap.bodySize))}
+        ${row('status.field.tlsProtocol', snap.tlsProtocol)}
+      </div>
+      ${snap.message ? `<p class="small" style="margin:8px 0 0">${escapeHtml(snap.message)}</p>` : ''}
+      ${snap.bodyExcerpt ? `
+        <p class="small muted" style="margin:10px 0 4px">${escapeHtml(t('status.report.excerpt'))}</p>
+        <pre class="excerpt">${escapeHtml(snap.bodyExcerpt)}</pre>` : ''}
     </div>`;
 }
+
+function snapshotsOf(report) {
+  return `
+    <h4>${escapeHtml(t('status.report.snapshots'))}</h4>
+    <div class="snapshots">
+      ${snapshotColumn('status.report.whenFailing', report.failure)}
+      ${snapshotColumn('status.report.whenRecovered', report.recovery)}
+    </div>`;
+}
+
+/**
+ * What was observably different once it worked again.
+ *
+ * Deliberately not labelled as the cause. StatusDog watches from outside the site
+ * and cannot see a service being restarted or a deploy rolled back, so this is
+ * evidence for a person to interpret and the wording has to say so.
+ */
+function changedOf(report) {
+  if (!report.recovery) return '';
+
+  const changes = report.changed ?? [];
+  if (changes.length === 0) {
+    return `
+      <h4>${escapeHtml(t('status.report.changed'))}</h4>
+      <p class="small muted">${escapeHtml(t('status.report.noChange'))}</p>`;
+  }
+
+  const items = changes.map((change) => {
+    const label = t(`status.field.${change.field}`);
+    const from = change.field === 'bodySize' ? formatBytes(change.from) : (change.from ?? t('status.report.absent'));
+    const to = change.field === 'bodySize' ? formatBytes(change.to) : (change.to ?? t('status.report.absent'));
+    return `<li><span>${escapeHtml(label)}</span> <code>${escapeHtml(from)}</code> → <code>${escapeHtml(to)}</code></li>`;
+  }).join('');
+
+  return `
+    <h4>${escapeHtml(t('status.report.changed'))}</h4>
+    <ul class="changed">${items}</ul>
+    <p class="small muted" style="margin:8px 0 0">${escapeHtml(t('status.report.evidenceNote'))}</p>`;
+}
+
+const stamp = formatTimestamp;
 
 /* ---------------- helpers ---------------- */
 
