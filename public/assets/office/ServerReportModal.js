@@ -388,6 +388,8 @@ export class ServerReportModal {
           ${escapeHtml(this.busy ? t('office.report.checking') : t('office.report.recheck'))}
         </button>
         <a href="/check?url=${encodeURIComponent(monitor.url)}"><button type="button" class="secondary">${escapeHtml(t('home.fullReport'))}</button></a>
+        ${monitor.kind === 'staff' ? `
+          <a href="/status/${encodeURIComponent(monitor.id)}"><button type="button" class="secondary">${escapeHtml(t('office.report.incidents'))}</button></a>` : ''}
       </div>
       <div class="report-actions-secondary">
         <button type="button" class="secondary" data-report-reroll>${escapeHtml(t('office.reroll'))}</button>

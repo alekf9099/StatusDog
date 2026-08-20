@@ -204,6 +204,11 @@ export interface TlsInfo {
   /** Days until the certificate expires; negative once it already has. */
   daysRemaining: number | null;
   protocol: string | null;
+  /**
+   * SHA-256 fingerprint. Two certificates can share every field above and still
+   * be different certificates, so this is what tells a renewal from a swap.
+   */
+  fingerprint: string | null;
 }
 
 export interface RedirectHop {
@@ -221,6 +226,22 @@ export interface ProbeDetail {
   headers: Record<string, string>;
   tls: TlsInfo | null;
   chain: RedirectHop[];
+  /**
+   * Which address actually answered.
+   *
+   * The single most useful thing to know about an outage that has since ended: an
+   * address that changed between failing and working says the traffic is going
+   * somewhere else now, which no status code would have told you.
+   */
+  peer: string | null;
+  /** Bytes received. A page that shrinks to nothing still answers 200. */
+  bodySize: number | null;
+  /**
+   * A short piece of the response, kept **only when the check failed**, so an
+   * error page can be read after the fact. Never kept for a healthy response:
+   * it would be per-check weight in the store for no diagnostic value.
+   */
+  bodyExcerpt: string | null;
 }
 
 export interface ProbeResult {

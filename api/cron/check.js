@@ -29,6 +29,11 @@
  * When the primary fails and that vantage did not, the check is inconclusive —
  * stored, but kept out of the state machine and the statistics, and nobody is paged.
  * One observer cannot tell a broken site from a broken path to it.
+ *
+ * A confirmed change also writes an incident report: a snapshot of the failing
+ * response, the checks leading up to it, and — on recovery — what is observably
+ * different now that it works. See src/store/incident.ts for why that is recorded
+ * as evidence and never as a cause.
  */
 import { probe } from '../../dist/monitor/probe.js';
 import { resolveRoster } from '../../dist/store/roster.js';
@@ -46,6 +51,8 @@ import {
 import { dispatchAlerts, dispatchTransitions, notifiersFromEnv } from '../../dist/notify/dispatch.js';
 import { certSeverity, describeCertExpiry } from '../../dist/monitor/cert.js';
 import { findVantageReport, nextDisputeCount, reconcile } from '../../dist/monitor/vantage.js';
+import { attachAlerts, closeInLog, openInLog } from '../../dist/store/incident.js';
+import { readLog, writeLog } from '../../dist/store/incident-store.js';
 import { ROSTER } from '../../dist/roster.data.js';
 
 /** Constant-time comparison so the secret cannot be probed byte by byte. */
@@ -131,9 +138,14 @@ export default async function handler(req, res) {
   const vantage = body && typeof body.vantage === 'object' ? body.vantage : null;
 
   const startedAt = Date.now();
+  // Incident logs touched by this run, so the alert results can be attached once
+  // the fan-out below has actually happened.
+  const reportsOpened = [];
   const transitions = [];
   const alerts = [];
   const disputes = [];
+  const reportsClosed = [];
+  const reportFailures = [];
 
   const checks = await Promise.all(targets.map(async (target) => {
     const result = await probe(target);
@@ -176,6 +188,42 @@ export default async function handler(req, res) {
           result,
           at: result.checkedAt,
         });
+
+        // The detailed report. Its own key, so a body excerpt from last March is
+        // never in the payload the dashboard polls every minute. A failure here
+        // costs the report and never the check.
+        try {
+          const log = await readLog(kv, target.id);
+          const next = entry.state === 'down'
+            ? openInLog(log, {
+                targetId: target.id,
+                confirmedAt: result.checkedAt,
+                result,
+                // The history *including* this check, so the failing run can be
+                // walked back to where the trouble actually started.
+                history: entry.history,
+                vantage: verdict.outcome,
+              })
+            : closeInLog(log, {
+                recoveredAt: result.checkedAt,
+                result,
+                history: entry.history,
+              });
+          // Both helpers hand back the same log when there is nothing to do — an
+          // "up" with no open incident, or a second "down" during one. Skipping the
+          // write then keeps the count honest and saves a round trip.
+          if (next !== log) {
+            await writeLog(kv, next);
+            if (entry.state === 'down') {
+              reportsOpened.push({ targetId: target.id, id: result.checkedAt });
+            } else {
+              reportsClosed.push(target.id);
+            }
+          }
+        } catch {
+          // Reported below rather than swallowed silently.
+          reportFailures.push(target.id);
+        }
       }
 
       if (cert.crossed !== null) {
@@ -277,6 +325,22 @@ export default async function handler(req, res) {
   const failed = transitionResults.failed + alertResults.failed;
   const outcomes = [...transitionResults.outcomes, ...alertResults.outcomes];
 
+  // A report that cannot say whether anyone was told is missing the part that
+  // matters most, and that is only known once the fan-out has run.
+  await Promise.all(reportsOpened.map(async ({ targetId, id }) => {
+    const mine = transitionResults.outcomes.filter((outcome) => outcome.target === targetId);
+    try {
+      const log = await readLog(kv, targetId);
+      await writeLog(kv, attachAlerts(log, id, {
+        attempted: mine.length,
+        delivered: mine.filter((outcome) => outcome.delivered).length,
+        failed: mine.filter((outcome) => !outcome.delivered).length,
+      }));
+    } catch {
+      reportFailures.push(targetId);
+    }
+  }));
+
   res.status(everythingFailed ? 502 : 200).json({
     checkedAt: new Date(startedAt).toISOString(),
     durationMs: Date.now() - startedAt,
@@ -286,6 +350,11 @@ export default async function handler(req, res) {
     transitions: transitions.map((event) => `${event.target.id}:${event.from}->${event.to}`),
     vantage: vantage ? { name: vantage.name ?? 'unnamed', reports: vantage.checks?.length ?? 0 } : null,
     disputes,
+    incidentReports: {
+      opened: reportsOpened.length,
+      closed: reportsClosed.length,
+      failed: reportFailures.length,
+    },
     // `alerts` now holds more than one kind, and a scheduler alert has no target.
     certWarnings: alerts
       .filter((alert) => alert.kind === 'cert-expiry')

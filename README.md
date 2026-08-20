@@ -246,6 +246,64 @@ Nothing here is required. With no store configured, `/api/monitors` returns
 `storage: "none"`, the dashboard says as much, and the rest of the site is
 unaffected.
 
+#### Incident reports
+
+An incident used to be six fields: when it started, when it ended, how long, and a
+single word like `timeout`. That says an outage happened and nothing about it.
+
+Every confirmed change now writes a report to its own key, read through
+`GET /api/incidents` and shown on each target's status page:
+
+**Timeline** — the first failing check, when the threshold was crossed, the first
+check that passed again, and the confirmed recovery. The gap between the first
+failure and the confirmation is the **detection delay**: the price of
+`failureThreshold`, stated rather than hidden.
+
+**Leading up to it** — the checks before the first failure, with their response
+times. A site that crept from 208ms to 1.6s before falling over failed differently
+from one that died instantly, and this is the only place that difference is visible.
+
+**What was seen** — two snapshots, one from the moment it was called down and one
+from the moment it came back: status, latency, the address that answered, the
+`server` header, content type, response size, TLS version, and — on the failing
+side only — a 400-character excerpt of the page it returned.
+
+**Whether anyone was told** — how many alert deliveries were attempted and how many
+landed, per incident. A webhook that silently stopped working is otherwise invisible.
+
+`/api/incidents` is public, so the excerpt is only kept for plain public GETs. A
+target configured with request `headers` or a request `body` is an authenticated or
+non-idempotent check, and its response is not something every visitor could see —
+those keep the status code, the curated headers and the response size, and no page
+content.
+
+#### What it deliberately does not claim
+
+StatusDog watches from *outside* the site. It cannot see a service being restarted
+or a deploy rolled back, so it never says what fixed anything. What it can do is
+list what is **observably different** now that it works:
+
+```
+Different on recovery
+  Answering address   104.18.32.77 → 13.209.144.20
+  Server header       cloudflare   → nginx
+  Response size       512 B        → 85 KB
+```
+
+That is enough to see the traffic is going somewhere else and the page is no longer
+a stub — which is where to look, not what happened. The UI labels it as observed
+differences for that reason, and says so plainly when there are none. The cause and
+the remedy are for a person to write down; there is nowhere to write them yet,
+because the site has no accounts and a public write endpoint would let any visitor
+edit everyone's outage history, for the same reason [the roster is a committed
+file](#the-roster).
+
+Comparison covers the fields that might explain a recovery and skips the ones that
+merely restate it: status, latency and failure reason are the symptom, and "it was
+failing and now it is not" is the definition of a recovery rather than a finding.
+Response size is only reported when it appears, vanishes, or moves by more than a
+quarter, so ordinary page jitter stays out.
+
 #### Two vantage points
 
 One observer cannot tell *the site is down* from *the path to the site is down*.

@@ -7,7 +7,7 @@
  *
  * Anything user-visible goes through `t()` so both languages stay in step.
  */
-import { t } from './i18n.js';
+import { getLanguage, t } from './i18n.js';
 
 const STORAGE_KEY = 'statusdog.monitors.v1';
 const HISTORY_LIMIT = 40;
@@ -101,6 +101,28 @@ export function formatRelative(iso) {
 }
 
 /**
+ * An absolute timestamp, in the language the page is being read in.
+ *
+ * `toLocaleString()` with no argument follows the *browser*, so an English page on
+ * a Korean machine printed Korean dates. An incident report is mostly timestamps,
+ * which made that worth fixing rather than living with.
+ */
+export function formatTimestamp(iso) {
+  if (!iso) return null;
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return String(iso);
+  const locale = getLanguage() === 'ko' ? 'ko-KR' : 'en-GB';
+  try {
+    return new Date(ms).toLocaleString(locale, {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return new Date(ms).toISOString();
+  }
+}
+
+/**
  * A span of milliseconds as something readable: `45m`, `2h 15m`, `3d 4h`.
  *
  * Distinct from formatMs, which reports one response time. Downtime is measured in
@@ -127,6 +149,20 @@ export function formatDurationMs(ms) {
   return restHours === 0
     ? t('duration.days', { n: days })
     : t('duration.daysHours', { d: days, h: restHours });
+}
+
+/**
+ * Bytes, in the units a person reads them in.
+ *
+ * "84000" and "512" are hard to tell apart at a glance, which is exactly the
+ * comparison an incident report asks the reader to make.
+ */
+export function formatBytes(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return '–';
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /** `https://example.com/path` → `example.com/path` */
