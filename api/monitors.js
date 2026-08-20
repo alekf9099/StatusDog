@@ -10,11 +10,7 @@
 import { resolveRoster } from '../dist/store/roster.js';
 import { readAll, statsFor } from '../dist/store/uptime.js';
 import { kvEnvNames, kvFromEnv } from '../dist/store/kv.js';
-import {
-  DEFAULT_STALE_AFTER_MS,
-  evaluateStaleness,
-  readSchedulerState,
-} from '../dist/store/scheduler.js';
+import { evaluateStaleness, readSchedulerState } from '../dist/store/scheduler.js';
 import { parseIntParam } from '../dist/util/params.js';
 import { ROSTER } from '../dist/roster.data.js';
 
@@ -68,17 +64,17 @@ export default async function handler(req, res) {
       readSchedulerState(kv),
     ]);
     const limits = new Map(targets.map((target) => [target.id, target.maxResponseTimeMs]));
-    const staleAfterMs = parseIntParam(process.env.STATUSDOG_STALE_AFTER_MINUTES, {
-      min: 5,
-      max: 24 * 60,
-      fallback: DEFAULT_STALE_AFTER_MS / 60_000,
-    }) * 60_000;
+    // No fallback here: with the env var unset the threshold comes from the
+    // cadence this deployment actually runs at, which is the point.
+    const configured = process.env.STATUSDOG_STALE_AFTER_MINUTES
+      ? parseIntParam(process.env.STATUSDOG_STALE_AFTER_MINUTES, { min: 5, max: 24 * 60, fallback: 0 }) * 60_000
+      : null;
 
     res.status(200).json({
       storage: 'kv',
       generatedAt: new Date().toISOString(),
       // So a reader is never shown last Tuesday's numbers as if they were current.
-      scheduler: evaluateStaleness(schedulerState, Date.now(), staleAfterMs),
+      scheduler: evaluateStaleness(schedulerState, Date.now(), { staleAfterMs: configured }),
       monitors: entries.map((entry) => ({
         id: entry.id,
         name: entry.name,

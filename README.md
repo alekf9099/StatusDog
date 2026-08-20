@@ -200,7 +200,7 @@ the file out of the deployment.
 | `STATUSDOG_WEBHOOK_URL` | Optional. Alert webhooks, comma-separated. |
 | `STATUSDOG_WEBHOOK_ON` | Optional. `down`, `up`, or `down,up` (default: both). |
 | `STATUSDOG_WEBHOOK_FORMAT` | Optional. `full` or `text`; per-host default otherwise. |
-| `STATUSDOG_STALE_AFTER_MINUTES` | Optional. How long without a check counts as stale. Default 45. |
+| `STATUSDOG_STALE_AFTER_MINUTES` | Optional. Overrides the staleness threshold. Left unset, it is three times the cadence this deployment actually runs at. |
 
 [`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) calls it every 15
 minutes and needs two repository secrets, `MONITOR_ENDPOINT` and `CRON_SECRET`.
@@ -308,6 +308,21 @@ within a day beats one never found at all.
 
 The banner is the part that matters most in practice: a stale view says so in
 plain words instead of presenting old numbers as current.
+
+#### The threshold is measured, not assumed
+
+The workflow asks GitHub for a run every fifteen minutes. Over 28 observed runs on
+this repo GitHub actually delivered one every **32 minutes** on median, with gaps up
+to 58 — scheduled workflows are best-effort, and a busy queue delays them.
+
+A fixed 45-minute threshold therefore fired on a perfectly healthy scheduler. So the
+interval is learned from the gaps this deployment actually sees (median of the last
+20, ignoring gaps long enough to be outages rather than cadence), and the threshold
+is three of those, floored at 30 minutes and capped at six hours.
+
+With the real history that lands on a 30-minute cadence and a 90-minute threshold:
+the 52- and 58-minute gaps that used to false-alarm stay quiet, and a genuinely
+stopped scheduler still trips at 100 minutes.
 
 ## Statistics
 

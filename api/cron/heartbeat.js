@@ -12,7 +12,6 @@
  */
 import { kvEnvNames, kvFromEnv } from '../../dist/store/kv.js';
 import {
-  DEFAULT_STALE_AFTER_MS,
   describeStaleness,
   evaluateStaleness,
   readSchedulerState,
@@ -60,14 +59,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  const staleAfterMs = parseIntParam(process.env.STATUSDOG_STALE_AFTER_MINUTES, {
-    min: 5,
-    max: 24 * 60,
-    fallback: DEFAULT_STALE_AFTER_MS / 60_000,
-  }) * 60_000;
+  // Unset means "use the measured cadence", which is the default and the point.
+  const configured = process.env.STATUSDOG_STALE_AFTER_MINUTES
+    ? parseIntParam(process.env.STATUSDOG_STALE_AFTER_MINUTES, { min: 5, max: 24 * 60, fallback: 0 }) * 60_000
+    : null;
 
   const state = await readSchedulerState(kv);
-  const staleness = evaluateStaleness(state, Date.now(), staleAfterMs);
+  const staleness = evaluateStaleness(state, Date.now(), { staleAfterMs: configured });
   const kind = stalenessAlertKind(state, staleness);
 
   let alerts = { notifiers: 0, attempted: 0, delivered: 0, failed: 0, outcomes: [] };
