@@ -8,6 +8,7 @@
  *   url        required, http(s) only; a bare host gets https:// prepended
  *   expect     accepted statuses, e.g. `200` or `2xx,3xx`  (default: 2xx,3xx)
  *   contains   response body must contain this text
+ *   forbid     comma-separated text that must NOT appear
  *   method     HTTP method                                  (default: GET)
  *   timeout    milliseconds, 1000–30000                     (default: 15000)
  *   redirects  `false` to stop following redirects
@@ -44,6 +45,7 @@ export default async function handler(req, res) {
 
   const expect = query.get('expect');
   const contains = query.get('contains');
+  const forbid = query.get('forbid');
 
   try {
     const result = await probeUrl(url, {
@@ -57,6 +59,7 @@ export default async function handler(req, res) {
         ? expect.split(',').map((value) => value.trim()).filter(Boolean)
         : ['2xx', '3xx'],
       expectBody: contains || null,
+      forbidBody: forbid ? forbid.split(',').map((value) => value.trim()).filter(Boolean) : [],
       followRedirects: query.get('redirects') !== 'false',
     });
     res.status(200).json(result);

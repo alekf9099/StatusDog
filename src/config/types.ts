@@ -43,6 +43,22 @@ export interface TargetConfig {
   /** Response body must contain this text (or match it, when `expectBodyIsRegex`). */
   expectBody?: string;
   expectBodyIsRegex?: boolean;
+  /**
+   * Text that must **not** appear. One pattern or several; matched
+   * case-insensitively. A half-broken page usually returns 200 with the bad news in
+   * the body, which nothing else here would catch.
+   */
+  forbidBody?: string | string[];
+  forbidBodyIsRegex?: boolean;
+  /**
+   * Response headers that must be there. `true` requires presence; a string
+   * requires the value to contain it, compared case-insensitively.
+   */
+  expectHeaders?: Record<string, true | string>;
+  /** Exact number of redirect hops expected. Catches a chain changing shape. */
+  expectRedirects?: number;
+  /** Where the chain must end up, compared ignoring a trailing slash. */
+  expectFinalUrl?: string;
   /** Flag the target as unhealthy when a probe is slower than this. `0` disables. */
   maxResponseTimeMs?: number;
   followRedirects?: boolean;
@@ -137,6 +153,11 @@ export interface ResolvedTarget {
   expectStatus: ExpectStatus[];
   expectBody: string | null;
   expectBodyIsRegex: boolean;
+  forbidBody: string[];
+  forbidBodyIsRegex: boolean;
+  expectHeaders: Record<string, true | string>;
+  expectRedirects: number | null;
+  expectFinalUrl: string | null;
   maxResponseTimeMs: number;
   followRedirects: boolean;
   maxRedirects: number;
@@ -166,6 +187,10 @@ export type FailureReason =
   | 'timeout'
   | 'dns'
   | 'refused'
+  /** A required response header was missing or had the wrong value. */
+  | 'header'
+  /** The redirect chain was not the expected shape. */
+  | 'redirect'
   /** The TLS handshake or certificate validation failed. */
   | 'tls'
   | 'network'

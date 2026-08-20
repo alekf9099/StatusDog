@@ -77,6 +77,7 @@
       <tr><th>url</th><td data-i18n="docs.api.url"></td></tr>
       <tr><th>expect</th><td><code>200</code>, <code>2xx,3xx</code>, <code>200-299</code>, <code>*</code> · <span data-i18n="docs.api.expect"></span></td></tr>
       <tr><th>contains</th><td data-i18n="docs.api.contains"></td></tr>
+      <tr><th>forbid</th><td data-i18n="docs.api.forbid"></td></tr>
       <tr><th>method</th><td data-i18n="docs.api.method"></td></tr>
       <tr><th>timeout</th><td data-i18n="docs.api.timeout"></td></tr>
       <tr><th>redirects</th><td data-i18n="docs.api.redirects"></td></tr>
@@ -102,6 +103,21 @@ node dist/cli.js start</code></pre>
       <tr><th>init</th><td data-i18n="docs.cli.init"></td></tr>
     </table>
     <p class="small muted" data-i18n="docs.cli.note"></p>
+  </section>
+
+  <section class="block">
+    <h2 data-i18n="docs.assert.h2">Assertions beyond "it answered 200"</h2>
+    <p data-i18n="docs.assert.pHtml"></p>
+    <pre><code>{
+  "forbidBody": ["502 Bad Gateway", "Internal Server Error"],
+  "expectHeaders": { "strict-transport-security": true, "x-frame-options": "DENY" },
+  "expectRedirects": 1,
+  "expectFinalUrl": "https://www.example.com/"
+}</code></pre>
+    <p data-i18n-html="docs.assert.forbidHtml"></p>
+    <p data-i18n-html="docs.assert.headersHtml"></p>
+    <p data-i18n-html="docs.assert.redirectHtml"></p>
+    <p class="small muted" data-i18n-html="docs.assert.orderHtml"></p>
   </section>
 
   <section class="block">

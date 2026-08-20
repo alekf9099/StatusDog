@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { toPatternList } from '../monitor/assertions.js';
 import {
   DASHBOARD_DEFAULTS,
   FALLBACK_DEFAULTS,
@@ -173,6 +174,15 @@ function resolveTarget(
     expectStatus,
     expectBody: pick('expectBody') ?? null,
     expectBodyIsRegex: pick('expectBodyIsRegex') ?? TARGET_DEFAULTS.expectBodyIsRegex,
+    forbidBody: toPatternList(pick('forbidBody')),
+    forbidBodyIsRegex: pick('forbidBodyIsRegex') ?? false,
+    // Header names are lowercased once here, so the probe can look them up directly.
+    expectHeaders: normalizeHeaderExpectations(
+      { ...defaults.expectHeaders, ...target.expectHeaders },
+      `targets[${index}].expectHeaders`,
+    ),
+    expectRedirects: hopCount(pick('expectRedirects'), `targets[${index}].expectRedirects`),
+    expectFinalUrl: pick('expectFinalUrl') ?? null,
     maxResponseTimeMs: pick('maxResponseTimeMs') ?? TARGET_DEFAULTS.maxResponseTimeMs,
     followRedirects: pick('followRedirects') ?? TARGET_DEFAULTS.followRedirects,
     maxRedirects: pick('maxRedirects') ?? TARGET_DEFAULTS.maxRedirects,
@@ -204,6 +214,30 @@ function resolveTarget(
 
 function isBuiltinTemplateName(name: string): boolean {
   return /^[a-z0-9-]+$/i.test(name) && !name.includes('.');
+}
+
+function normalizeHeaderExpectations(
+  input: Record<string, true | string> | undefined,
+  label: string,
+): Record<string, true | string> {
+  const out: Record<string, true | string> = {};
+  for (const [name, expected] of Object.entries(input ?? {})) {
+    if (expected !== true && typeof expected !== 'string') {
+      throw new ConfigError(
+        `${label}.${name} must be true (present) or a string (contains), got ${JSON.stringify(expected)}.`,
+      );
+    }
+    out[name.toLowerCase()] = expected;
+  }
+  return out;
+}
+
+function hopCount(value: number | undefined, label: string): number | null {
+  if (value === undefined) return null;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    throw new ConfigError(`${label} must be a non-negative integer, got ${JSON.stringify(value)}.`);
+  }
+  return value;
 }
 
 /** An empty list is meaningful — it turns the warnings off — so only shape is checked. */

@@ -8,29 +8,48 @@
     "timeoutMs": 10000,
     "failureThreshold": 2,
     "recoveryThreshold": 1,
-    "expectStatus": ["2xx"]
+    "expectStatus": [
+      "2xx"
+    ],
+    "//forbidBody": "A half-broken page answers 200 with the bad news in the body. These strings only appear when something upstream has actually failed.",
+    "forbidBody": [
+      "502 Bad Gateway",
+      "504 Gateway Time-out",
+      "503 Service Temporarily Unavailable",
+      "Internal Server Error"
+    ]
   },
   "targets": [
     {
       "id": "copykiller",
       "name": "CopyKiller",
       "url": "https://www.copykiller.com/",
-      "//": "Measured 175-225ms from Seoul. 2000ms is roughly ten times the baseline: slow enough not to alert on a bad moment, fast enough that real degradation shows up.",
-      "maxResponseTimeMs": 2000
+      "//": "Measured 175-225ms from Seoul, so maxResponseTimeMs is set well above that: it should catch real degradation, not the normal baseline. Pointed at www directly because the apex redirect took 17s from the old US region.",
+      "maxResponseTimeMs": 2000,
+      "//expectRedirects": "www answers directly today. If an interstitial or locale redirect appears, that is a change worth knowing about.",
+      "expectRedirects": 0
     },
     {
       "id": "copykiller-apex",
       "name": "CopyKiller (apex redirect)",
       "url": "https://copykiller.com/",
-      "//": "Watches that copykiller.com still redirects to www. Measured 184-236ms from Seoul, so the extra hop costs almost nothing.",
-      "maxResponseTimeMs": 2500
+      "//": "Watches that copykiller.com still redirects to www and resolves. One hop, ending at www - both asserted, so a broken or retargeted redirect fails rather than passing quietly.",
+      "maxResponseTimeMs": 2500,
+      "expectRedirects": 1,
+      "expectFinalUrl": "https://www.copykiller.com/"
     },
     {
       "id": "statusdog",
       "name": "StatusDog itself",
       "url": "https://status-dog.vercel.app/healthz",
       "expectBody": "\"status\":\"ok\"",
-      "maxResponseTimeMs": 3000
+      "timeoutMs": 15000,
+      "maxResponseTimeMs": 5000,
+      "expectRedirects": 0,
+      "//expectHeaders": "Our own endpoint, so we can hold it to its contract.",
+      "expectHeaders": {
+        "content-type": "application/json"
+      }
     }
   ]
 }

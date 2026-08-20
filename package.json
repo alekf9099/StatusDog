@@ -34,7 +34,7 @@
     "dev": "tsx src/cli.ts",
     "dev:web": "npm run build && node scripts/dev-web.mjs",
     "start": "node dist/cli.js start",
-    "test": "node --import tsx --test test/matchers.test.ts test/params.test.ts test/i18n.test.ts test/office.test.ts test/dogs.test.ts test/probe.test.ts test/target-url.test.ts test/transition.test.ts test/cert.test.ts test/scheduler.test.ts test/rollup.test.ts test/store.test.ts test/notify.test.ts test/fallback.test.ts test/engine.test.ts",
+    "test": "node --import tsx --test test/matchers.test.ts test/assertions.test.ts test/params.test.ts test/i18n.test.ts test/office.test.ts test/dogs.test.ts test/probe.test.ts test/target-url.test.ts test/transition.test.ts test/cert.test.ts test/scheduler.test.ts test/rollup.test.ts test/store.test.ts test/notify.test.ts test/fallback.test.ts test/engine.test.ts",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

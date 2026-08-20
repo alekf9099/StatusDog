@@ -11,6 +11,7 @@ import type {
   TlsInfo,
 } from '../config/types.js';
 import { bodyMatches, describeExpectations, statusMatches } from './matchers.js';
+import { findForbidden, findHeaderMismatch, sameUrl } from './assertions.js';
 
 /** Response bodies are only read up to this size; the rest is drained. */
 const MAX_BODY_BYTES = 64 * 1024;
@@ -114,7 +115,7 @@ export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
       }
 
       const responseTimeMs = Date.now() - startedAt;
-      const failure = evaluate(target, response, responseTimeMs);
+      const failure = evaluate(target, response, responseTimeMs, redirects, currentUrl);
       return {
         url: target.url,
         finalUrl: currentUrl,
@@ -155,10 +156,19 @@ function buildDetail(response: RawResponse, chain: RedirectHop[]): ProbeDetail {
   return { headers, tls: response.tls, chain };
 }
 
+/**
+ * Decide whether a response counts as healthy.
+ *
+ * Ordered from most to least fundamental: where the request ended up, then what the
+ * server said about it, then what it sent, and latency last — a slow-but-correct
+ * response is the softest of these signals.
+ */
 function evaluate(
   target: ResolvedTarget,
   response: RawResponse,
   responseTimeMs: number,
+  redirects: number,
+  finalUrl: string,
 ): { reason: FailureReason; message: string } | null {
   if (!statusMatches(response.status, target.expectStatus)) {
     return {
@@ -166,6 +176,31 @@ function evaluate(
       message: `Unexpected status ${response.status} (expected ${describeExpectations(target.expectStatus)})`,
     };
   }
+
+  if (target.expectRedirects !== null && redirects !== target.expectRedirects) {
+    return {
+      reason: 'redirect',
+      message: `Followed ${redirects} redirect(s), expected ${target.expectRedirects}`,
+    };
+  }
+
+  if (target.expectFinalUrl !== null && !sameUrl(finalUrl, target.expectFinalUrl)) {
+    return {
+      reason: 'redirect',
+      message: `Ended at ${finalUrl}, expected ${target.expectFinalUrl}`,
+    };
+  }
+
+  const headerMismatch = findHeaderMismatch(response.headers, target.expectHeaders);
+  if (headerMismatch) {
+    return {
+      reason: 'header',
+      message: headerMismatch.actual === null
+        ? `Response is missing the ${headerMismatch.name} header`
+        : `Header ${headerMismatch.name} was ${JSON.stringify(headerMismatch.actual)}, expected it to contain ${JSON.stringify(headerMismatch.expected)}`,
+    };
+  }
+
   if (target.expectBody !== null && !bodyMatches(response.body, target.expectBody, target.expectBodyIsRegex)) {
     const kind = target.expectBodyIsRegex ? 'match' : 'contain';
     return {
@@ -173,6 +208,15 @@ function evaluate(
       message: `Response body did not ${kind} ${JSON.stringify(target.expectBody)}`,
     };
   }
+
+  const forbidden = findForbidden(response.body, target.forbidBody, target.forbidBodyIsRegex);
+  if (forbidden !== null) {
+    return {
+      reason: 'body',
+      message: `Response body contained ${JSON.stringify(forbidden)}`,
+    };
+  }
+
   if (target.maxResponseTimeMs > 0 && responseTimeMs > target.maxResponseTimeMs) {
     return {
       reason: 'slow',
@@ -357,6 +401,11 @@ export function probeUrl(
     expectStatus: ['2xx', '3xx'],
     expectBody: null,
     expectBodyIsRegex: false,
+    forbidBody: [],
+    forbidBodyIsRegex: false,
+    expectHeaders: {},
+    expectRedirects: null,
+    expectFinalUrl: null,
     maxResponseTimeMs: 0,
     followRedirects: true,
     maxRedirects: 5,
