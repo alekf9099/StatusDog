@@ -189,6 +189,39 @@ The roster is baked into `dist/roster.data.js` at build time by
 through `readFile(cwd + '/monitors.json')`, so reading it at runtime would leave
 the file out of the deployment.
 
+### Assertions beyond "it answered 200"
+
+A 200 is not the same as a working site. Three checks run on data the probe
+already collects, so they cost nothing per check.
+
+```json
+{
+  "forbidBody": ["502 Bad Gateway", "Internal Server Error"],
+  "expectHeaders": { "strict-transport-security": true, "x-frame-options": "DENY" },
+  "expectRedirects": 1,
+  "expectFinalUrl": "https://www.example.com/"
+}
+```
+
+- **`forbidBody`** catches the half-broken page. A proxy erroring, a stack trace
+  rendered into the template, or a maintenance notice nobody removed all answer
+  **200 with the bad news in the body** — which nothing else here would notice.
+  One pattern or several, matched case-insensitively; `forbidBodyIsRegex` for patterns.
+- **`expectHeaders`** holds security headers to account. `true` requires presence,
+  a string requires the value to contain it. An HSTS or CSP header dropped in a
+  config change is invisible to every other check.
+- **`expectRedirects`** pins the hop count and **`expectFinalUrl`** pins the
+  destination, compared ignoring a trailing slash and a default port — those are not
+  redirect changes, and treating them as such would make the assertion useless.
+  Together they catch an interstitial appearing, an https upgrade lost, or a
+  redirect quietly retargeted.
+
+They are judged in order of how fundamental they are — status, then destination,
+then headers, then body, and latency last. A 404 with a missing header reports the
+404, which is the part worth acting on.
+
+`/api/check` takes `forbid` as a comma-separated list for one-off checks.
+
 ### The scheduler
 
 `POST /api/cron/check` probes every roster target and persists the results.

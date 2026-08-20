@@ -185,6 +185,7 @@ export const LOCALES = {
     'docs.api.url': 'required · http(s); a bare host gets https:// prepended',
     'docs.api.expect': 'default 2xx,3xx',
     'docs.api.contains': 'response body must contain this text',
+    'docs.api.forbid': 'comma-separated text that must NOT appear — a half-broken page answers 200 with the bad news in the body',
     'docs.api.method': 'default GET',
     'docs.api.timeout': 'milliseconds, 1000–30000 · default 15000',
     'docs.api.redirects': 'false to stop following redirects',
@@ -202,6 +203,17 @@ export const LOCALES = {
     'docs.cli.init': 'Write a starter config file',
     'docs.cli.note':
       'status and check exit non-zero on failure, so they drop straight into CI or a cron job.',
+    'docs.assert.h2': 'Assertions beyond "it answered 200"',
+    'docs.assert.pHtml':
+      'A 200 is not the same as a working site. Three checks run on data the probe already collects, so they cost nothing per check.',
+    'docs.assert.forbidHtml':
+      '<code>forbidBody</code> — text that must <strong>not</strong> appear, one pattern or several, matched case-insensitively. This catches the half-broken page: a proxy erroring, a stack trace rendered into the template, or a maintenance notice nobody removed all answer 200 with the bad news in the body. Set <code>forbidBodyIsRegex</code> for patterns.',
+    'docs.assert.headersHtml':
+      '<code>expectHeaders</code> — <code>true</code> requires a header to be present, a string requires its value to contain that text. A security header dropped in a config change is invisible to every other check, so this is where HSTS and CSP get held to account.',
+    'docs.assert.redirectHtml':
+      '<code>expectRedirects</code> pins the exact hop count and <code>expectFinalUrl</code> pins where the chain ends, compared ignoring a trailing slash and a default port. Together they catch an interstitial appearing, an https upgrade being lost, or a redirect quietly retargeted.',
+    'docs.assert.orderHtml':
+      'They are judged in order of how fundamental they are — status, then where the request ended up, then headers, then body, and latency last. So a 404 with a missing header reports the 404, which is the part worth acting on.',
     'docs.config.h2': 'Configuration',
     'docs.config.p':
       'statusdog.config.json is discovered from the working directory upwards. // and /* */ comments are allowed.',
@@ -588,6 +600,7 @@ export const LOCALES = {
     'docs.api.url': '필수 · http(s). 호스트만 넣으면 https://가 붙습니다',
     'docs.api.expect': '기본값 2xx,3xx',
     'docs.api.contains': '응답 본문에 이 문자열이 있어야 합니다',
+    'docs.api.forbid': '쉼표로 구분한 금지 문자열 — 반쯤 망가진 페이지는 200을 반환하면서 본문에 오류를 담습니다',
     'docs.api.method': '기본값 GET',
     'docs.api.timeout': '밀리초, 1000–30000 · 기본값 15000',
     'docs.api.redirects': 'false로 두면 리다이렉트를 따라가지 않습니다',
@@ -605,6 +618,17 @@ export const LOCALES = {
     'docs.cli.init': '기본 설정 파일을 생성합니다',
     'docs.cli.note':
       'status와 check는 실패 시 0이 아닌 코드로 종료하므로 CI나 cron에 그대로 넣을 수 있습니다.',
+    'docs.assert.h2': '"200이면 정상"을 넘어서',
+    'docs.assert.pHtml':
+      '200이 곧 정상 동작은 아닙니다. 세 가지 검증이 이미 수집 중인 데이터로 동작하므로 확인당 추가 비용이 없습니다.',
+    'docs.assert.forbidHtml':
+      '<code>forbidBody</code> — 나타나면 <strong>안 되는</strong> 문자열. 하나 또는 여러 개, 대소문자 구분 없이 비교합니다. 반쯤 망가진 페이지를 잡습니다: 프록시 오류, 템플릿에 렌더된 스택 트레이스, 아무도 안 지운 점검 공지 모두 200을 반환하면서 본문에 오류를 담습니다. 정규식을 쓰려면 <code>forbidBodyIsRegex</code>.',
+    'docs.assert.headersHtml':
+      '<code>expectHeaders</code> — <code>true</code>는 헤더 존재를 요구하고, 문자열은 값에 그 문자열이 포함되기를 요구합니다. 설정 변경으로 사라진 보안 헤더는 다른 어떤 검사에도 안 걸리므로, HSTS와 CSP를 여기서 붙잡습니다.',
+    'docs.assert.redirectHtml':
+      '<code>expectRedirects</code>는 정확한 홉 수를, <code>expectFinalUrl</code>은 도착지를 고정합니다(끝 슬래시와 기본 포트는 무시하고 비교). 둘이 함께 중간 페이지 삽입, https 승격 소실, 리다이렉트 대상 변경을 잡습니다.',
+    'docs.assert.orderHtml':
+      '판정은 근본적인 것부터 순서대로 합니다 — 상태 코드, 도착지, 헤더, 본문, 마지막에 응답 시간. 그래서 헤더가 없는 404는 404로 보고됩니다. 그게 조치해야 할 부분이니까요.',
     'docs.config.h2': '설정',
     'docs.config.p':
       'statusdog.config.json은 작업 디렉터리에서 위로 올라가며 탐색합니다. // 와 /* */ 주석을 쓸 수 있습니다.',

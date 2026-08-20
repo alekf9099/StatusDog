@@ -1,7 +1,25 @@
 import type { DashboardConfig, StorageConfig, TargetDefaults } from './types.js';
 
+/**
+ * Engine-wide defaults.
+ *
+ * The assertion fields are omitted deliberately: forbidBody, expectHeaders,
+ * expectRedirects and expectFinalUrl are per-target opt-ins, and "no expectation"
+ * is expressed by their absence rather than by a global value.
+ */
 export const TARGET_DEFAULTS: Required<
-  Omit<TargetDefaults, 'headers' | 'body' | 'expectBody' | 'fallback'>
+  Omit<
+    TargetDefaults,
+    | 'headers'
+    | 'body'
+    | 'expectBody'
+    | 'fallback'
+    | 'forbidBody'
+    | 'forbidBodyIsRegex'
+    | 'expectHeaders'
+    | 'expectRedirects'
+    | 'expectFinalUrl'
+  >
 > = {
   method: 'GET',
   intervalMs: 60_000,
