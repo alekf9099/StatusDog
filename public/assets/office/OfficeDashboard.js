@@ -14,7 +14,8 @@
  * restart imperceptibly. The open report is updated in place instead, so it does
  * not shut under the reader.
  */
-import { check, escapeHtml, renderStaleBanner, store } from '../statusdog.js';
+import { check, escapeHtml, reflectStateInTab, renderStaleBanner, store } from '../statusdog.js';
+import { tenureOf } from './tenure.js';
 import { t } from '../i18n.js';
 import { deriveMood, officeSummary } from './mood.js';
 import { makeWorker, renderDogWorkerCard } from './DogWorkerCard.js';
@@ -143,8 +144,28 @@ export class OfficeDashboard {
 
   /** Fetch roster state, run the browser monitors, then redraw. */
   async refresh() {
-    await Promise.all([this.loadStaff(), this.runInterns()]);
+    await Promise.all([this.loadStaff(), this.loadRecords(), this.runInterns()]);
     this.render();
+  }
+
+  /**
+   * Tenure and clean-run figures, fetched once rather than on every poll.
+   *
+   * A streak measured in days does not change between two one-minute polls, and
+   * this payload carries months of daily buckets. Failing is fine: the desks lose
+   * a line and nothing else.
+   */
+  async loadRecords() {
+    if (this.records !== undefined) return;
+    this.records = null;
+    try {
+      const response = await fetch('/api/stats?days=400', { cache: 'no-store' });
+      if (!response.ok) return;
+      const payload = await response.json();
+      this.records = new Map((payload.targets ?? []).map((target) => [target.id, target]));
+    } catch {
+      this.records = null;
+    }
   }
 
   async loadStaff() {
@@ -196,7 +217,13 @@ export class OfficeDashboard {
     const workers = [];
 
     for (const monitor of this.serverPayload?.monitors ?? []) {
-      const normalised = { ...monitor, uid: `staff:${monitor.id}`, kind: 'staff' };
+      const normalised = {
+        ...monitor,
+        uid: `staff:${monitor.id}`,
+        kind: 'staff',
+        // Roster dogs have a record; interns have only this tab.
+        tenure: tenureOf(monitor, this.records?.get(monitor.id) ?? null),
+      };
       workers.push(this.buildWorker(normalised));
     }
 
@@ -235,6 +262,7 @@ export class OfficeDashboard {
     this.room.dataset.worst = summary.worst;
     this.board.innerHTML = this.renderBoard(summary);
     renderStaleBanner(this.staleBanner, this.serverPayload?.scheduler ?? null);
+    reflectStateInTab(this.serverPayload?.monitors ?? []);
 
     this.floor.innerHTML = this.workers.length === 0
       ? `<div class="office-empty">${t('office.emptyHtml')}</div>`

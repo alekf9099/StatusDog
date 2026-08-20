@@ -51,7 +51,7 @@
 import { initI18n, t } from '/assets/i18n.js';
 import {
   escapeHtml, formatBytes, formatDurationMs, formatMs, formatRelative, formatTimestamp,
-  markCurrentNav, prettyUrl, renderStaleBanner, stateBadge,
+  markCurrentNav, prettyUrl, reflectStateInTab, renderStaleBanner, stateBadge,
 } from '/assets/statusdog.js';
 
 initI18n();
@@ -106,6 +106,7 @@ document.addEventListener('statusdog:languagechange', () => {
 
 function render() {
   renderStaleBanner(document.getElementById('stale-banner'), monitors?.scheduler ?? null);
+  reflectStateInTab(monitors?.monitors ?? []);
 
   const targets = stats.targets ?? [];
   if (targets.length === 0) {
@@ -176,6 +177,8 @@ function renderDetail(target) {
     <p class="small muted" style="margin:0 0 4px">${escapeHtml(t('status.dailyNote', { tz: tzLabel() }))}</p>
     <div class="card">${dayChart(target.daily ?? [], 90)}</div>
 
+    ${shareBox(target)}
+
     <h2 style="font-size:15px;margin:30px 0 4px">${escapeHtml(t('status.incidents'))}</h2>
     <p class="small muted" style="margin:0 0 12px">${escapeHtml(t('status.report.lede'))}</p>
     ${incidentList(target.incidents ?? [])}`;
@@ -228,6 +231,58 @@ function dayChart(daily, days) {
       <span>${escapeHtml(window[window.length - 1].day)}</span>
     </div>`;
 }
+
+/**
+ * The two things a reader can take away with them: a feed address and a badge.
+ *
+ * Both are plain URLs on purpose. Subscribing needs no account because RSS needs
+ * none, and the badge is one SVG someone can paste into a README — the markdown is
+ * pre-written because nobody wants to assemble that by hand.
+ */
+function shareBox(target) {
+  const origin = location.origin;
+  const feed = `${origin}/api/feed?target=${encodeURIComponent(target.id)}`;
+  const badge = `${origin}/api/badge?target=${encodeURIComponent(target.id)}`;
+  const markdown = `[![${target.name}](${badge})](${origin}/status/${encodeURIComponent(target.id)})`;
+
+  return `
+    <h2 style="font-size:15px;margin:30px 0 4px">${escapeHtml(t('status.subscribe'))}</h2>
+    <div class="card share-row">
+      <div class="share-box">
+        <h3>RSS</h3>
+        <p class="small muted" style="margin:0">${escapeHtml(t('status.subscribeNote'))}</p>
+        <div class="share-field">
+          <input type="text" readonly value="${escapeHtml(feed)}" aria-label="RSS">
+          <button type="button" class="secondary" data-copy="${escapeHtml(feed)}">${escapeHtml(t('status.copy'))}</button>
+        </div>
+      </div>
+      <div class="share-box">
+        <h3>${escapeHtml(t('status.badge'))}</h3>
+        <p class="small muted" style="margin:0">${escapeHtml(t('status.badgeNote'))}</p>
+        <div class="share-field">
+          <input type="text" readonly value="${escapeHtml(markdown)}" aria-label="${escapeHtml(t('status.badge'))}">
+          <button type="button" class="secondary" data-copy="${escapeHtml(markdown)}">${escapeHtml(t('status.copy'))}</button>
+        </div>
+        <div class="share-preview"><img src="${escapeHtml(badge)}" alt="${escapeHtml(t('status.badge'))}"></div>
+      </div>
+    </div>`;
+}
+
+// One listener for the whole page: the boxes are re-rendered on every poll and on
+// every language switch, so per-button handlers would leak.
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest?.('[data-copy]');
+  if (!button) return;
+  try {
+    await navigator.clipboard.writeText(button.dataset.copy);
+    const original = button.textContent;
+    button.textContent = t('status.copied');
+    setTimeout(() => { button.textContent = original; }, 1500);
+  } catch {
+    // Clipboard access can be refused; the field is selectable either way.
+    button.closest('.share-field')?.querySelector('input')?.select();
+  }
+});
 
 /* ---------------- incidents ---------------- */
 

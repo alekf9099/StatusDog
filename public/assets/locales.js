@@ -185,6 +185,41 @@ export const LOCALES = {
       'Checked {time}, but the two vantage points disagreed \u2014 nothing was concluded from it, so the state above is the last check that counted.',
     'office.report.disputed': 'Unclear check',
     'office.report.disputedV': '{time} \u2014 the two vantage points disagreed, so it was not counted',
+    'tab.down': ' down',
+    'office.streak.days': 'no trouble for {n} day(s)',
+    'office.streak.record': 'no trouble for {n} day(s) — personal best',
+    'office.report.tenure': 'On the job',
+    'office.report.tenureV': '{n} day(s)',
+    'office.report.streak': 'Clean run',
+    'office.report.streakV': '{n} day(s)',
+    'office.report.streakNone': 'ended by the current trouble',
+    'office.report.longest': 'Best run',
+    'office.report.longestV': '{n} day(s)',
+    'office.report.recordNow': 'and this is the record',
+    'status.subscribe': 'Subscribe',
+    'status.subscribeNote':
+      'An RSS feed of this site\u2019s outages. No account needed \u2014 paste the address into any reader.',
+    'status.badge': 'Badge',
+    'status.badgeNote': 'Paste this into a README to show the last 30 days.',
+    'status.copy': 'Copy',
+    'status.copied': 'Copied',
+    'docs.share.h2': 'Taking it with you',
+    'docs.share.p1':
+      'Four things that need no account, because there are none yet.',
+    'docs.share.badge': 'A badge',
+    'docs.share.badgeV':
+      'One self-contained SVG, so it renders in a README or anywhere else. Its thresholds match this site, so the badge and the page it links to never disagree. An unknown site or a missing store gives a grey \u201cno data\u201d rather than a broken image.',
+    'docs.share.feed': 'An RSS feed',
+    'docs.share.feedV':
+      'The only way to subscribe today: email needs an address and therefore an account, a feed needs nothing but a URL. Each item carries the whole incident report, not just a headline.',
+    'docs.share.tab': 'The browser tab',
+    'docs.share.tabV':
+      'Leave a page open in a background tab and the title says how many are down while the icon takes a coloured dot. Anything unchecked shows amber, because \u201cwe have not looked\u201d is not \u201cit is fine\u201d.',
+    'docs.share.streak': 'Clean-run records',
+    'docs.share.streakV':
+      'Each dog\u2019s desk shows how long since it last had a bad day, and its report adds time on the job and its best run. A dog with no history says nothing rather than claiming a clean sheet.',
+    'docs.share.note':
+      'Both addresses are on each site\u2019s status page, ready to copy.',
     'docs.incident.h2': 'Incident reports',
     'docs.incident.p1':
       'Every confirmed outage writes a report, shown on that site\u2019s status page. An incident used to be a start time, a duration and a single word like "timeout" \u2014 which says one happened and nothing about it.',
@@ -694,6 +729,41 @@ export const LOCALES = {
       '{time} 확인했지만 두 지점의 결과가 엇갈려 판단을 보류했습니다. 위 상태는 집계에 반영된 마지막 확인 결과입니다.',
     'office.report.disputed': '판단 보류된 확인',
     'office.report.disputedV': '{time} \u2014 두 지점의 결과가 엇갈려 집계하지 않았습니다',
+    'tab.down': '개 장애',
+    'office.streak.days': '{n}일째 무사고',
+    'office.streak.record': '{n}일째 무사고 — 최장 기록',
+    'office.report.tenure': '근속',
+    'office.report.tenureV': '{n}일',
+    'office.report.streak': '무사고 기록',
+    'office.report.streakV': '{n}일',
+    'office.report.streakNone': '이번 장애로 끊겼습니다',
+    'office.report.longest': '최장 기록',
+    'office.report.longestV': '{n}일',
+    'office.report.recordNow': '지금이 최장 기록입니다',
+    'status.subscribe': '구독',
+    'status.subscribeNote':
+      '이 사이트의 장애 기록 RSS 피드입니다. 계정이 필요 없습니다 \u2014 주소를 리더에 붙여넣으세요.',
+    'status.badge': '배지',
+    'status.badgeNote': 'README에 붙이면 최근 30일 가동률이 표시됩니다.',
+    'status.copy': '복사',
+    'status.copied': '복사했습니다',
+    'docs.share.h2': '가져가서 쓰기',
+    'docs.share.p1':
+      '계정이 아직 없으므로, 계정 없이 되는 네 가지입니다.',
+    'docs.share.badge': '배지',
+    'docs.share.badgeV':
+      'SVG 하나로 완결되어 README든 어디든 그대로 뜹니다. 기준값이 이 사이트와 같아서 배지와 링크된 페이지가 서로 다른 말을 하지 않습니다. 없는 사이트나 저장소 미설정이면 이미지가 깨지는 대신 회색 \u201c데이터 없음\u201d이 표시됩니다.',
+    'docs.share.feed': 'RSS 피드',
+    'docs.share.feedV':
+      '지금 구독할 수 있는 유일한 방법입니다. 이메일은 주소가 필요하니 계정이 필요하지만, 피드는 URL만 있으면 됩니다. 각 항목에 장애 상세 기록이 그대로 들어갑니다.',
+    'docs.share.tab': '브라우저 탭',
+    'docs.share.tabV':
+      '탭에 열어두면 제목에 장애 개수가 붙고 아이콘에 색 점이 찍힙니다. 아직 확인하지 않은 것은 초록이 아니라 주황입니다 \u2014 \u201c안 봤다\u201d와 \u201c괜찮다\u201d는 다르니까요.',
+    'docs.share.streak': '무사고 기록',
+    'docs.share.streakV':
+      '강아지 책상마다 마지막으로 문제가 있었던 뒤 며칠이 지났는지 표시하고, 리포트에는 근속과 최장 기록이 붙습니다. 이력이 없는 강아지는 없는 기록을 주장하지 않고 아무 말도 하지 않습니다.',
+    'docs.share.note':
+      '두 주소는 각 사이트의 상태 페이지에서 바로 복사할 수 있습니다.',
     'docs.incident.h2': '장애 상세 기록',
     'docs.incident.p1':
       '장애가 확정될 때마다 상세 기록을 남기고, 해당 사이트의 상태 페이지에서 볼 수 있습니다. 전에는 시작 시각, 지속 시간, 그리고 "timeout" 같은 단어 하나뿐이었습니다 \u2014 장애가 있었다는 사실 외에는 아무것도 알 수 없었죠.',

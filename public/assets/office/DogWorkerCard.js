@@ -14,6 +14,22 @@ import { t, getLanguage } from '../i18n.js';
 import { resolveDog } from './dogs.js';
 
 /**
+ * How long since this dog last had a bad day.
+ *
+ * A percentage is the honest measure and a poor motivator; a run of clean days is
+ * something a reader notices breaking. Shown only when there is a record to show —
+ * an intern with no server history, or a dog that is down right now, says nothing
+ * rather than claiming a streak it has not got.
+ */
+function streakLine(tenure) {
+  if (!tenure || tenure.streak === null || tenure.streak <= 0) return '';
+  const text = tenure.record
+    ? t('office.streak.record', { n: tenure.streak })
+    : t('office.streak.days', { n: tenure.streak });
+  return `<div class="desk-streak${tenure.record ? ' record' : ''}">${escapeHtml(text)}</div>`;
+}
+
+/**
  * The dog, drawn once and reused. Sits behind the desk, so the lower body being
  * clipped is intentional.
  */
@@ -113,6 +129,7 @@ function plate(worker) {
         <span class="dot"></span>${escapeHtml(t(`office.mood.${mood.mood}.short`))}
       </div>
       ${latency}
+      ${streakLine(monitor.tenure)}
     </div>`;
 }
 
