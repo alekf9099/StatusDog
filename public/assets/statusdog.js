@@ -160,8 +160,13 @@ export function sparkline(history = []) {
   const bars = history
     .map((h) => {
       const height = Math.max(10, Math.round(((h.ms || 0) / max) * 100));
-      const title = `${h.t} · ${h.ok ? t('state.up') : h.reason || t('state.down')} · ${formatMs(h.ms)}`;
-      return `<i class="${h.ok ? '' : 'bad'}" style="height:${height}%" title="${escapeHtml(title)}"></i>`;
+      // A check the two vantage points could not agree on is neither a good bar nor
+      // a bad one: drawing it red would show an outage that was never established.
+      const unclear = h.reason === 'disputed';
+      const label = unclear ? t('spark.disputed') : h.ok ? t('state.up') : h.reason || t('state.down');
+      const title = `${h.t} · ${label} · ${formatMs(h.ms)}`;
+      const cls = unclear ? 'unclear' : h.ok ? '' : 'bad';
+      return `<i class="${cls}" style="height:${height}%" title="${escapeHtml(title)}"></i>`;
     })
     .join('');
   return `<div class="spark">${bars}</div>`;

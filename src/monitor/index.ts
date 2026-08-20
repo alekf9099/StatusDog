@@ -15,5 +15,14 @@ export {
 export type { HeaderExpectation, HeaderMismatch } from './assertions.js';
 export { applyResult, INITIAL_STATE } from './transition.js';
 export { certSeverity, describeCertExpiry, evaluateCertExpiry, EMPTY_CERT_STATE } from './cert.js';
+export {
+  findVantageReport,
+  isDisputable,
+  MAX_CONSECUTIVE_DISPUTES,
+  nextDisputeCount,
+  reconcile,
+  vantageSaysOk,
+} from './vantage.js';
+export type { Reconciliation, VantageOutcome, VantagePayload, VantageReport } from './vantage.js';
 export type { CertEvaluation, CertNotifyState } from './cert.js';
 export type { StateSnapshot, Thresholds, TransitionEvent } from './transition.js';

@@ -51,6 +51,7 @@ export default async function handler(req, res) {
         consecutiveFailures: 0,
         maxResponseTimeMs: target.maxResponseTimeMs,
         lastResult: null,
+        lastDispute: null,
         stats: null,
         history: [],
       })),
@@ -86,6 +87,9 @@ export default async function handler(req, res) {
         // Roster config, not a secret: lets a client say "close to your limit".
         maxResponseTimeMs: limits.get(entry.id) ?? 0,
         lastResult: entry.lastResult,
+        // The last check two vantage points could not agree on. Reported so a
+        // reader can see the network was unclear rather than being shown nothing.
+        lastDispute: entry.lastDispute,
         stats: statsFor(entry),
         history: historyLimit > 0 ? entry.history.slice(-historyLimit) : [],
       })),

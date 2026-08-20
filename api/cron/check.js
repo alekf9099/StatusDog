@@ -20,6 +20,15 @@
  * Besides up/down changes it also warns before a TLS certificate expires — the
  * one total outage that is entirely foreseeable. Each threshold fires once per
  * certificate, and renewing resets them.
+ *
+ * The request body may carry a second opinion from another network:
+ *
+ *   { "vantage": { "name": "github-actions",
+ *                  "checks": [ { "id": "copykiller", "reachable": true, "status": 200 } ] } }
+ *
+ * When the primary fails and that vantage did not, the check is inconclusive —
+ * stored, but kept out of the state machine and the statistics, and nobody is paged.
+ * One observer cannot tell a broken site from a broken path to it.
  */
 import { probe } from '../../dist/monitor/probe.js';
 import { resolveRoster } from '../../dist/store/roster.js';
@@ -36,6 +45,7 @@ import {
 } from '../../dist/store/scheduler.js';
 import { dispatchAlerts, dispatchTransitions, notifiersFromEnv } from '../../dist/notify/dispatch.js';
 import { certSeverity, describeCertExpiry } from '../../dist/monitor/cert.js';
+import { findVantageReport, nextDisputeCount, reconcile } from '../../dist/monitor/vantage.js';
 import { ROSTER } from '../../dist/roster.data.js';
 
 /** Constant-time comparison so the secret cannot be probed byte by byte. */
@@ -53,6 +63,33 @@ function presentedSecret(req) {
   if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth.slice(7);
   const header = req.headers?.['x-cron-secret'];
   return typeof header === 'string' ? header : null;
+}
+
+/**
+ * Read the JSON body, if there is one.
+ *
+ * Vercel parses it for us; the local dev server does not, so both paths are
+ * handled. A malformed body is ignored rather than failing the run — a second
+ * opinion is an improvement on the primary check, never a prerequisite for it.
+ */
+async function readBody(req) {
+  if (req.body && typeof req.body === 'object') return req.body;
+  if (typeof req.body === 'string' && req.body !== '') {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    if (chunks.length === 0) return null;
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
+    return null;
+  }
 }
 
 export default async function handler(req, res) {
@@ -90,9 +127,13 @@ export default async function handler(req, res) {
     return;
   }
 
+  const body = await readBody(req);
+  const vantage = body && typeof body.vantage === 'object' ? body.vantage : null;
+
   const startedAt = Date.now();
   const transitions = [];
   const alerts = [];
+  const disputes = [];
 
   const checks = await Promise.all(targets.map(async (target) => {
     const result = await probe(target);
@@ -107,7 +148,26 @@ export default async function handler(req, res) {
       // Captured before applyCheck overwrites them: the rollup needs to know how
       // long the target had been in its previous state to attribute downtime.
       const before = await readEntry(kv, target);
-      const { entry, transitioned, previousState, cert } = await applyCheck(kv, target, result);
+
+      // Does another network agree? Only a failure the second vantage will not
+      // corroborate is suppressed, and only for a limited run of checks.
+      const verdict = reconcile({
+        primaryOk: result.ok,
+        report: findVantageReport(vantage, target.id),
+        expectStatus: target.expectStatus,
+        reason: result.reason,
+        consecutiveDisputes: before.consecutiveDisputes,
+        vantageName: vantage?.name,
+      });
+
+      const { entry, transitioned, previousState, cert } = await applyCheck(kv, target, result, {
+        inconclusive: !verdict.conclusive,
+        disputeRun: nextDisputeCount(before.consecutiveDisputes, verdict.outcome),
+      });
+
+      if (verdict.outcome === 'disputed' || verdict.outcome === 'dispute-exhausted') {
+        disputes.push({ id: target.id, outcome: verdict.outcome, note: verdict.note });
+      }
       if (transitioned) {
         transitions.push({
           target,
@@ -135,17 +195,21 @@ export default async function handler(req, res) {
       }
 
       // Rollups are a separate key, so a failure here loses a data point rather
-      // than the check itself.
-      let rolled = true;
-      try {
-        await recordCheck(kv, target, result, {
-          offsetMinutes,
-          previousState: before.state,
-          previousCheckedAt: before.lastResult?.checkedAt ?? null,
-          transitionedTo: transitioned ? entry.state : null,
-        });
-      } catch {
-        rolled = false;
+      // than the check itself. An inconclusive check is skipped entirely: a result
+      // nobody can interpret must not move the uptime figure either way.
+      let rolled = false;
+      if (verdict.conclusive) {
+        try {
+          await recordCheck(kv, target, result, {
+            offsetMinutes,
+            previousState: before.state,
+            previousCheckedAt: before.lastResult?.checkedAt ?? null,
+            transitionedTo: transitioned ? entry.state : null,
+          });
+          rolled = true;
+        } catch {
+          rolled = false;
+        }
       }
 
       return {
@@ -154,6 +218,8 @@ export default async function handler(req, res) {
         transitioned,
         stored: true,
         rolled,
+        vantage: verdict.outcome,
+        conclusive: verdict.conclusive,
         certDaysRemaining: cert.daysRemaining,
       };
     } catch (err) {
@@ -218,6 +284,8 @@ export default async function handler(req, res) {
     down,
     scheduler,
     transitions: transitions.map((event) => `${event.target.id}:${event.from}->${event.to}`),
+    vantage: vantage ? { name: vantage.name ?? 'unnamed', reports: vantage.checks?.length ?? 0 } : null,
+    disputes,
     // `alerts` now holds more than one kind, and a scheduler alert has no target.
     certWarnings: alerts
       .filter((alert) => alert.kind === 'cert-expiry')

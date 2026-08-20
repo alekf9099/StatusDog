@@ -293,6 +293,12 @@ export class ServerReportModal {
     const message = monitor.lastResult && !monitor.lastResult.ok ? monitor.lastResult.message : null;
     if (message) rows.push([t('office.report.lastError'), message]);
 
+    // The dog is calm because nothing was concluded, not because nothing happened.
+    const dispute = monitor.lastDispute;
+    if (dispute && (!monitor.lastResult || dispute.at > monitor.lastResult.checkedAt)) {
+      rows.push([t('office.report.disputed'), t('office.report.disputedV', { time: formatRelative(dispute.at) })]);
+    }
+
     if (rows.length === 0) return '';
 
     return `

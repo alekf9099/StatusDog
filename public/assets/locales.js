@@ -180,6 +180,30 @@ export const LOCALES = {
     'docs.can.traffic': 'Traffic / visitor counts',
     'docs.can.trafficV':
       "No — that needs access to the site's own analytics or server logs, not an external probe",
+    'spark.disputed': 'unclear \u2014 the two vantage points disagreed',
+    'dash.disputed':
+      'Checked {time}, but the two vantage points disagreed \u2014 nothing was concluded from it, so the state above is the last check that counted.',
+    'office.report.disputed': 'Unclear check',
+    'office.report.disputedV': '{time} \u2014 the two vantage points disagreed, so it was not counted',
+    'docs.vantage.h2': 'Two vantage points',
+    'docs.vantage.p1':
+      'One observer cannot tell "the site is down" from "the path to the site is down". Roster checks run from Seoul; a second look comes from GitHub\u2019s network before every scheduled run, so the two can be compared.',
+    'docs.vantage.p2':
+      'This is not hypothetical. A site that answers in 200ms from Seoul once took 30 seconds from a US region, and StatusDog reported an outage that was not happening.',
+    'docs.vantage.bothOk': 'Both saw it working',
+    'docs.vantage.bothOkV': 'Counted as up.',
+    'docs.vantage.bothBad': 'Both saw it failing',
+    'docs.vantage.bothBadV': 'Counted as down \u2014 an outage two networks agree on.',
+    'docs.vantage.split': 'Only the Seoul check failed',
+    'docs.vantage.splitV':
+      'Inconclusive. Recorded and visible, but kept out of the up/down decision and out of the statistics, and no alert is sent.',
+    'docs.vantage.reverse': 'Only the second look failed',
+    'docs.vantage.reverseV':
+      'Counted as up \u2014 Seoul serves this dashboard. Still recorded: it is the early warning for a routing problem elsewhere.',
+    'docs.vantage.limit':
+      'Only failures the network could have caused are ever set aside \u2014 a timeout, a refused connection, DNS, a handshake, or latency over the limit. A wrong status code, forbidden text in the body, a missing header or a changed redirect chain is the site\u2019s own answer, identical from anywhere, and always counts.',
+    'docs.vantage.guard':
+      'Three disagreements in a row and the second look stops being believed, until the two agree again. A broken runner delays an alert by three checks and no more.',
     'docs.api.h2': 'Check API',
     'docs.api.p': 'One request, one probe. Nothing is stored.',
     'docs.api.url': 'required · http(s); a bare host gets https:// prepended',
@@ -595,6 +619,30 @@ export const LOCALES = {
     'docs.can.traffic': '트래픽 · 방문자 수',
     'docs.can.trafficV':
       '불가능 — 외부에서 찔러보는 방식으로는 알 수 없고, 해당 사이트의 애널리틱스나 서버 로그에 접근해야 합니다',
+    'spark.disputed': '판단 보류 — 두 지점의 결과가 엇갈렸습니다',
+    'dash.disputed':
+      '{time} 확인했지만 두 지점의 결과가 엇갈려 판단을 보류했습니다. 위 상태는 집계에 반영된 마지막 확인 결과입니다.',
+    'office.report.disputed': '판단 보류된 확인',
+    'office.report.disputedV': '{time} \u2014 두 지점의 결과가 엇갈려 집계하지 않았습니다',
+    'docs.vantage.h2': '두 지점에서 확인',
+    'docs.vantage.p1':
+      '한 곳에서만 보면 "사이트가 죽었다"와 "그 사이트로 가는 길이 죽었다"를 구분할 수 없습니다. 감시 목록 확인은 서울에서 실행되고, 예정된 확인마다 그 직전에 GitHub 쪽 네트워크에서 한 번 더 봅니다. 그래서 두 결과를 맞대볼 수 있습니다.',
+    'docs.vantage.p2':
+      '가정이 아닙니다. 서울에서 200ms에 응답하는 사이트가 미국 리전에서는 30초가 걸린 적이 있고, StatusDog는 일어나지도 않은 장애를 알렸습니다.',
+    'docs.vantage.bothOk': '양쪽 모두 정상',
+    'docs.vantage.bothOkV': '정상으로 집계합니다.',
+    'docs.vantage.bothBad': '양쪽 모두 실패',
+    'docs.vantage.bothBadV': '장애로 집계합니다 \u2014 두 네트워크가 같은 결론을 낸 경우입니다.',
+    'docs.vantage.split': '서울 확인만 실패',
+    'docs.vantage.splitV':
+      '판단 보류. 기록에는 남지만 정상·장애 판정과 통계에서 제외하고, 알림도 보내지 않습니다.',
+    'docs.vantage.reverse': '두 번째 확인만 실패',
+    'docs.vantage.reverseV':
+      '정상으로 집계합니다 \u2014 이 대시보드를 서비스하는 곳이 서울이기 때문입니다. 그래도 기록은 남깁니다. 다른 경로에 문제가 생겼다는 조기 신호입니다.',
+    'docs.vantage.limit':
+      '네트워크 때문일 수 있는 실패만 보류합니다 \u2014 타임아웃, 연결 거부, DNS, 핸드셰이크, 응답 시간 초과. 상태 코드가 틀렸거나 본문에 금지 문자열이 있거나 헤더가 빠졌거나 리다이렉트가 바뀐 경우는 사이트가 직접 내놓은 답이고 어디서 봐도 같으므로, 언제나 그대로 집계합니다.',
+    'docs.vantage.guard':
+      '세 번 연속 엇갈리면 두 번째 확인을 더 이상 믿지 않고, 양쪽이 다시 일치할 때까지 그 상태를 유지합니다. 실행기가 고장 나도 알림이 확인 세 번만큼 늦어질 뿐입니다.',
     'docs.api.h2': '확인 API',
     'docs.api.p': '요청 한 번에 확인 한 번. 아무것도 저장하지 않습니다.',
     'docs.api.url': '필수 · http(s). 호스트만 넣으면 https://가 붙습니다',

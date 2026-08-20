@@ -1,4 +1,4 @@
-import type { ProbeResult, ResolvedTarget } from '../config/types.js';
+import type { FailureReason, ProbeResult, ResolvedTarget } from '../config/types.js';
 import {
   applyResult,
   INITIAL_STATE,
@@ -24,7 +24,11 @@ export interface UptimeRecord {
   ok: boolean;
   status: number | null;
   ms: number;
-  reason: string | null;
+  /**
+   * A {@link FailureReason}, `null` on success, or `'disputed'` when two vantage
+   * points could not agree — the one value that is not a verdict about the site.
+   */
+  reason: FailureReason | 'disputed' | null;
 }
 
 export interface UptimeEntry extends StateSnapshot {
@@ -35,6 +39,22 @@ export interface UptimeEntry extends StateSnapshot {
   history: UptimeRecord[];
   /** Which certificate expiry warnings have already gone out, and for which cert. */
   cert: CertNotifyState;
+  /**
+   * Failures the second vantage would not corroborate, in a row. Reset by any
+   * conclusive check; used to stop a broken second opinion muting a real outage.
+   */
+  consecutiveDisputes: number;
+  /** Total inconclusive checks, so the dashboard can say the network was unclear. */
+  disputes: number;
+  /**
+   * The most recent check no conclusion could be drawn from.
+   *
+   * Kept separate from `lastResult`, which stays the last check that actually
+   * counted. Overwriting `lastResult` with a disputed failure would paint the
+   * dashboard red over a check we have just declared uninterpretable — while
+   * hiding the disagreement entirely would be no better.
+   */
+  lastDispute: { at: string; message: string | null; reason: FailureReason | null } | null;
 }
 
 export interface UptimeStats {
@@ -46,9 +66,21 @@ export interface UptimeStats {
 }
 
 export function statsFor(entry: UptimeEntry): UptimeStats {
-  const history = entry.history ?? [];
+  const all = entry.history ?? [];
+  // Checks two vantage points could not agree on are still in the history, so the
+  // disagreement is visible — but they must not reach the figures. Counting one as a
+  // failure would put the false alarm straight back into the uptime percentage, and
+  // its timed-out duration would drag the average with it.
+  const history = all.filter((record) => record.reason !== 'disputed');
   if (history.length === 0) {
-    return { checks: 0, failures: 0, uptimePct: null, avgResponseTimeMs: null, lastCheckedAt: null };
+    return {
+      checks: 0,
+      failures: 0,
+      uptimePct: null,
+      avgResponseTimeMs: null,
+      // Something did happen, even if nothing could be concluded from it.
+      lastCheckedAt: all.length > 0 ? all[all.length - 1]!.t : null,
+    };
   }
   let failures = 0;
   let totalMs = 0;
@@ -65,6 +97,10 @@ export function statsFor(entry: UptimeEntry): UptimeStats {
   };
 }
 
+function numberOr(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
 function keyFor(targetId: string): string {
   return `${KEY_PREFIX}${targetId}`;
 }
@@ -78,6 +114,9 @@ function blankEntry(target: Pick<ResolvedTarget, 'id' | 'name' | 'url'>): Uptime
     lastResult: null,
     history: [],
     cert: { ...EMPTY_CERT_STATE },
+    consecutiveDisputes: 0,
+    disputes: 0,
+    lastDispute: null,
   };
 }
 
@@ -102,6 +141,9 @@ export async function readEntry(
       history: Array.isArray(parsed.history) ? parsed.history.slice(-HISTORY_LIMIT) : [],
       // Absent on entries written before expiry warnings existed.
       cert: parsed.cert ?? { ...EMPTY_CERT_STATE },
+      consecutiveDisputes: numberOr(parsed.consecutiveDisputes, 0),
+      disputes: numberOr(parsed.disputes, 0),
+      lastDispute: parsed.lastDispute ?? null,
     };
   } catch {
     return blankEntry(target);
@@ -110,6 +152,22 @@ export async function readEntry(
 
 export async function writeEntry(kv: KvClient, entry: UptimeEntry): Promise<void> {
   await kv.set(keyFor(entry.id), JSON.stringify(entry));
+}
+
+export interface ApplyOptions {
+  /**
+   * Set when a second vantage could not corroborate this failure. An inconclusive
+   * check is stored, but it does not move the state machine — a result nobody can
+   * interpret must not flip a target to down.
+   */
+  inconclusive?: boolean;
+  /**
+   * The new length of the disagreement run, when the caller has already worked it
+   * out. It is not the same as the count of suppressed checks: a disagreement that
+   * has exhausted its patience still counts, or the second vantage would mute every
+   * fourth check forever. Defaults to "+1 while suppressed, 0 otherwise".
+   */
+  disputeRun?: number;
 }
 
 export interface AppliedCheck {
@@ -138,9 +196,24 @@ export async function applyCheck(
   kv: KvClient,
   target: ResolvedTarget,
   result: ProbeResult,
+  options: ApplyOptions = {},
 ): Promise<AppliedCheck> {
   const previous = await readEntry(kv, target);
-  const { next, transitioned } = applyResult(previous, result, target);
+
+  // An inconclusive check leaves the state machine exactly where it was: the
+  // streak counters must not advance either, or three disputed checks would look
+  // like three failures once one finally counts.
+  const { next, transitioned } = options.inconclusive
+    ? {
+        next: {
+          state: previous.state,
+          since: previous.since,
+          consecutiveFailures: previous.consecutiveFailures,
+          consecutiveSuccesses: previous.consecutiveSuccesses,
+        },
+        transitioned: false,
+      }
+    : applyResult(previous, result, target);
   const cert = evaluateCertExpiry(
     result.detail?.tls ?? null,
     target.certExpiryWarnDays,
@@ -150,12 +223,30 @@ export async function applyCheck(
   const entry: UptimeEntry = {
     ...previous,
     ...next,
-    lastResult: result,
+    // A disputed check leaves the last *conclusive* result standing, because that
+    // is what the state, the badges and the dogs are showing. The disagreement is
+    // not swept away: it goes in the history and in `lastDispute`.
+    lastResult: options.inconclusive ? previous.lastResult : result,
+    lastDispute: options.inconclusive
+      ? { at: result.checkedAt, message: result.message, reason: result.reason }
+      : previous.lastDispute,
+    // The raw history still records what happened, so a dispute is visible rather
+    // than erased — it simply does not count towards the state or the statistics.
     history: [
       ...previous.history,
-      { t: result.checkedAt, ok: result.ok, status: result.status, ms: result.responseTimeMs, reason: result.reason },
+      {
+        t: result.checkedAt,
+        ok: result.ok,
+        status: result.status,
+        ms: result.responseTimeMs,
+        // `as const` because `.slice` below detaches the literal from its
+        // contextual type, which would widen this to `string`.
+        reason: options.inconclusive ? ('disputed' as const) : result.reason,
+      } satisfies UptimeRecord,
     ].slice(-HISTORY_LIMIT),
     cert: cert.state,
+    consecutiveDisputes: options.disputeRun ?? (options.inconclusive ? previous.consecutiveDisputes + 1 : 0),
+    disputes: previous.disputes + (options.inconclusive ? 1 : 0),
   };
 
   await writeEntry(kv, entry);

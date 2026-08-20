@@ -246,6 +246,51 @@ Nothing here is required. With no store configured, `/api/monitors` returns
 `storage: "none"`, the dashboard says as much, and the rest of the site is
 unaffected.
 
+#### Two vantage points
+
+One observer cannot tell *the site is down* from *the path to the site is down*.
+
+This is not hypothetical. copykiller.com answers in about 200ms from Seoul; from
+Vercel's US-East region it once took 30 seconds, timed out, and StatusDog duly
+reported an outage and sent an alert. The site was fine. What was being measured
+was a transpacific round trip.
+
+So the GitHub Actions runner takes its own look at every target before it wakes the
+scheduler, and posts what it saw:
+
+```json
+{ "vantage": { "name": "github-actions",
+               "checks": [ { "id": "copykiller", "reachable": true, "status": 200 } ] } }
+```
+
+The runner only *measures*. Whether a status counts as healthy is decided
+server-side against each target's own `expectStatus`, so the policy lives in one
+place — 301 is healthy for a target that expects a redirect and a failure for one
+that does not, and the runner cannot know which.
+
+| Both saw | Outcome |
+| --- | --- |
+| Working | Counted as up. |
+| Failing | Counted as down. A real outage, agreed on by two networks. |
+| Primary failed, runner reached it | **Inconclusive.** Stored and visible, but kept out of the state machine and the statistics, and nobody is paged. |
+| Primary worked, runner could not reach it | Counted as up — the primary is the region that serves the dashboard. Recorded anyway: it is the early warning for a routing problem. |
+
+Two limits, both deliberate:
+
+- **Only failures the network could have caused are ever disputed** — a timeout, a
+  refused connection, DNS, a handshake, or latency over `maxResponseTimeMs`. A
+  wrong status code, forbidden text in the body, a missing header or a changed
+  redirect chain is the site's own answer, identical from anywhere, and is never
+  suppressed. Otherwise this feature would be a way of hiding real content faults.
+- **Three disputes in a row and the runner stops being believed** (`dispute-exhausted`).
+  A runner whose own network is broken would otherwise report every target as
+  reachable and mute a genuine outage indefinitely. Exhaustion sticks until the two
+  agree again, so a broken runner delays a page by three checks and no more.
+
+A missing, empty or malformed body is simply no second opinion: the primary stands
+alone and alerts exactly as it did before. The improvement can never be a
+prerequisite for the check.
+
 ### Alerts
 
 Every confirmed up/down change posts JSON to each configured webhook. *Confirmed*

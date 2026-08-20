@@ -231,6 +231,8 @@ p code, li code, td code {
   opacity: .85;
 }
 .spark i.bad { background: var(--down); }
+/* Nothing was concluded from this check, so it is drawn as absent rather than bad. */
+.spark i.unclear { background: var(--border); opacity: 0.85; }
 .spark .empty-note { color: var(--muted); font-size: 13px; font-style: normal; align-self: center; }
 
 /* ---------- misc ---------- */
