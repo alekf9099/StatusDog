@@ -75,6 +75,29 @@ const wanted = new URLSearchParams(location.search).get('target')
 let stats = null;
 let monitors = null;
 let reports = null;
+/** `null` until /api/auth/me answers; the UI shows no admin affordance before then. */
+let viewer = null;
+/** Which incident is currently being edited, by its confirmed-down timestamp. */
+let editing = null;
+let saving = false;
+/**
+ * Which incident reports the reader has opened.
+ *
+ * The page re-renders on every poll, on a language switch and after saving a note,
+ * and each render replaces the markup — so without remembering this, an outage
+ * being read would snap shut under the reader every minute.
+ */
+const opened = new Set();
+
+// Delegated because the elements are replaced on each render.
+document.addEventListener('toggle', (event) => {
+  const details = event.target;
+  if (!details.classList?.contains('incident-report')) return;
+  const id = details.dataset.incident;
+  if (!id) return;
+  if (details.open) opened.add(id);
+  else opened.delete(id);
+}, true);
 
 async function load() {
   try {
@@ -87,6 +110,13 @@ async function load() {
         ? fetch(`/api/incidents?target=${encodeURIComponent(wanted)}&limit=10`, { cache: 'no-store' })
         : Promise.resolve(null),
     ]);
+    // Asked once. Whether an owner is signed in does not change on a poll, and a
+    // failure here simply means no edit boxes.
+    if (viewer === null) {
+      viewer = await fetch('/api/auth/me', { cache: 'no-store' })
+        .then((response) => (response.ok ? response.json() : null))
+        .catch(() => null) ?? { configured: false, signedIn: false };
+    }
     const statsBody = await statsRes.json();
     if (!statsRes.ok) throw new Error(statsBody.error ?? t('error.requestFailed', { status: statsRes.status }));
     stats = statsBody;
@@ -178,6 +208,7 @@ function renderDetail(target) {
     <div class="card">${dayChart(target.daily ?? [], 90)}</div>
 
     ${shareBox(target)}
+    ${ownerStrip()}
 
     <h2 style="font-size:15px;margin:30px 0 4px">${escapeHtml(t('status.incidents'))}</h2>
     <p class="small muted" style="margin:0 0 12px">${escapeHtml(t('status.report.lede'))}</p>
@@ -233,6 +264,38 @@ function dayChart(daily, days) {
 }
 
 /**
+ * Sign in, or say who is signed in.
+ *
+ * Hidden entirely when the deployment has no admin surface configured: offering a
+ * sign-in that cannot work is worse than offering none. A reader never needs this,
+ * so it is a quiet strip rather than a header button.
+ */
+function ownerStrip() {
+  if (!viewer?.configured) return '';
+
+  const reason = new URLSearchParams(location.search).get('signin');
+  const notice = reason && reason !== 'ok'
+    ? `<div class="notice small" style="margin-bottom:10px">${escapeHtml(t(`signin.${reason}`))}</div>`
+    : '';
+
+  if (viewer.signedIn) {
+    return `
+      ${notice}
+      <div class="owner-strip small">
+        <span class="muted">${escapeHtml(t('signin.as', { email: viewer.email ?? '' }))}</span>
+        <button type="button" class="secondary" data-signout>${escapeHtml(t('signin.out'))}</button>
+      </div>`;
+  }
+
+  const next = `${location.pathname}${location.search.replace(/[?&]signin=[^&]*/, '')}`;
+  return `
+    ${notice}
+    <div class="owner-strip small">
+      <a href="/api/auth/login?next=${encodeURIComponent(next)}">${escapeHtml(t('signin.in'))}</a>
+    </div>`;
+}
+
+/**
  * The two things a reader can take away with them: a feed address and a badge.
  *
  * Both are plain URLs on purpose. Subscribing needs no account because RSS needs
@@ -268,9 +331,87 @@ function shareBox(target) {
     </div>`;
 }
 
+/**
+ * Save a note.
+ *
+ * The custom header is what makes this a same-origin write: a form on another site
+ * cannot set it, and a script elsewhere would need a CORS preflight this site never
+ * approves. The server checks it before it looks at the session at all.
+ */
+async function saveNote(incidentId, form) {
+  const errorBox = form.querySelector('[data-note-error]');
+  errorBox.hidden = true;
+  saving = true;
+  render();
+
+  try {
+    const response = await fetch('/api/admin/note', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-statusdog-admin': '1' },
+      body: JSON.stringify({
+        target: wanted,
+        incident: incidentId,
+        cause: form.querySelector('[data-note-cause]')?.value ?? '',
+        action: form.querySelector('[data-note-action]')?.value ?? '',
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error ?? t('error.requestFailed', { status: response.status }));
+
+    // Update the loaded report in place so the note shows without a refetch.
+    const report = reports?.targets?.[0]?.reports?.find((entry) => entry.confirmedAt === incidentId);
+    if (report) report.note = payload.note ?? null;
+    editing = null;
+    saving = false;
+    render();
+  } catch (err) {
+    saving = false;
+    editing = incidentId;
+    render();
+    const box = document.querySelector(`[data-note-form="${CSS.escape(incidentId)}"] [data-note-error]`);
+    if (box) {
+      box.textContent = err.message;
+      box.hidden = false;
+    }
+  }
+}
+
 // One listener for the whole page: the boxes are re-rendered on every poll and on
 // every language switch, so per-button handlers would leak.
 document.addEventListener('click', async (event) => {
+  const edit = event.target.closest?.('[data-note-edit]');
+  if (edit) {
+    editing = edit.dataset.noteEdit;
+    opened.add(editing);
+    render();
+    document.querySelector('[data-note-cause]')?.focus();
+    return;
+  }
+
+  if (event.target.closest?.('[data-note-cancel]')) {
+    editing = null;
+    render();
+    return;
+  }
+
+  const save = event.target.closest?.('[data-note-save]');
+  if (save) {
+    const form = save.closest('[data-note-form]');
+    if (form) await saveNote(form.dataset.noteForm, form);
+    return;
+  }
+
+  if (event.target.closest?.('[data-signout]')) {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { 'x-statusdog-admin': '1' },
+    }).catch(() => {});
+    viewer = null;
+    editing = null;
+    await load();
+    return;
+  }
+
   const button = event.target.closest?.('[data-copy]');
   if (!button) return;
   try {
@@ -315,16 +456,83 @@ function incidentEntry(incident, report) {
     ? reportBody(report)
     : `<p class="small muted">${escapeHtml(incident.message ?? t('status.report.noDetail'))}</p>`;
 
-  return `<details class="incident-report${ongoing ? ' ongoing' : ''}">${head}<div class="report-body">${body}</div></details>`;
+  const id = incident.startedAt;
+  const isOpen = opened.has(id) || editing === id;
+  return `<details class="incident-report${ongoing ? ' ongoing' : ''}" data-incident="${escapeHtml(id)}"${isOpen ? ' open' : ''}>${head}<div class="report-body">${body}</div></details>`;
 }
 
 function reportBody(report) {
   return [
+    noteOf(report),
     timelineOf(report),
     precursorOf(report),
     snapshotsOf(report),
     changedOf(report),
   ].filter(Boolean).join('');
+}
+
+/**
+ * The half a probe cannot write: what actually broke, and what was done.
+ *
+ * Placed first in the report because it is the only part written by somebody who
+ * knows. Everything below it is evidence; this is the explanation.
+ *
+ * Three states: the note, the edit form, and nothing at all. A reader who is not an
+ * owner sees the note or sees nothing — never an empty prompt to fill in a box they
+ * cannot submit.
+ */
+function noteOf(report) {
+  const note = report.note ?? null;
+  const canEdit = viewer?.signedIn === true;
+
+  if (editing === report.confirmedAt && canEdit) return noteForm(report, note);
+
+  if (!note) {
+    if (!canEdit) return '';
+    return `
+      <h4>${escapeHtml(t('note.h4'))}</h4>
+      <p class="small muted" style="margin:0 0 8px">${escapeHtml(t('note.empty'))}</p>
+      <button type="button" class="secondary" data-note-edit="${escapeHtml(report.confirmedAt)}">${escapeHtml(t('note.add'))}</button>`;
+  }
+
+  const rows = [];
+  if (note.cause) rows.push([t('note.cause'), note.cause]);
+  if (note.action) rows.push([t('note.action'), note.action]);
+
+  return `
+    <h4>${escapeHtml(t('note.h4'))}</h4>
+    <div class="note">
+      ${rows.map(([label, text]) => `
+        <div class="note-row">
+          <span>${escapeHtml(label)}</span>
+          <p>${escapeHtml(text)}</p>
+        </div>`).join('')}
+      <p class="small muted" style="margin:8px 0 0">${escapeHtml(t('note.updated', {
+        time: formatTimestamp(note.updatedAt) ?? '',
+      }))}</p>
+      ${canEdit ? `<button type="button" class="secondary" style="margin-top:10px" data-note-edit="${escapeHtml(report.confirmedAt)}">${escapeHtml(t('note.edit'))}</button>` : ''}
+    </div>`;
+}
+
+function noteForm(report, note) {
+  return `
+    <h4>${escapeHtml(t('note.h4'))}</h4>
+    <div class="note note-editing" data-note-form="${escapeHtml(report.confirmedAt)}">
+      <label>
+        <span>${escapeHtml(t('note.cause'))}</span>
+        <textarea rows="3" data-note-cause placeholder="${escapeHtml(t('note.causeHint'))}">${escapeHtml(note?.cause ?? '')}</textarea>
+      </label>
+      <label>
+        <span>${escapeHtml(t('note.action'))}</span>
+        <textarea rows="3" data-note-action placeholder="${escapeHtml(t('note.actionHint'))}">${escapeHtml(note?.action ?? '')}</textarea>
+      </label>
+      <div class="note-actions">
+        <button type="button" data-note-save ${saving ? 'disabled' : ''}>${escapeHtml(saving ? t('note.saving') : t('note.save'))}</button>
+        <button type="button" class="secondary" data-note-cancel>${escapeHtml(t('note.cancel'))}</button>
+        <span class="small muted">${escapeHtml(t('note.clearHint'))}</span>
+      </div>
+      <div class="note-error small" data-note-error hidden></div>
+    </div>`;
 }
 
 function row(labelKey, value) {

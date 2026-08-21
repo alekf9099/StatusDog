@@ -495,6 +495,93 @@ With the real history that lands on a 30-minute cadence and a 90-minute threshol
 the 52- and 58-minute gaps that used to false-alarm stay quiet, and a genuinely
 stopped scheduler still trips at 100 minutes.
 
+## Owner sign-in
+
+Everything the site shows is public and read-only. The only thing that needs an
+identity is **writing**, so that is all this gates.
+
+### Authentication is not authorization
+
+Google sign-in proves who somebody is, and everyone on earth has a Google account.
+`STATUSDOG_ADMIN_EMAILS` is the actual gate. Without it, nothing is authorized —
+adding sign-in *without* a list would make the deployment worse than having none.
+
+The list is re-read on every request rather than baked into the session cookie, so
+removing an address revokes it on the next request instead of whenever the session
+happens to expire.
+
+| Variable | Purpose |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` | OAuth client from the Google Cloud console |
+| `GOOGLE_CLIENT_SECRET` | For the code exchange |
+| `STATUSDOG_SESSION_SECRET` | Signs the session cookie. 32+ random bytes |
+| `STATUSDOG_ADMIN_EMAILS` | Comma-separated owner addresses — **the gate** |
+| `STATUSDOG_SITE_URL` | Optional but recommended: pins the origin instead of deriving it from the request |
+
+With any of the first four missing, `adminConfigured` is false: sign-in returns 503,
+the UI hides its admin affordances entirely, and `/api/admin/*` refuses everything.
+**Unset closes the door rather than opening it**, exactly as `CRON_SECRET` does.
+
+Redirect URI to register with Google:
+
+```
+https://<your-deployment>/api/auth/callback
+```
+
+### How the session works
+
+A signed cookie, and nothing else — no session table, no store, which suits a
+serverless deployment where any request may hit a cold instance.
+
+- `HttpOnly`, `Secure`, `SameSite=Lax`, one week
+- HMAC-SHA256 over the payload, compared in constant time
+- **Revoking everything everywhere**: rotate `STATUSDOG_SESSION_SECRET`. Every
+  existing session becomes invalid at once, which is the answer for a lost laptop
+- The ID token is verified by asking Google (`tokeninfo`) rather than checking the
+  signature locally. Sign-in happens once a week, so a round trip costs nothing and
+  removes a family of subtle JWT-verification mistakes that all look like working code
+
+### Writes are checked twice
+
+`/api/admin/*` refuses a request before it looks at the session unless both hold:
+
+- the `Origin` header is this site — a cross-site form post carries the attacker's
+  origin and cannot forge this one
+- a custom `x-statusdog-admin` header is present — a plain form cannot set one at
+  all, and a script elsewhere would need a CORS preflight this site never approves
+
+### Incident notes
+
+The first thing sign-in unlocks, and the reason it exists.
+[Incident reports](#incident-reports) record in detail what was observed and refuse
+to guess at a cause, because a probe outside the site cannot see one. `POST
+/api/admin/note` is where a person supplies it:
+
+```json
+{ "target": "copykiller", "incident": "2026-08-20T03:00:00.000Z",
+  "cause": "Origin ran out of connections",
+  "action": "Raised the pool size and restarted" }
+```
+
+Notes appear on the public status page, at the top of the report they belong to —
+explaining an outage to whoever is reading is the point of writing one. Two details:
+
+- **The author's address is stored and never served.** Knowing which owner wrote a
+  note belongs in the record; publishing an email on a public page does not
+- **Notes live in their own key**, not in the incident log. That log is written by
+  the scheduler; sharing a key would mean a cron run and a saved postmortem could
+  overwrite each other, and losing hand-written words that way is not acceptable in
+  the way losing a bucket count is
+
+Clearing both fields deletes the note.
+
+### Still a file
+
+The roster is not editable here. `monitors.json` stays a committed file for now, and
+UI editing is a separate step: once the site can add monitors, it can be told to
+fetch arbitrary URLs every fifteen minutes, so that write path needs the same
+address guard `/api/check` has plus a target cap before it exists at all.
+
 ## Statistics
 
 [`/status`](https://status-dog.vercel.app/status) reports uptime and response time
