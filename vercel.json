@@ -25,6 +25,14 @@
       "destination": "/api/preview"
     },
     {
+      "source": "/api/auth/:action",
+      "destination": "/api/auth?action=:action"
+    },
+    {
+      "source": "/api/admin/:action",
+      "destination": "/api/admin?action=:action"
+    },
+    {
       "source": "/preview/:template",
       "destination": "/api/preview?template=:template"
     }

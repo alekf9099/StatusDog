@@ -506,3 +506,56 @@ ul.changed code {
 .share-field button { padding: 6px 12px; font-size: 12px; white-space: nowrap; }
 .share-preview { margin-top: 8px; }
 .share-preview img { display: block; height: 20px; }
+
+/* ---------- incident notes and owner sign-in ---------- */
+
+.note {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--up);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+}
+.note-row { padding: 3px 0; }
+.note-row span {
+  display: block;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.note-row p { margin: 0 0 8px; font-size: 13.5px; white-space: pre-wrap; }
+
+.note-editing { border-left-color: var(--muted); }
+.note-editing label { display: block; margin-bottom: 10px; }
+.note-editing label span {
+  display: block;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.note-editing textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 13.5px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--fg);
+  resize: vertical;
+}
+.note-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.note-error { color: var(--down); margin-top: 8px; }
+
+.owner-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}

@@ -16,29 +16,8 @@ import { readStats } from '../dist/store/stats-store.js';
 import { readLog } from '../dist/store/incident-store.js';
 import { feedXml } from '../dist/feed/rss.js';
 import { kvEnvNames, kvFromEnv } from '../dist/store/kv.js';
+import { originOf } from '../dist/util/origin.js';
 import { ROSTER } from '../dist/roster.data.js';
-
-/**
- * Where this feed lives, taken from the request.
- *
- * A feed has to state its own address, and the deployment does not know its own
- * hostname. The host header is caller-controlled, so it is validated to a hostname
- * shape before being written into the XML rather than trusted.
- */
-function originOf(req) {
-  const configured = process.env.STATUSDOG_SITE_URL;
-  if (configured) return String(configured).replace(/\/+$/, '');
-
-  const host = req.headers?.['x-forwarded-host'] ?? req.headers?.host ?? '';
-  const clean = String(host).split(',')[0].trim();
-  if (!/^[a-z0-9.-]+(:\d{1,5})?$/i.test(clean)) return 'https://status-dog.vercel.app';
-
-  const proto = String(req.headers?.['x-forwarded-proto'] ?? '').split(',')[0].trim();
-  const scheme = proto === 'http' || clean.startsWith('127.0.0.1') || clean.startsWith('localhost')
-    ? 'http'
-    : 'https';
-  return `${scheme}://${clean}`;
-}
 
 export default async function handler(req, res) {
   const query = new URL(req.url ?? '/', 'http://localhost').searchParams;
@@ -67,7 +46,7 @@ export default async function handler(req, res) {
   const generatedAt = new Date().toISOString();
   const base = {
     target: { id: target.id, name: target.name, url: target.url },
-    origin: originOf(req),
+    origin: originOf(req, process.env),
     generatedAt,
     language,
   };

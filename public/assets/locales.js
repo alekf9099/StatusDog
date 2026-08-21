@@ -203,6 +203,26 @@ export const LOCALES = {
     'status.badgeNote': 'Paste this into a README to show the last 30 days.',
     'status.copy': 'Copy',
     'status.copied': 'Copied',
+    'note.h4': 'What happened, and what was done',
+    'note.empty': 'No cause has been written for this outage yet.',
+    'note.add': 'Write it down',
+    'note.edit': 'Edit',
+    'note.cause': 'Cause',
+    'note.action': 'Remedy',
+    'note.causeHint': 'What actually broke \u2014 the part no probe can see from outside.',
+    'note.actionHint': 'What was done about it, and whether it is a permanent fix.',
+    'note.save': 'Save',
+    'note.saving': 'Saving\u2026',
+    'note.cancel': 'Cancel',
+    'note.clearHint': 'Clearing both fields deletes the note.',
+    'note.updated': 'Written {time}',
+    'signin.in': 'Owner sign-in',
+    'signin.out': 'Sign out',
+    'signin.as': 'Signed in as {email}',
+    'signin.denied': 'That account is not an owner of this deployment.',
+    'signin.expired': 'That sign-in attempt expired. Please try again.',
+    'signin.failed': 'Sign-in could not be completed.',
+    'signin.cancelled': 'Sign-in was cancelled.',
     'docs.share.h2': 'Taking it with you',
     'docs.share.p1':
       'Four things that need no account, because there are none yet.',
@@ -220,6 +240,27 @@ export const LOCALES = {
       'Each dog\u2019s desk shows how long since it last had a bad day, and its report adds time on the job and its best run. A dog with no history says nothing rather than claiming a clean sheet.',
     'docs.share.note':
       'Both addresses are on each site\u2019s status page, ready to copy.',
+    'docs.admin.h2': 'Owner sign-in',
+    'docs.admin.p1':
+      'Everything this site shows is public and read-only. The only thing that needs an identity is writing, so that is all sign-in gates.',
+    'docs.admin.gate':
+      'Google sign-in proves who somebody is, and everyone on earth has a Google account. An owner allowlist the deployment controls is the actual gate \u2014 and it is re-checked on every request, so removing an address revokes it immediately rather than whenever the session expires.',
+    'docs.admin.what': 'What it unlocks',
+    'docs.admin.whatV': 'Writing the cause and remedy of an outage. Nothing else, for now.',
+    'docs.admin.note': 'Incident notes',
+    'docs.admin.noteV':
+      'A probe outside a site cannot see why it broke, so it never guesses. This is where a person writes it down, and it appears at the top of that outage\u2019s report on this page \u2014 explaining an outage to whoever is reading is the point of writing one.',
+    'docs.admin.author': 'Who wrote it',
+    'docs.admin.authorV':
+      'Recorded in the store and never served. Knowing which owner wrote a note belongs in the record; publishing an email address on a public page does not.',
+    'docs.admin.closed': 'Unconfigured means closed',
+    'docs.admin.closedV':
+      'With the sign-in environment incomplete, the admin surface does not exist: sign-in returns an error, the write endpoints refuse everything, and this page hides the edit boxes rather than offering ones that cannot work.',
+    'docs.admin.roster': 'Not the roster',
+    'docs.admin.rosterV':
+      'Sites are still added by editing a committed file. Once a signed-in page can add one, it can be told to fetch any address every fifteen minutes \u2014 that write path needs its own address guard and a limit before it exists.',
+    'docs.admin.note2':
+      'Sessions are signed cookies with no server-side store. Rotating the signing secret invalidates every session at once, which is the answer for a lost laptop.',
     'docs.incident.h2': 'Incident reports',
     'docs.incident.p1':
       'Every confirmed outage writes a report, shown on that site\u2019s status page. An incident used to be a start time, a duration and a single word like "timeout" \u2014 which says one happened and nothing about it.',
@@ -747,6 +788,26 @@ export const LOCALES = {
     'status.badgeNote': 'README에 붙이면 최근 30일 가동률이 표시됩니다.',
     'status.copy': '복사',
     'status.copied': '복사했습니다',
+    'note.h4': '무슨 일이 있었고, 무엇을 했는지',
+    'note.empty': '이 장애의 원인이 아직 기록되지 않았습니다.',
+    'note.add': '기록하기',
+    'note.edit': '수정',
+    'note.cause': '원인',
+    'note.action': '조치',
+    'note.causeHint': '실제로 무엇이 고장났는지 \u2014 밖에서 찔러봐서는 알 수 없는 부분입니다.',
+    'note.actionHint': '어떻게 대응했는지, 그리고 그것이 임시 조치인지 영구 조치인지.',
+    'note.save': '저장',
+    'note.saving': '저장 중\u2026',
+    'note.cancel': '취소',
+    'note.clearHint': '두 칸을 모두 비우면 기록이 삭제됩니다.',
+    'note.updated': '{time} 작성',
+    'signin.in': '소유자 로그인',
+    'signin.out': '로그아웃',
+    'signin.as': '{email}(으)로 로그인됨',
+    'signin.denied': '이 배포의 소유자 계정이 아닙니다.',
+    'signin.expired': '로그인 시도가 만료되었습니다. 다시 시도해 주세요.',
+    'signin.failed': '로그인을 완료할 수 없습니다.',
+    'signin.cancelled': '로그인을 취소했습니다.',
     'docs.share.h2': '가져가서 쓰기',
     'docs.share.p1':
       '계정이 아직 없으므로, 계정 없이 되는 네 가지입니다.',
@@ -764,6 +825,27 @@ export const LOCALES = {
       '강아지 책상마다 마지막으로 문제가 있었던 뒤 며칠이 지났는지 표시하고, 리포트에는 근속과 최장 기록이 붙습니다. 이력이 없는 강아지는 없는 기록을 주장하지 않고 아무 말도 하지 않습니다.',
     'docs.share.note':
       '두 주소는 각 사이트의 상태 페이지에서 바로 복사할 수 있습니다.',
+    'docs.admin.h2': '소유자 로그인',
+    'docs.admin.p1':
+      '이 사이트가 보여주는 것은 모두 공개이고 읽기 전용입니다. 신원이 필요한 건 쓰기뿐이라, 로그인은 쓰기만 막습니다.',
+    'docs.admin.gate':
+      '구글 로그인은 그 사람이 누구인지를 증명할 뿐이고, 구글 계정은 전 세계 누구나 가지고 있습니다. 실제 관문은 배포 소유자가 관리하는 허용 목록입니다 \u2014 매 요청마다 다시 확인하므로, 주소를 목록에서 지우면 세션 만료를 기다리지 않고 즉시 권한이 사라집니다.',
+    'docs.admin.what': '무엇이 열리는지',
+    'docs.admin.whatV': '장애의 원인과 조치를 기록하는 것. 지금은 그것뿐입니다.',
+    'docs.admin.note': '장애 기록',
+    'docs.admin.noteV':
+      '사이트 밖에서 찔러보는 방식으로는 왜 고장났는지 알 수 없어서, StatusDog는 추측하지 않습니다. 사람이 직접 적는 곳이 여기이고, 해당 장애 기록 맨 위에 표시됩니다 \u2014 읽는 사람에게 장애를 설명하는 것이 기록을 쓰는 이유니까요.',
+    'docs.admin.author': '작성자',
+    'docs.admin.authorV':
+      '저장은 하고 공개는 하지 않습니다. 누가 썼는지는 기록에 남을 일이지만, 공개 페이지에 이메일 주소를 띄울 일은 아닙니다.',
+    'docs.admin.closed': '설정이 없으면 닫힙니다',
+    'docs.admin.closedV':
+      '로그인 환경변수가 하나라도 빠지면 관리자 기능이 아예 존재하지 않습니다. 로그인은 오류를 반환하고, 쓰기 엔드포인트는 전부 거부하고, 이 화면은 동작하지 않을 입력칸을 보여주는 대신 감춥니다.',
+    'docs.admin.roster': '감시 목록은 별개',
+    'docs.admin.rosterV':
+      '감시 대상 추가는 여전히 커밋된 파일을 고치는 방식입니다. 로그인한 화면에서 대상을 추가할 수 있게 되면 임의의 주소를 15분마다 두드리게 만들 수도 있어서, 그 쓰기 경로는 자체 주소 차단과 개수 상한을 갖춘 뒤에 만들어야 합니다.',
+    'docs.admin.note2':
+      '세션은 서버 저장소 없는 서명된 쿠키입니다. 서명 시크릿을 교체하면 모든 세션이 한 번에 무효화되고, 그게 노트북을 분실했을 때의 답입니다.',
     'docs.incident.h2': '장애 상세 기록',
     'docs.incident.p1':
       '장애가 확정될 때마다 상세 기록을 남기고, 해당 사이트의 상태 페이지에서 볼 수 있습니다. 전에는 시작 시각, 지속 시간, 그리고 "timeout" 같은 단어 하나뿐이었습니다 \u2014 장애가 있었다는 사실 외에는 아무것도 알 수 없었죠.',

@@ -13,9 +13,14 @@
  * monitored site itself: a status code, curated response headers, the address that
  * answered, and a short piece of a page any visitor would have seen. Nothing about
  * the monitor's own configuration or credentials goes out.
+ *
+ * Owner-written notes are included, because explaining an outage to whoever is
+ * reading the status page is the whole point of writing one. The author's address is
+ * not: that is recorded in the store and never served.
  */
 import { resolveRoster } from '../dist/store/roster.js';
 import { readLog } from '../dist/store/incident-store.js';
+import { findNote, publicNote, readNotes } from '../dist/store/notes.js';
 import { REPORT_LIMIT } from '../dist/store/incident.js';
 import { kvEnvNames, kvFromEnv } from '../dist/store/kv.js';
 import { parseIntParam } from '../dist/util/params.js';
@@ -67,8 +72,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const logs = await Promise.all(targets.map((target) => readLog(kv, target.id)));
+    const [logs, noteLogs] = await Promise.all([
+      Promise.all(targets.map((target) => readLog(kv, target.id))),
+      Promise.all(targets.map((target) => readNotes(kv, target.id))),
+    ]);
     const byId = new Map(logs.map((log) => [log.targetId, log]));
+    const notesById = new Map(noteLogs.map((log) => [log.targetId, log]));
 
     res.status(200).json({
       storage: 'kv',
@@ -78,7 +87,13 @@ export default async function handler(req, res) {
         name: target.name,
         url: target.url,
         // Newest first: a report list is read from the top.
-        reports: [...(byId.get(target.id)?.reports ?? [])].reverse().slice(0, limit),
+        reports: [...(byId.get(target.id)?.reports ?? [])].reverse().slice(0, limit).map((report) => {
+          const notes = notesById.get(target.id);
+          const note = notes ? findNote(notes, report.confirmedAt) : null;
+          // `note` is the owner's account of the outage; `changed` above stays what
+          // was merely observed. They are not the same claim and are not merged.
+          return { ...report, note: note ? publicNote(note) : null };
+        }),
       })),
     });
   } catch (err) {
