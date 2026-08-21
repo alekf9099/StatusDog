@@ -559,3 +559,65 @@ ul.changed code {
   flex-wrap: wrap;
   margin-top: 10px;
 }
+
+/* ---------- account control ---------- */
+
+.account-slot { display: inline-flex; align-items: center; }
+.account-link { font-size: 13px; }
+.account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 4px 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12.5px;
+}
+.account-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--up);
+  flex: none;
+}
+.account-name { color: var(--muted); max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-chip button {
+  font-size: 11.5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  cursor: pointer;
+}
+.account-chip button:hover { border-color: var(--muted); }
+
+/* ---------- sign-in page ---------- */
+
+.signin-head { text-align: center; margin-bottom: 26px; }
+.signin-mark { font-size: 40px; display: block; margin-bottom: 10px; }
+.signin-head h1 { font-size: 22px; margin: 0 0 8px; }
+.signin-head p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.signin-card { padding: 24px; text-align: center; }
+.signin-as { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+.signin-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.signin-foot { text-align: center; margin-top: 18px; }
+
+.google-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.google-button:hover { border-color: var(--muted); text-decoration: none; }
+.google-button svg { flex: none; }

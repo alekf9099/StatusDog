@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="signin.pageTitle">Owner sign-in — StatusDog</title>
+<meta name="description" data-i18n-content="signin.metaDescription" content="Sign in as the owner of this deployment.">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/assets/statusdog.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <nav class="site-nav">
+      <a href="/" data-i18n="nav.home">Home</a>
+      <a href="/office" data-i18n="nav.office">Office</a>
+      <a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/status" data-i18n="nav.status">Status</a>
+      <a href="/docs" data-i18n="nav.docs">Docs</a>
+      <span class="lang-switch" role="group" data-i18n-aria-label="lang.switchLabel" aria-label="Language">
+        <button type="button" data-lang="en" data-i18n="lang.en">EN</button>
+        <button type="button" data-lang="ko" data-i18n="lang.ko">한국어</button>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding:56px 0 72px;max-width:520px">
+  <div id="signin-card"></div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span data-i18n="footer.license">StatusDog · MIT</span>
+    <span class="spacer"></span>
+    <a href="/status" data-i18n="nav.status">Status</a>
+    <a href="/docs" data-i18n="footer.docs">Docs</a>
+    <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import { initI18n, t } from '/assets/i18n.js';
+import { escapeHtml, markCurrentNav } from '/assets/statusdog.js';
+
+initI18n();
+markCurrentNav();
+
+const card = document.getElementById('signin-card');
+const params = new URLSearchParams(location.search);
+/** Only a path on this site; the server refuses anything else anyway. */
+const next = (() => {
+  const raw = params.get('next') ?? '';
+  return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/status';
+})();
+const reason = params.get('signin');
+
+let viewer = null;
+
+async function load() {
+  try {
+    const response = await fetch('/api/auth/me', { cache: 'no-store' });
+    viewer = response.ok ? await response.json() : { configured: false, signedIn: false };
+  } catch {
+    viewer = { configured: false, signedIn: false };
+  }
+  render();
+}
+
+document.addEventListener('statusdog:languagechange', () => {
+  if (viewer) render();
+});
+
+/**
+ * The failure codes the callback can send back.
+ *
+ * `denied` is the interesting one: the account is real and Google confirmed it, and
+ * it is still not an owner. Saying so plainly is better than a generic failure,
+ * because the fix — adding the address to the allowlist — is a different action
+ * from trying again.
+ */
+function notice() {
+  if (!reason || reason === 'ok') return '';
+  const tone = reason === 'denied' ? 'error' : '';
+  return `<div class="notice ${tone} small" style="margin-bottom:18px">${escapeHtml(t(`signin.${reason}`))}</div>`;
+}
+
+function render() {
+  if (!viewer.configured) {
+    card.innerHTML = `
+      ${signInHeader()}
+      <div class="notice">${escapeHtml(t('signin.notConfigured'))}</div>`;
+    return;
+  }
+
+  if (viewer.signedIn) {
+    card.innerHTML = `
+      ${signInHeader()}
+      ${notice()}
+      <div class="card signin-card">
+        <p class="signin-as">${escapeHtml(t('signin.as', { email: viewer.email ?? '' }))}</p>
+        <p class="small muted" style="margin:0 0 18px">${escapeHtml(t('signin.whatNow'))}</p>
+        <div class="signin-actions">
+          <a href="${escapeHtml(next)}"><button type="button">${escapeHtml(t('signin.continue'))}</button></a>
+          <button type="button" class="secondary" data-signout>${escapeHtml(t('signin.out'))}</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  card.innerHTML = `
+    ${signInHeader()}
+    ${notice()}
+    <div class="card signin-card">
+      <a class="google-button" href="/api/auth/login?next=${encodeURIComponent(next)}">
+        <svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true">
+          <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92a8.78 8.78 0 0 0 2.68-6.62z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.34A9 9 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.01-2.34z"/>
+          <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59A9 9 0 0 0 .96 4.94l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/>
+        </svg>
+        <span>${escapeHtml(t('signin.withGoogle'))}</span>
+      </a>
+      <p class="small muted" style="margin:16px 0 0">${escapeHtml(t('signin.unverifiedHint'))}</p>
+    </div>
+    <p class="small muted signin-foot">${escapeHtml(t('signin.allowlistHint'))}</p>`;
+}
+
+function signInHeader() {
+  return `
+    <div class="signin-head">
+      <span class="signin-mark" aria-hidden="true">🐕</span>
+      <h1>${escapeHtml(t('signin.h1'))}</h1>
+      <p>${escapeHtml(t('signin.lede'))}</p>
+    </div>`;
+}
+
+card.addEventListener('click', async (event) => {
+  if (!event.target.closest('[data-signout]')) return;
+  await fetch('/api/auth/logout', {
+    method: 'POST',
+    headers: { 'x-statusdog-admin': '1' },
+  }).catch(() => {});
+  await load();
+});
+
+load();
+</script>
+
+</body>
+</html>
