@@ -216,6 +216,20 @@ export const LOCALES = {
     'note.cancel': 'Cancel',
     'note.clearHint': 'Clearing both fields deletes the note.',
     'note.updated': 'Written {time}',
+    'signin.pageTitle': 'Owner sign-in \u2014 StatusDog',
+    'signin.metaDescription': 'Sign in as the owner of this deployment.',
+    'signin.h1': 'Owner sign-in',
+    'signin.lede':
+      'Everything on this site is public and read-only. Signing in is only needed to write \u2014 to record what caused an outage and what was done about it.',
+    'signin.withGoogle': 'Continue with Google',
+    'signin.unverifiedHint':
+      'Google may warn that this app is unverified. It asks for your email address and nothing else.',
+    'signin.allowlistHint':
+      'Only addresses this deployment lists as owners can make changes. Signing in with any other account is allowed, and grants nothing.',
+    'signin.notConfigured':
+      'This deployment has no owner sign-in configured, so there is nothing to sign in to.',
+    'signin.whatNow': 'You can write the cause and remedy of any recorded outage.',
+    'signin.continue': 'Continue',
     'signin.in': 'Owner sign-in',
     'signin.out': 'Sign out',
     'signin.as': 'Signed in as {email}',
@@ -801,6 +815,20 @@ export const LOCALES = {
     'note.cancel': '취소',
     'note.clearHint': '두 칸을 모두 비우면 기록이 삭제됩니다.',
     'note.updated': '{time} 작성',
+    'signin.pageTitle': '소유자 로그인 \u2014 StatusDog',
+    'signin.metaDescription': '이 배포의 소유자로 로그인합니다.',
+    'signin.h1': '소유자 로그인',
+    'signin.lede':
+      '이 사이트의 모든 내용은 공개이고 읽기 전용입니다. 로그인은 쓰기에만 필요합니다 \u2014 장애의 원인과 조치를 기록할 때요.',
+    'signin.withGoogle': 'Google로 계속하기',
+    'signin.unverifiedHint':
+      'Google이 확인되지 않은 앱이라고 경고할 수 있습니다. 이 앱이 요청하는 건 이메일 주소뿐입니다.',
+    'signin.allowlistHint':
+      '이 배포가 소유자로 등록한 주소만 변경할 수 있습니다. 다른 계정으로도 로그인은 되지만 아무 권한도 주지 않습니다.',
+    'signin.notConfigured':
+      '이 배포에는 소유자 로그인이 설정되어 있지 않아 로그인할 대상이 없습니다.',
+    'signin.whatNow': '기록된 장애의 원인과 조치를 작성할 수 있습니다.',
+    'signin.continue': '계속',
     'signin.in': '소유자 로그인',
     'signin.out': '로그아웃',
     'signin.as': '{email}(으)로 로그인됨',

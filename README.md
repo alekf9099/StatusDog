@@ -534,6 +534,22 @@ functions per deployment and this project is at twelve, so **a new admin action
 goes into `api/admin.js` rather than a new file** — the pretty paths come from
 `vercel.json`, so nothing about the URLs changes.
 
+### Where the control lives
+
+The account control sits in the site header on every page, because the first
+version put it under the subscribe box on a single status page — which meant
+somebody who had signed in could not find how to sign out.
+
+`/signin` is a page in the site's own design rather than a bare link: it says what
+signing in is for (everything is public and read-only; only writing needs an
+account), warns that Google will call the app unverified while it is in testing,
+and states plainly that being signed in grants nothing on its own. The failure
+codes the callback can return are rendered there too — `denied` in particular,
+because "that account is not an owner" needs a different fix from "try again".
+
+With no admin surface configured the control renders nothing at all. A reader who
+can never be an owner should not be shown a door that opens onto a 503.
+
 ### How the session works
 
 A signed cookie, and nothing else — no session table, no store, which suits a

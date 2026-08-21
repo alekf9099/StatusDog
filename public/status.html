@@ -134,6 +134,13 @@ document.addEventListener('statusdog:languagechange', () => {
   if (stats) render();
 });
 
+// The header control signs out; the note editors have to stop offering themselves.
+document.addEventListener('statusdog:accountchange', (event) => {
+  viewer = event.detail ?? viewer;
+  editing = null;
+  if (stats) render();
+});
+
 function render() {
   renderStaleBanner(document.getElementById('stale-banner'), monitors?.scheduler ?? null);
   reflectStateInTab(monitors?.monitors ?? []);
@@ -208,7 +215,6 @@ function renderDetail(target) {
     <div class="card">${dayChart(target.daily ?? [], 90)}</div>
 
     ${shareBox(target)}
-    ${ownerStrip()}
 
     <h2 style="font-size:15px;margin:30px 0 4px">${escapeHtml(t('status.incidents'))}</h2>
     <p class="small muted" style="margin:0 0 12px">${escapeHtml(t('status.report.lede'))}</p>
@@ -260,38 +266,6 @@ function dayChart(daily, days) {
     <div class="day-axis">
       <span>${escapeHtml(window[0].day)}</span>
       <span>${escapeHtml(window[window.length - 1].day)}</span>
-    </div>`;
-}
-
-/**
- * Sign in, or say who is signed in.
- *
- * Hidden entirely when the deployment has no admin surface configured: offering a
- * sign-in that cannot work is worse than offering none. A reader never needs this,
- * so it is a quiet strip rather than a header button.
- */
-function ownerStrip() {
-  if (!viewer?.configured) return '';
-
-  const reason = new URLSearchParams(location.search).get('signin');
-  const notice = reason && reason !== 'ok'
-    ? `<div class="notice small" style="margin-bottom:10px">${escapeHtml(t(`signin.${reason}`))}</div>`
-    : '';
-
-  if (viewer.signedIn) {
-    return `
-      ${notice}
-      <div class="owner-strip small">
-        <span class="muted">${escapeHtml(t('signin.as', { email: viewer.email ?? '' }))}</span>
-        <button type="button" class="secondary" data-signout>${escapeHtml(t('signin.out'))}</button>
-      </div>`;
-  }
-
-  const next = `${location.pathname}${location.search.replace(/[?&]signin=[^&]*/, '')}`;
-  return `
-    ${notice}
-    <div class="owner-strip small">
-      <a href="/api/auth/login?next=${encodeURIComponent(next)}">${escapeHtml(t('signin.in'))}</a>
     </div>`;
 }
 
@@ -690,6 +664,8 @@ function tzLabel() {
 load();
 setInterval(load, 120_000);
 </script>
+
+<script type="module" src="/assets/account.js"></script>
 
 </body>
 </html>
