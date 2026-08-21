@@ -25,6 +25,15 @@
       "destination": "/api/preview"
     },
     {
+      "//": "One function serves every auth step and every admin action: the Hobby plan allows twelve, and a file per route would spend the budget on routing. The pretty paths stay, including the redirect URI registered with Google.",
+      "source": "/api/auth/:action",
+      "destination": "/api/auth?action=:action"
+    },
+    {
+      "source": "/api/admin/:action",
+      "destination": "/api/admin?action=:action"
+    },
+    {
       "source": "/preview/:template",
       "destination": "/api/preview?template=:template"
     }

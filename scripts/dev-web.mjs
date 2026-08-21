@@ -46,6 +46,15 @@ function rewrite(pathname) {
   if (api && existsSync(path.join(root, 'api', `${api[1]}.js`))) {
     return { module: `${api[1]}.js`, query: '' };
   }
+
+  // Mirrors the /api/auth/:action and /api/admin/:action rewrites. One function
+  // serves every action, so a two-segment path resolves to the parent file with
+  // the last segment handed over as `action`.
+  const dispatch = /^\/api\/(auth|admin)\/([\w-]+)$/.exec(pathname);
+  if (dispatch && existsSync(path.join(root, 'api', `${dispatch[1]}.js`))) {
+    return { module: `${dispatch[1]}.js`, query: `action=${dispatch[2]}` };
+  }
+
   return null;
 }
 

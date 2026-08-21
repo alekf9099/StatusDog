@@ -528,6 +528,12 @@ Redirect URI to register with Google:
 https://<your-deployment>/api/auth/callback
 ```
 
+One function serves every auth step and every admin action, dispatched on
+`?action=` behind a rewrite. Vercel's Hobby plan allows twelve serverless
+functions per deployment and this project is at twelve, so **a new admin action
+goes into `api/admin.js` rather than a new file** — the pretty paths come from
+`vercel.json`, so nothing about the URLs changes.
+
 ### How the session works
 
 A signed cookie, and nothing else — no session table, no store, which suits a
