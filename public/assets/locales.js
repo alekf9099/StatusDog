@@ -17,6 +17,72 @@ export const LOCALES = {
     /* ---------- chrome ---------- */
     'nav.home': 'Home',
     'nav.dashboard': 'Dashboard',
+    'nav.alerts': 'Alerts',
+    'alerts.pageTitle': 'Alerts \u2014 StatusDog',
+    'alerts.metaDescription': 'Connect StatusDog alerts to the app you already use.',
+    'alerts.h1': 'Alerts',
+    'alerts.lede':
+      'When an outage is confirmed, StatusDog posts to every destination you have connected. Pick the ones you actually read \u2014 an alert nobody sees is worse than none, because it looks like coverage.',
+    'alerts.how.h2': 'How connecting works',
+    'alerts.how.p1':
+      'Every destination below ends the same way: you get a webhook URL from that app and add it to one environment variable. Several are allowed, comma-separated, and all of them receive every alert.',
+    'alerts.how.p2':
+      'Set it in your hosting environment (on Vercel: Settings \u2192 Environment Variables), then redeploy \u2014 variables only apply to new deployments.',
+    'alerts.how.warning':
+      'A webhook URL is a password. Anyone holding it can post into that channel, and for Slack, Google Chat and Discord the path is the whole credential. Never commit one, never paste one into a chat or an issue. To revoke, delete the webhook in the app that issued it.',
+    'alerts.works.h2': 'Works today',
+    'alerts.works.p': 'No code needed \u2014 add the URL and redeploy.',
+    'alerts.not.h2': 'Not supported yet',
+    'alerts.not.p': 'Each of these needs more than a webhook URL. What it would take, and what to use instead.',
+    'alerts.tag.ready': 'ready',
+    'alerts.tag.untested': 'should work, untested',
+    'alerts.tag.no': 'not yet',
+    'alerts.gchat.stepsHtml':
+      '<ol><li>Open the Google Chat <b>space</b> you want alerts in.</li><li>Click the space name \u2192 <b>Apps &amp; integrations</b>.</li><li><b>Webhooks</b> \u2192 <b>Add webhook</b>, give it a name, save.</li><li>Copy the URL it shows.</li></ol>',
+    'alerts.gchat.note':
+      'Webhooks exist only in spaces on a Google Workspace account, not in personal Google Chat. StatusDog sends Google Chat a text-only payload, because its API rejects any request carrying fields it does not recognise \u2014 that is handled automatically from the hostname.',
+    'alerts.slack.stepsHtml':
+      '<ol><li>Go to <b>api.slack.com/apps</b> \u2192 <b>Create New App</b> \u2192 <b>From scratch</b>.</li><li>Name it, pick your workspace, create.</li><li><b>Incoming Webhooks</b> \u2192 turn it on.</li><li><b>Add New Webhook to Workspace</b>, choose the channel, allow.</li><li>Copy the webhook URL.</li></ol>',
+    'alerts.slack.note': 'Already supported: the payload carries a text field, which is what Slack renders.',
+    'alerts.discord.stepsHtml':
+      '<ol><li>In Discord, open the channel \u2192 <b>Edit Channel</b> (the gear).</li><li><b>Integrations</b> \u2192 <b>Webhooks</b> \u2192 <b>New Webhook</b>.</li><li>Pick the channel, then <b>Copy Webhook URL</b>.</li></ol>',
+    'alerts.discord.note': 'Already supported: the same payload carries a content field, which is what Discord renders.',
+    'alerts.kakaowork.name': 'KakaoWork',
+    'alerts.kakaowork.stepsHtml':
+      '<ol><li>In the KakaoWork admin, create an <b>Incoming Webhook</b> for the conversation you want.</li><li>Copy the URL it issues.</li><li>Add it to the variable above like any other webhook.</li></ol>',
+    'alerts.kakaowork.note':
+      'Untested with StatusDog. It takes a normal webhook URL and the payload includes a plain text field, so it should work. If nothing arrives, set STATUSDOG_WEBHOOK_FORMAT=text \u2014 that sends the one-line summary only, which every service accepts. Tell us if you try it.',
+    'alerts.generic.name': 'Any other webhook',
+    'alerts.generic.stepsHtml':
+      '<ol><li>Add the URL to the variable above.</li><li>It receives a JSON body with the event, the target, the probe result, and a one-line summary in both <code>text</code> and <code>content</code>.</li><li>If the service rejects unknown fields, set <code>STATUSDOG_WEBHOOK_FORMAT=text</code> to send only the summary.</li></ol>',
+    'alerts.kakao.name': 'KakaoTalk',
+    'alerts.kakao.bodyHtml':
+      '<p>KakaoTalk has no incoming webhook. There is no URL to post to, so this cannot work the way the others do.</p><p>Two real options:</p><ul><li><b>KakaoWork</b> \u2014 the business messenger, which does have incoming webhooks. See above; that is the answer if you want alerts in the Kakao ecosystem.</li><li><b>KakaoTalk &ldquo;send to me&rdquo;</b> \u2014 possible through the Kakao Developers REST API, but it needs an OAuth access token per user and tokens expire, so it means storing and refreshing a refresh token. Real work, not a URL.</li></ul><p>Alimtalk and Friend-talk need a registered business, an approved template and per-message billing \u2014 far too much for an outage ping.</p>',
+    'alerts.email.name': 'Email',
+    'alerts.email.bodyHtml':
+      '<p>Not supported. Sending mail needs either SMTP credentials or a sending service, and those want an API key in a request header \u2014 which the webhook configuration cannot carry from the environment today.</p><p>Two things that work now:</p><ul><li><b>The RSS feed</b> \u2014 the subscribe box on any site\u2019s status page. It needs no account, which is exactly why it exists.</li><li><b>A relay</b> \u2014 Zapier, Make and similar accept a webhook and send mail. Add their catch-hook URL to the variable above.</li></ul>',
+    'alerts.telegram.bodyHtml':
+      '<p>Not yet. Telegram looks like a webhook but is not one: its send endpoint needs a <code>chat_id</code> alongside the text, and the payload here does not carry one, so a plain post would be rejected.</p><p>It is the cheapest destination to add properly \u2014 a bot token and a chat id, one request \u2014 so it is a small piece of work rather than a hard one.</p>',
+    'alerts.what.h2': 'What gets sent, and when',
+    'alerts.what.down': 'Confirmed down',
+    'alerts.what.downV':
+      'After the failure threshold, not on the first bad check \u2014 and never for a check two vantage points disagreed about.',
+    'alerts.what.up': 'Recovered',
+    'alerts.what.upV': 'Once, when it comes back. A site down all day alerts twice, not ninety-six times.',
+    'alerts.what.cert': 'Certificate expiring',
+    'alerts.what.certV': 'At 90, 30, 14 and 7 days. Once per threshold per certificate; renewing resets them.',
+    'alerts.what.stale': 'Monitoring stopped',
+    'alerts.what.staleV':
+      'When checks stop arriving at all, and again when they resume. A monitor that dies quietly is the failure that hides every other one.',
+    'alerts.what.filterHtml':
+      'To receive only outages and not recoveries, set <code>STATUSDOG_WEBHOOK_ON=down</code>. Both is the default.',
+    'alerts.what.note':
+      'That filter names up/down changes only. Certificate expiry and monitoring-stopped always go out \u2014 they are the ones you cannot afford to have filtered.',
+    'alerts.check.h2': 'Checking it works',
+    'alerts.check.p1':
+      'Each outage record shows how many alert deliveries were attempted and how many landed, so a webhook that quietly stopped working shows up there.',
+    'alerts.check.p2':
+      'There is no test-send button yet. Until there is, the honest check is the delivery count on the next real incident.',
     'nav.docs': 'Docs',
     'nav.github': 'GitHub',
     'lang.switchLabel': 'Language',
@@ -616,6 +682,72 @@ export const LOCALES = {
     /* ---------- chrome ---------- */
     'nav.home': '홈',
     'nav.dashboard': '대시보드',
+    'nav.alerts': '알림',
+    'alerts.pageTitle': '알림 \u2014 StatusDog',
+    'alerts.metaDescription': 'StatusDog 알림을 이미 쓰는 앱으로 받도록 연결하세요.',
+    'alerts.h1': '알림 연동',
+    'alerts.lede':
+      '장애가 확정되면 연결해둔 모든 곳으로 알립니다. 실제로 읽는 곳만 연결하세요 \u2014 아무도 안 보는 알림은 없는 것보다 나쁩니다. 감시되고 있다는 착각을 주니까요.',
+    'alerts.how.h2': '연동 방식',
+    'alerts.how.p1':
+      '아래 모든 항목은 끝이 같습니다. 해당 앱에서 웹훅 URL을 받아 환경변수 하나에 넣으면 됩니다. 쉼표로 여러 개를 넣을 수 있고, 넣은 곳 전부로 알림이 갑니다.',
+    'alerts.how.p2':
+      '호스팅 환경변수에 설정하세요 (Vercel이면 Settings → Environment Variables). 그리고 재배포해야 합니다 \u2014 환경변수는 새 배포에만 적용됩니다.',
+    'alerts.how.warning':
+      '웹훅 URL은 비밀번호입니다. 가진 사람은 누구나 그 채널에 글을 쓸 수 있고, Slack·Google Chat·Discord는 URL 경로 자체가 자격증명입니다. 저장소에 커밋하지 말고, 채팅이나 이슈에 붙여넣지 마세요. 유출되면 발급한 앱에서 그 웹훅을 삭제하면 무효화됩니다.',
+    'alerts.works.h2': '지금 되는 것',
+    'alerts.works.p': '코드 수정 없이 됩니다 \u2014 URL을 넣고 재배포하면 끝입니다.',
+    'alerts.not.h2': '아직 안 되는 것',
+    'alerts.not.p': '이들은 웹훅 URL 하나로 끝나지 않습니다. 무엇이 더 필요한지, 그리고 대신 무엇을 쓸 수 있는지 적었습니다.',
+    'alerts.tag.ready': '바로 가능',
+    'alerts.tag.untested': '될 것으로 보임, 미검증',
+    'alerts.tag.no': '아직 안 됨',
+    'alerts.gchat.stepsHtml':
+      '<ol><li>알림을 받을 Google Chat <b>스페이스</b>를 엽니다.</li><li>스페이스 이름 클릭 → <b>앱 및 통합</b>.</li><li><b>웹훅</b> → <b>웹훅 추가</b>, 이름을 넣고 저장.</li><li>표시된 URL을 복사합니다.</li></ol>',
+    'alerts.gchat.note':
+      '웹훅은 Google Workspace 계정의 스페이스에서만 지원되고 개인 Google Chat에는 없습니다. Google Chat에는 텍스트만 담은 페이로드를 보냅니다 \u2014 모르는 필드가 있으면 요청을 거부하는 API라서요. 호스트명을 보고 자동으로 처리합니다.',
+    'alerts.slack.stepsHtml':
+      '<ol><li><b>api.slack.com/apps</b> → <b>Create New App</b> → <b>From scratch</b>.</li><li>이름을 넣고 워크스페이스를 골라 생성.</li><li><b>Incoming Webhooks</b> → 활성화.</li><li><b>Add New Webhook to Workspace</b> → 채널 선택 → 허용.</li><li>웹훅 URL을 복사합니다.</li></ol>',
+    'alerts.slack.note': '이미 지원합니다. 페이로드에 Slack이 렌더링하는 text 필드가 들어 있습니다.',
+    'alerts.discord.stepsHtml':
+      '<ol><li>Discord에서 채널 → <b>채널 편집</b>(톱니바퀴).</li><li><b>연동</b> → <b>웹후크</b> → <b>새 웹후크</b>.</li><li>채널을 고르고 <b>웹후크 URL 복사</b>.</li></ol>',
+    'alerts.discord.note': '이미 지원합니다. 같은 페이로드에 Discord가 렌더링하는 content 필드가 들어 있습니다.',
+    'alerts.kakaowork.name': '카카오워크',
+    'alerts.kakaowork.stepsHtml':
+      '<ol><li>카카오워크 관리자에서 원하는 대화방에 <b>Incoming Webhook</b>을 만듭니다.</li><li>발급된 URL을 복사합니다.</li><li>다른 웹훅과 똑같이 위 환경변수에 넣습니다.</li></ol>',
+    'alerts.kakaowork.note':
+      'StatusDog로 검증하지 못했습니다. 일반 웹훅 URL을 받고 페이로드에 평문 text 필드가 있으니 될 것으로 봅니다. 아무것도 오지 않으면 STATUSDOG_WEBHOOK_FORMAT=text로 설정하세요 \u2014 한 줄 요약만 보내는 방식이고 어느 서비스든 받습니다. 시도해보셨다면 결과를 알려주세요.',
+    'alerts.generic.name': '그 외 웹훅',
+    'alerts.generic.stepsHtml':
+      '<ol><li>URL을 위 환경변수에 넣습니다.</li><li>이벤트, 대상, 확인 결과, 그리고 한 줄 요약이 <code>text</code>와 <code>content</code> 양쪽에 담긴 JSON을 받습니다.</li><li>모르는 필드를 거부하는 서비스라면 <code>STATUSDOG_WEBHOOK_FORMAT=text</code>로 요약만 보내세요.</li></ol>',
+    'alerts.kakao.name': '카카오톡',
+    'alerts.kakao.bodyHtml':
+      '<p>카카오톡에는 수신 웹훅이 없습니다. 보낼 URL 자체가 제공되지 않아서, 다른 항목들과 같은 방식으로는 불가능합니다.</p><p>현실적인 선택지는 둘입니다:</p><ul><li><b>카카오워크</b> \u2014 업무용 메신저이고 수신 웹훅을 지원합니다. 위 항목을 보세요. 카카오 생태계로 받고 싶으시면 이게 답입니다.</li><li><b>카카오톡 &ldquo;나에게 보내기&rdquo;</b> \u2014 Kakao Developers REST API로 가능하지만 사용자별 OAuth 액세스 토큰이 필요하고 토큰이 만료되므로, 갱신 토큰을 저장하고 재발급하는 로직이 필요합니다. URL 하나가 아니라 실제 개발입니다.</li></ul><p>알림톡·친구톡은 사업자 등록, 템플릿 사전 심사, 건당 과금이 필요합니다 \u2014 장애 알림 하나에는 과합니다.</p>',
+    'alerts.email.name': '이메일',
+    'alerts.email.bodyHtml':
+      '<p>지원하지 않습니다. 메일 발송은 SMTP 자격증명이나 발송 서비스가 필요하고, 그런 서비스는 요청 헤더에 API 키를 요구합니다 \u2014 지금 웹훅 설정은 환경변수에서 헤더를 실어보낼 수 없습니다.</p><p>지금 되는 방법 둘:</p><ul><li><b>RSS 피드</b> \u2014 각 사이트 상태 페이지의 구독 박스에 있습니다. 계정이 필요 없다는 게 이 기능의 존재 이유입니다.</li><li><b>중계 서비스</b> \u2014 Zapier, Make 등은 웹훅을 받아 메일을 보냅니다. 그쪽에서 받은 훅 URL을 위 환경변수에 넣으면 됩니다.</li></ul>',
+    'alerts.telegram.bodyHtml':
+      '<p>아직 안 됩니다. 텔레그램은 웹훅처럼 보이지만 아닙니다. 발송 엔드포인트가 텍스트와 함께 <code>chat_id</code>를 요구하는데 지금 페이로드에는 그게 없어서, 그냥 던지면 거부됩니다.</p><p>제대로 추가하기엔 가장 싼 대상입니다 \u2014 봇 토큰과 chat id, 요청 한 번. 어려운 일이 아니라 작은 일입니다.</p>',
+    'alerts.what.h2': '무엇이 언제 오는지',
+    'alerts.what.down': '장애 확정',
+    'alerts.what.downV':
+      '첫 실패가 아니라 실패 임계값을 넘긴 뒤입니다. 두 지점의 결과가 엇갈린 확인에는 절대 알림을 보내지 않습니다.',
+    'alerts.what.up': '복구',
+    'alerts.what.upV': '돌아올 때 한 번. 하루 종일 죽어 있던 사이트도 96번이 아니라 두 번만 알립니다.',
+    'alerts.what.cert': '인증서 만료 임박',
+    'alerts.what.certV': '90·30·14·7일 시점. 인증서마다 임계값별로 한 번씩이고, 갱신하면 초기화됩니다.',
+    'alerts.what.stale': '감시 중단',
+    'alerts.what.staleV':
+      '확인이 아예 도착하지 않을 때, 그리고 다시 시작될 때. 감시가 조용히 죽는 것은 다른 모든 장애를 가리는 장애입니다.',
+    'alerts.what.filterHtml':
+      '복구 알림 없이 장애만 받으려면 <code>STATUSDOG_WEBHOOK_ON=down</code>으로 설정하세요. 기본값은 둘 다입니다.',
+    'alerts.what.note':
+      '이 필터는 정상·장애 전환에만 적용됩니다. 인증서 만료와 감시 중단은 항상 발송됩니다 \u2014 걸러지면 안 되는 알림이라서요.',
+    'alerts.check.h2': '잘 오는지 확인하기',
+    'alerts.check.p1':
+      '각 장애 기록에 알림을 몇 건 시도해 몇 건이 발송됐는지 표시됩니다. 웹훅이 조용히 고장 나면 거기서 드러납니다.',
+    'alerts.check.p2':
+      '아직 테스트 발송 버튼은 없습니다. 생기기 전까지는 다음 실제 장애의 발송 건수가 정직한 확인 방법입니다.',
     'nav.docs': '문서',
     'nav.github': 'GitHub',
     'lang.switchLabel': '언어',

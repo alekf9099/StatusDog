@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="alerts.pageTitle">Alerts — StatusDog</title>
+<meta name="description" data-i18n-content="alerts.metaDescription" content="Connect StatusDog alerts to the app you already use.">
+<link rel="stylesheet" href="/assets/statusdog.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <nav class="site-nav">
+      <a href="/" data-i18n="nav.home">Home</a>
+      <a href="/office" data-i18n="nav.office">Office</a>
+      <a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/status" data-i18n="nav.status">Status</a>
+      <a href="/alerts" data-i18n="nav.alerts">Alerts</a>
+      <a href="/docs" data-i18n="nav.docs">Docs</a>
+      <a href="https://github.com/alekf9099/StatusDog" data-i18n="nav.github">GitHub</a>
+      <span class="lang-switch" role="group" data-i18n-aria-label="lang.switchLabel" aria-label="Language">
+        <button type="button" data-lang="en" data-i18n="lang.en">EN</button>
+        <button type="button" data-lang="ko" data-i18n="lang.ko">한국어</button>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding:32px 0 64px;max-width:820px">
+
+  <h1 style="font-size:28px;margin:0 0 8px" data-i18n="alerts.h1">Alerts</h1>
+  <p class="lede" data-i18n="alerts.lede"></p>
+
+  <!-- Every guide below ends in the same place, so the shared part is stated once. -->
+  <section class="block">
+    <h2 data-i18n="alerts.how.h2">How connecting works</h2>
+    <p data-i18n="alerts.how.p1"></p>
+    <pre><code>STATUSDOG_WEBHOOK_URL=https://hooks.slack.com/services/…,https://chat.googleapis.com/…</code></pre>
+    <p class="small muted" data-i18n="alerts.how.p2"></p>
+    <div class="notice error" data-i18n="alerts.how.warning"></div>
+  </section>
+
+  <section class="block">
+    <h2 data-i18n="alerts.works.h2">Works today</h2>
+    <p class="small muted" style="margin:0 0 14px" data-i18n="alerts.works.p"></p>
+
+    <details class="integration">
+      <summary><span class="int-name">Google Chat</span><span class="int-tag ok" data-i18n="alerts.tag.ready"></span></summary>
+      <div class="int-body">
+        <div data-i18n-html="alerts.gchat.stepsHtml"></div>
+        <p class="small muted" data-i18n="alerts.gchat.note"></p>
+      </div>
+    </details>
+
+    <details class="integration">
+      <summary><span class="int-name">Slack</span><span class="int-tag ok" data-i18n="alerts.tag.ready"></span></summary>
+      <div class="int-body">
+        <div data-i18n-html="alerts.slack.stepsHtml"></div>
+        <p class="small muted" data-i18n="alerts.slack.note"></p>
+      </div>
+    </details>
+
+    <details class="integration">
+      <summary><span class="int-name">Discord</span><span class="int-tag ok" data-i18n="alerts.tag.ready"></span></summary>
+      <div class="int-body">
+        <div data-i18n-html="alerts.discord.stepsHtml"></div>
+        <p class="small muted" data-i18n="alerts.discord.note"></p>
+      </div>
+    </details>
+
+    <details class="integration">
+      <summary><span class="int-name" data-i18n="alerts.kakaowork.name">KakaoWork</span><span class="int-tag maybe" data-i18n="alerts.tag.untested"></span></summary>
+      <div class="int-body">
+        <div data-i18n-html="alerts.kakaowork.stepsHtml"></div>
+        <p class="small muted" data-i18n="alerts.kakaowork.note"></p>
+      </div>
+    </details>
+
+    <details class="integration">
+      <summary><span class="int-name" data-i18n="alerts.generic.name">Any other webhook</span><span class="int-tag ok" data-i18n="alerts.tag.ready"></span></summary>
+      <div class="int-body">
+        <div data-i18n-html="alerts.generic.stepsHtml"></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2 data-i18n="alerts.not.h2">Not supported yet</h2>
+    <p class="small muted" style="margin:0 0 14px" data-i18n="alerts.not.p"></p>
+
+    <details class="integration">
+      <summary><span class="int-name" data-i18n="alerts.kakao.name">KakaoTalk</span><span class="int-tag no" data-i18n="alerts.tag.no"></span></summary>
+      <div class="int-body">
+        <div data-i18n-html="alerts.kakao.bodyHtml"></div>
+      </div>
+    </details>
+
+    <details class="integration">
+      <summary><span class="int-name" data-i18n="alerts.email.name">Email</span><span class="int-tag no" data-i18n="alerts.tag.no"></span></summary>
+      <div class="int-body">
+        <div data-i18n-html="alerts.email.bodyHtml"></div>
+      </div>
+    </details>
+
+    <details class="integration">
+      <summary><span class="int-name">Telegram</span><span class="int-tag no" data-i18n="alerts.tag.no"></span></summary>
+      <div class="int-body">
+        <div data-i18n-html="alerts.telegram.bodyHtml"></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2 data-i18n="alerts.what.h2">What gets sent, and when</h2>
+    <table class="kv">
+      <tr><th data-i18n="alerts.what.down"></th><td data-i18n="alerts.what.downV"></td></tr>
+      <tr><th data-i18n="alerts.what.up"></th><td data-i18n="alerts.what.upV"></td></tr>
+      <tr><th data-i18n="alerts.what.cert"></th><td data-i18n="alerts.what.certV"></td></tr>
+      <tr><th data-i18n="alerts.what.stale"></th><td data-i18n="alerts.what.staleV"></td></tr>
+    </table>
+    <p data-i18n-html="alerts.what.filterHtml" style="margin-top:14px"></p>
+    <p class="small muted" data-i18n="alerts.what.note"></p>
+  </section>
+
+  <section class="block">
+    <h2 data-i18n="alerts.check.h2">Checking it works</h2>
+    <p data-i18n="alerts.check.p1"></p>
+    <p class="small muted" data-i18n="alerts.check.p2"></p>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span data-i18n="footer.license">StatusDog · MIT</span>
+    <span class="spacer"></span>
+    <a href="/status" data-i18n="nav.status">Status</a>
+    <a href="/docs" data-i18n="footer.docs">Docs</a>
+    <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import { initI18n } from '/assets/i18n.js';
+import { markCurrentNav } from '/assets/statusdog.js';
+
+initI18n();
+markCurrentNav();
+</script>
+<script type="module" src="/assets/account.js"></script>
+
+</body>
+</html>

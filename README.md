@@ -391,6 +391,28 @@ carries the weight: a transition only happens after `failureThreshold`
 consecutive failures, and only the change fires — a target down for a day alerts
 once, not ninety-six times.
 
+#### Connecting a destination
+
+`/alerts` is a guide page: one entry per app, with the steps to get a webhook URL
+and an honest label for whether it works today.
+
+| Destination | State |
+| --- | --- |
+| Google Chat, Slack, Discord, any other webhook | Works now — add the URL, redeploy |
+| KakaoWork | Should work; takes a normal webhook URL, but untested here |
+| KakaoTalk | **No incoming webhook exists.** KakaoWork, or the Kakao REST API with OAuth token refresh |
+| Email | Needs SMTP or a sending service, which wants an API key in a header — the webhook config cannot carry one from the environment. RSS or a relay in the meantime |
+| Telegram | Looks like a webhook and is not one: its endpoint needs a `chat_id` the payload does not carry. Small piece of work, not a hard one |
+
+The page says which of these are guesses. `STATUSDOG_WEBHOOK_URL` already takes
+several URLs comma-separated and picks the payload shape per host, so Slack and
+Discord needed no code — the `full` payload carries `text` for one and `content`
+for the other, and both ignore keys they do not know.
+
+There is no test-send button yet, so the page says so rather than implying the
+connection is verified. Until there is one, the delivery count on each incident
+report is the honest check.
+
 #### Payload
 
 Two shapes, picked per host.
