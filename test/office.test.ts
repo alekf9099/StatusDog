@@ -224,6 +224,40 @@ test('hashString is stable and handles odd input', () => {
 
 /* ---------------- office summary ---------------- */
 
+test("an intern in trouble does not make the room look like an outage", () => {
+  // The bug this guards: a monitor somebody added in their own browser, often
+  // pointed at something the public internet cannot reach, turned the whole office
+  // red — saying "there is an outage" while every watched site was fine.
+  const staff = (mood: string) => ({ mood: { mood }, monitor: { kind: 'staff' } });
+  const intern = (mood: string) => ({ mood: { mood }, monitor: { kind: 'intern' } });
+
+  const summary = officeSummary([staff('working'), staff('working'), intern('alarmed')]);
+  assert.equal(summary.worst, 'working', 'the tone follows the sites actually being watched');
+  assert.equal(summary.counts.alarmed, 1, 'the intern is still counted and shown');
+  assert.equal(summary.interns, 1);
+  assert.equal(summary.internsInTrouble, 1);
+});
+
+test('a real outage still colours the room, intern or not', () => {
+  const staff = (mood: string) => ({ mood: { mood }, monitor: { kind: 'staff' } });
+  const intern = (mood: string) => ({ mood: { mood }, monitor: { kind: 'intern' } });
+  assert.equal(officeSummary([staff('alarmed'), intern('working')]).worst, 'alarmed');
+});
+
+test('with no roster at all, the interns are the room', () => {
+  // Somebody using this purely as a browser tool should still see their own trouble.
+  const intern = (mood: string) => ({ mood: { mood }, monitor: { kind: 'intern' } });
+  assert.equal(officeSummary([intern('alarmed')]).worst, 'alarmed');
+  assert.equal(officeSummary([intern('working')]).worst, 'working');
+});
+
+test('a worker with no monitor is not treated as an intern', () => {
+  // Older callers pass bare mood objects; they must not crash the summary.
+  assert.doesNotThrow(() => officeSummary([{ mood: { mood: 'working' } }]));
+  assert.equal(officeSummary([{ mood: { mood: 'alarmed' } }]).worst, 'alarmed');
+  assert.equal(officeSummary([{ mood: { mood: 'working' } }]).interns, 0);
+});
+
 test('the office summary reports the worst thing happening', () => {
   const worker = (mood: string) => ({ mood: { mood } });
 

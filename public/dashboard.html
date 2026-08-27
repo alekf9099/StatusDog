@@ -149,6 +149,22 @@ function renderServerMonitors() {
     : `<div class="grid cols-auto">${monitors.map(serverCard).join('')}</div>`;
 }
 
+/**
+ * What the figures above actually cover.
+ *
+ * These come from the stored checks for this target, which start whenever the
+ * store did — not from a fixed window. The status page reports 24 hours, 7 days,
+ * 30 days and 90 days from daily buckets, so the two pages can legitimately show
+ * different percentages for the same site. Saying which is which here is the
+ * difference between a reader trusting the numbers and doubting both.
+ */
+function statsNote(stats, monitor) {
+  if (!stats || !stats.checks) return '';
+  return `<div class="small muted" style="margin-top:6px">${escapeHtml(t('dash.statsWindow', {
+    count: stats.checks,
+  }))} <a href="/status/${encodeURIComponent(monitor.id)}">${escapeHtml(t('dash.periodsLink'))}</a></div>`;
+}
+
 function serverCard(monitor) {
   const result = monitor.lastResult;
   const stats = monitor.stats;
@@ -190,6 +206,7 @@ function serverCard(monitor) {
         <div class="metric"><span class="label">${escapeHtml(t('metric.checks'))}</span><span class="value">${stats?.checks ?? 0}</span></div>
       </div>
       ${problem}${dispute}${since}
+      ${statsNote(stats, monitor)}
     </section>`;
 }
 

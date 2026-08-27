@@ -78,6 +78,8 @@ let monitors = null;
 let reports = null;
 /** `null` until /api/auth/me answers; the UI shows no admin affordance before then. */
 let viewer = null;
+/** The last load failure, so switching language redraws it in the new one. */
+let loadError = null;
 /** Which incident is currently being edited, by its confirmed-down timestamp. */
 let editing = null;
 let saving = false;
@@ -124,15 +126,28 @@ async function load() {
     monitors = monitorsRes.ok ? await monitorsRes.json() : null;
     // A missing report is a thinner incident list, never a broken page.
     reports = reportsRes?.ok ? await reportsRes.json() : null;
+    loadError = null;
     render();
   } catch (err) {
-    head.innerHTML = '';
-    body.innerHTML = `<div class="notice error">${escapeHtml(err.message)}</div>`;
+    // A mistyped /status/<id> is the common way to land here, and the API's own
+    // wording is both English and about its own vocabulary. Say it in the reader's
+    // language and give them the way back.
+    loadError = { unknown: /unknown target/i.test(err.message), message: err.message };
+    renderError();
   }
 }
 
+function renderError() {
+  head.innerHTML = '';
+  body.innerHTML = loadError.unknown
+    ? `<div class="notice">${escapeHtml(t('status.unknownTarget', { id: wanted ?? '' }))}
+         <a href="/status" style="margin-left:6px">${escapeHtml(t('status.allTargets'))}</a></div>`
+    : `<div class="notice error">${escapeHtml(loadError.message)}</div>`;
+}
+
 document.addEventListener('statusdog:languagechange', () => {
-  if (stats) render();
+  if (loadError) renderError();
+  else if (stats) render();
 });
 
 // The header control signs out; the note editors have to stop offering themselves.

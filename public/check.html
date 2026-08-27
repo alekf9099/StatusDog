@@ -56,7 +56,7 @@
 
 <script type="module">
 import { initI18n, t } from '/assets/i18n.js';
-import { check, escapeHtml, formatMs, markCurrentNav, prettyUrl, statusBadge } from '/assets/statusdog.js';
+import { check, escapeHtml, formatMs, markCurrentNav, prettyUrl, statusBadge, formatTimestamp } from '/assets/statusdog.js';
 
 initI18n();
 markCurrentNav();
@@ -125,7 +125,7 @@ function summary(result) {
   const redirected = result.finalUrl !== result.url
     ? `<div class="small muted" style="margin-top:14px">${escapeHtml(t('check.finalUrl'))} <code>${escapeHtml(result.finalUrl)}</code></div>`
     : '';
-  const checkedAt = t('check.checkedAt', { time: new Date(result.checkedAt).toLocaleString() });
+  const checkedAt = t('check.checkedAt', { time: formatTimestamp(result.checkedAt) ?? '' });
 
   return `
     <section class="card" style="margin-bottom:16px">
