@@ -281,6 +281,20 @@ export class OfficeDashboard {
     }
   }
 
+  /**
+   * A line naming the interns, when there are any.
+   *
+   * Without it a browser-local monitor that cannot be reached reads as an outage of
+   * something this deployment watches, which is exactly the wrong conclusion.
+   */
+  internNote(summary) {
+    if (!summary.interns) return '';
+    const text = summary.internsInTrouble > 0
+      ? t('office.board.internTrouble', { count: summary.internsInTrouble })
+      : t('office.board.internCount', { count: summary.interns });
+    return `<p class="board-interns">${escapeHtml(text)}</p>`;
+  }
+
   renderBoard(summary) {
     if (this.serverError) {
       return `<strong>${escapeHtml(t('office.board.offline'))}</strong> ${escapeHtml(this.serverError)}`;
@@ -300,7 +314,7 @@ export class OfficeDashboard {
     if (summary.counts.offDuty) parts.push(t('office.board.offDuty', { count: summary.counts.offDuty }));
 
     const mood = parts.length === 0 ? t('office.board.allCalm') : parts.join(' · ');
-    return `<strong>${escapeHtml(headcount)}</strong> — ${escapeHtml(mood)}`;
+    return `<strong>${escapeHtml(headcount)}</strong> — ${escapeHtml(mood)}${this.internNote(summary)}`;
   }
 }
 

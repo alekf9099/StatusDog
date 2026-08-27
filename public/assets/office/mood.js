@@ -112,19 +112,36 @@ export function officeSummary(workers = []) {
   const counts = Object.fromEntries(MOODS.map((mood) => [mood, 0]));
   for (const worker of workers) counts[worker.mood.mood] = (counts[worker.mood.mood] ?? 0) + 1;
 
+  // The room's tone follows the sites that are actually being watched around the
+  // clock. An intern is a monitor somebody added in this browser, often pointed at
+  // something the public internet cannot reach at all - letting one turn the whole
+  // office red says "there is an outage" when the monitored sites are all fine.
+  const staff = workers.filter((worker) => worker.monitor?.kind !== 'intern');
+  const staffCounts = Object.fromEntries(MOODS.map((mood) => [mood, 0]));
+  for (const worker of staff) staffCounts[worker.mood.mood] = (staffCounts[worker.mood.mood] ?? 0) + 1;
+  // With no roster at all, interns are all there is to report.
+  const tone = staff.length > 0 ? staffCounts : counts;
+
   return {
     total: workers.length,
+    /** How many of the above are browser-local, so the board can say so. */
+    interns: workers.length - staff.length,
+    /** Interns among them that are in trouble, counted separately from the roster. */
+    internsInTrouble: workers.filter(
+      (worker) => worker.monitor?.kind === 'intern'
+        && (worker.mood.mood === 'alarmed' || worker.mood.mood === 'uneasy'),
+    ).length,
     counts,
     /** The single worst thing happening, for the room's overall tone. */
-    worst: counts.alarmed > 0
+    worst: tone.alarmed > 0
       ? 'alarmed'
-      : counts.uneasy > 0
+      : tone.uneasy > 0
         ? 'uneasy'
-        : counts.strained > 0
+        : tone.strained > 0
           ? 'strained'
           : workers.length === 0
             ? 'empty'
-            : counts.working > 0
+            : tone.working > 0
               ? 'working'
               : 'offDuty',
   };
