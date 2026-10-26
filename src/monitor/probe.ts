@@ -78,6 +78,24 @@ interface RawResponse {
  * so a flaky target can never take the scheduler down.
  */
 export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
+  return (await probeWithBody(target)).result;
+}
+
+export interface ProbeWithBody {
+  result: ProbeResult;
+  /**
+   * The response body, up to the read cap, or `null` when there was no response.
+   *
+   * Returned alongside the result rather than inside it on purpose: a
+   * {@link ProbeResult} is persisted as a target's `lastResult`, and a page body has
+   * no business in the store. Callers that need it — sub-page discovery reads the
+   * home page's links and compares bodies — get it here and drop it.
+   */
+  body: string | null;
+}
+
+/** {@link probe}, plus the body it read. */
+export async function probeWithBody(target: ResolvedTarget): Promise<ProbeWithBody> {
   const startedAt = Date.now();
   const checkedAt = new Date(startedAt).toISOString();
   const chain: RedirectHop[] = [];
@@ -119,7 +137,7 @@ export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
 
       const responseTimeMs = Date.now() - startedAt;
       const failure = evaluate(target, response, responseTimeMs, redirects, currentUrl);
-      return {
+      const result: ProbeResult = {
         url: target.url,
         finalUrl: currentUrl,
         ok: failure === null,
@@ -131,10 +149,11 @@ export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
         message: failure?.message ?? null,
         detail: buildDetail(response, chain, failure !== null && mayKeepExcerpt(target)),
       };
+      return { result, body: response.body };
     }
   } catch (err) {
     const probeError = toProbeError(err);
-    return {
+    const result: ProbeResult = {
       url: target.url,
       finalUrl: currentUrl,
       ok: false,
@@ -149,6 +168,7 @@ export async function probe(target: ResolvedTarget): Promise<ProbeResult> {
       // got partway is itself a clue about where the request died.
       detail: chain.length > 0 ? emptyDetail(chain) : null,
     };
+    return { result, body: null };
   }
 }
 
@@ -470,6 +490,7 @@ export function probeUrl(
     recoveryThreshold: 1,
     // A one-off check has nowhere to remember a warning, so it makes none.
     certExpiryWarnDays: [],
+    discoverLimit: 0,
     fallback: {
       template: 'maintenance',
       title: 'We will be right back',

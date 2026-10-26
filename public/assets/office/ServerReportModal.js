@@ -311,6 +311,23 @@ export class ServerReportModal {
       }
     }
 
+    // Linked pages: the count, and by name whichever are down — the dog's own
+    // mood follows the home page, so this is where a broken menu shows up.
+    const pages = monitor.discover ? monitor.pages ?? [] : [];
+    if (pages.length > 0) {
+      const count = (state) => pages.filter((page) => page.state === state).length;
+      rows.push([t('status.pages'), t('status.pages.summary', {
+        total: pages.length,
+        up: count('up'),
+        down: count('down'),
+        unverifiable: count('unverifiable'),
+      })]);
+      const down = pages.filter((page) => page.state === 'down');
+      if (down.length > 0) {
+        rows.push([t('office.report.pagesDown'), down.map((page) => page.name ?? page.path).join(', ')]);
+      }
+    }
+
     // The dog is calm because nothing was concluded, not because nothing happened.
     const dispute = monitor.lastDispute;
     if (dispute && (!monitor.lastResult || dispute.at > monitor.lastResult.checkedAt)) {

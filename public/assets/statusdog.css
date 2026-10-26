@@ -318,6 +318,27 @@ p code, li code, td code {
 
 /* ---------- status page ---------- */
 
+.page-list { list-style: none; margin: 0; padding: 4px 18px; }
+.page-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.page-row:first-child { border-top: 0; }
+.page-row .badge { flex: none; width: 104px; justify-content: center; }
+.page-name { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.page-name a { font-size: 12.5px; color: var(--muted); word-break: break-all; }
+.page-detail { flex-basis: 100%; font-size: 12.5px; color: var(--down); }
+.page-meta { flex: none; white-space: nowrap; }
+.page-row[data-state="unverifiable"] .page-name b { color: var(--muted); font-weight: 600; }
+.pages-alarm { color: var(--down); font-weight: 600; }
+@media (max-width: 520px) {
+  .page-row { flex-wrap: wrap; }
+  .page-meta { flex-basis: 100%; padding-left: 116px; }
+}
+
 .period-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));

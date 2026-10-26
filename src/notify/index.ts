@@ -15,8 +15,11 @@ import { color, createLogger, type Logger } from '../util/log.js';
  * change shape.
  */
 export interface Alert {
-  /** `test` is the owner's test send, so a channel can be checked without an outage. */
-  kind: 'cert-expiry' | 'monitor-stale' | 'test';
+  /**
+   * `test` is the owner's test send, so a channel can be checked without an outage.
+   * `page` is a linked page of a target changing state (see monitor/discover.ts).
+   */
+  kind: 'cert-expiry' | 'monitor-stale' | 'test' | 'page';
   severity: 'info' | 'warning' | 'critical';
   /** One line, which is all a chat client shows. */
   summary: string;
@@ -24,6 +27,11 @@ export interface Alert {
   at: string;
   /** Kind-specific detail, included only in the `full` payload. */
   data?: Record<string, unknown>;
+  /**
+   * Set on an alert that is an up/down change in all but name — a linked page
+   * going down — so a webhook's `on` filter applies to it as to a target's own.
+   */
+  event?: 'up' | 'down';
 }
 
 export interface Notifier {
@@ -137,7 +145,8 @@ function createWebhookNotifier(config: WebhookNotifierConfig, logger: Logger): N
 
     async notifyAlert(alert) {
       // Expiry and staleness are not up/down changes, so the `on` filter — which
-      // names transitions — does not apply to them.
+      // names transitions — does not apply to them. A page going down is one.
+      if (alert.event && !events.includes(alert.event)) return;
       const payload = JSON.stringify(
         format === 'text'
           ? { text: alert.summary }

@@ -152,6 +152,23 @@ test('a filtered-out transition sends nothing', async () => {
   assert.equal(received.length, 1);
 });
 
+test('a page going down obeys the same up/down filter; other alerts ignore it', async () => {
+  received.length = 0;
+  const notifier = createNotifier({ type: 'webhook', url: hook.url, on: ['down'] }, silent);
+  const page = (event?: 'up' | 'down') => ({
+    kind: 'page' as const,
+    event,
+    severity: 'info' as const,
+    summary: 'Page recovered: Site › Docs',
+    at: '2026-10-01T00:00:00Z',
+  });
+  await notifier.notifyAlert(page('up'));
+  assert.equal(received.length, 0);
+  await notifier.notifyAlert(page('down'));
+  await notifier.notifyAlert(page(undefined));
+  assert.equal(received.length, 2);
+});
+
 test('a non-2xx response rejects', async () => {
   received.length = 0;
   respondWith = 500;

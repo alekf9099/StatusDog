@@ -450,6 +450,11 @@ export const LOCALES = {
       '<code>expectRedirects</code> pins the exact hop count and <code>expectFinalUrl</code> pins where the chain ends, compared ignoring a trailing slash and a default port. Together they catch an interstitial appearing, an https upgrade being lost, or a redirect quietly retargeted.',
     'docs.assert.orderHtml':
       'They are judged in order of how fundamental they are — status, then where the request ended up, then headers, then body, and latency last. So a 404 with a missing header reports the 404, which is the part worth acting on.',
+    'docs.discover.h2': 'Menu pages from one URL',
+    'docs.discover.pHtml': 'Give a home page <code>"discover": true</code> and every run also checks the pages it links to on the same site — its menus — without listing each one.',
+    'docs.discover.scopeHtml': 'Only links on the same host, scheme and port are followed; anchors, <code>mailto:</code>, files and logout links are skipped. At most <code>discoverLimit</code> pages (default 10, up to 20). Linked pages keep the site-wide rules (statuses, <code>forbidBody</code>) and drop the home page’s own (<code>expectBody</code>, redirects, speed limit).',
+    'docs.discover.shellHtml': 'Many sites answer every path with the same empty app shell and draw the page in the browser. StatusDog does not run JavaScript, so each run also requests a path that cannot exist; a page that looks exactly like that response is <strong>can’t verify</strong>, never "up". A page that used to show real content and now serves only the shell is <strong>down</strong> — the blank-page outage no status code shows.',
+    'docs.discover.alertsHtml': 'A page goes down after <code>failureThreshold</code> failures in a row and alerts as <code>kind: "page"</code>. When the home page itself fails, the pages are left as they were, so one outage is one alert. Page states are stored inside the home page’s entry, so this costs no extra storage commands.',
     'docs.config.h2': 'Configuration',
     'docs.config.p':
       'statusdog.config.json is discovered from the working directory upwards. // and /* */ comments are allowed.',
@@ -619,7 +624,20 @@ export const LOCALES = {
     'status.daily': 'Day by day',
     'status.dailyNote': 'One bar per day, coloured by that day\'s uptime. Days start at midnight {tz}.',
     'status.incidents': 'Past incidents',
+    'status.pages': 'Menu pages',
+    'status.pages.lede': 'Pages on this site that its home page links to, checked on every run alongside it.',
+    'status.pages.summary': '{total} menu pages · {up} up · {down} down · {unverifiable} can\'t verify',
+    'status.pages.state.up': 'Up',
+    'status.pages.state.down': 'Down',
+    'status.pages.state.unverifiable': 'Can\'t verify',
+    'status.pages.state.unknown': 'Checking',
+    'status.pages.reason.shell': 'Serving the empty app shell instead of the page',
+    'status.pages.none':
+      'No links to other pages on this site were found in the home page\'s HTML. If the menu is drawn by JavaScript, there is nothing to follow from outside.',
+    'status.pages.unverifiableNote':
+      '"Can\'t verify" means the site draws that page in the browser with JavaScript. From outside, its response is identical to the one for a page that does not exist, so whether it works cannot be told — and rather than call it healthy, StatusDog says so. If a page that used to show real content starts serving only that empty shell, it is reported as down.',
     'office.report.incidents': 'Past outages',
+    'office.report.pagesDown': 'Menu pages down',
     'status.report.lede':
       'What was observed when each outage was called, and what was different when it came back.',
     'status.report.summaryOnly': 'summary only',
@@ -1149,6 +1167,11 @@ export const LOCALES = {
       '<code>expectRedirects</code>는 정확한 홉 수를, <code>expectFinalUrl</code>은 도착지를 고정합니다(끝 슬래시와 기본 포트는 무시하고 비교). 둘이 함께 중간 페이지 삽입, https 승격 소실, 리다이렉트 대상 변경을 잡습니다.',
     'docs.assert.orderHtml':
       '판정은 근본적인 것부터 순서대로 합니다 — 상태 코드, 도착지, 헤더, 본문, 마지막에 응답 시간. 그래서 헤더가 없는 404는 404로 보고됩니다. 그게 조치해야 할 부분이니까요.',
+    'docs.discover.h2': 'URL 하나로 하위 메뉴까지',
+    'docs.discover.pHtml': '홈 페이지에 <code>"discover": true</code>만 켜면, 홈에 링크된 같은 사이트의 페이지(메뉴)를 하나씩 등록하지 않아도 매번 함께 확인합니다.',
+    'docs.discover.scopeHtml': '호스트·스킴·포트가 같은 링크만 따라가며, 앵커·<code>mailto:</code>·파일·로그아웃 링크는 건너뜁니다. 최대 <code>discoverLimit</code>개(기본 10, 최대 20). 하위 페이지는 사이트 공통 규칙(허용 상태 코드, <code>forbidBody</code>)은 그대로 쓰고, 홈 전용 규칙(<code>expectBody</code>, 리다이렉트, 응답 시간 한도)은 적용하지 않습니다.',
+    'docs.discover.shellHtml': '많은 사이트가 모든 주소에 같은 빈 앱 화면을 보내고 실제 내용은 브라우저에서 그립니다. StatusDog은 JavaScript를 실행하지 않으므로, 매번 존재할 수 없는 주소도 함께 요청해 그 응답과 똑같은 페이지는 "정상"이 아니라 <strong>확인 불가</strong>로 표시합니다. 실제 내용을 보여주던 페이지가 빈 화면만 내보내면 <strong>장애</strong>로 판단합니다 — 상태 코드로는 절대 보이지 않는 "하얀 화면" 장애입니다.',
+    'docs.discover.alertsHtml': '하위 페이지도 <code>failureThreshold</code>번 연속 실패해야 장애가 되고, <code>kind: "page"</code> 알림으로 갑니다. 홈 자체가 실패하면 하위 페이지 상태는 그대로 두므로 장애 하나에 알림도 하나입니다. 상태는 홈 항목 안에 저장되어 저장소 명령이 추가로 들지 않습니다.',
     'docs.config.h2': '설정',
     'docs.config.p':
       'statusdog.config.json은 작업 디렉터리에서 위로 올라가며 탐색합니다. // 와 /* */ 주석을 쓸 수 있습니다.',
@@ -1318,7 +1341,20 @@ export const LOCALES = {
     'status.daily': '일별 추이',
     'status.dailyNote': '막대 하나가 하루이고, 그날 가동률에 따라 색이 정해집니다. 하루는 {tz} 자정에 시작합니다.',
     'status.incidents': '과거 장애',
+    'status.pages': '하위 메뉴 페이지',
+    'status.pages.lede': '홈 화면에 링크된 같은 사이트의 페이지를 홈과 함께 매번 확인합니다.',
+    'status.pages.summary': '메뉴 {total}개 · 정상 {up} · 장애 {down} · 확인 불가 {unverifiable}',
+    'status.pages.state.up': '정상',
+    'status.pages.state.down': '장애',
+    'status.pages.state.unverifiable': '확인 불가',
+    'status.pages.state.unknown': '확인 중',
+    'status.pages.reason.shell': '페이지 대신 빈 앱 화면만 응답함',
+    'status.pages.none':
+      '홈 화면 HTML에서 이 사이트의 다른 페이지 링크를 찾지 못했습니다. 메뉴를 JavaScript로 그리는 사이트라면 밖에서 따라갈 링크가 없습니다.',
+    'status.pages.unverifiableNote':
+      '"확인 불가"는 사이트가 그 페이지를 브라우저에서 JavaScript로 그리는 경우입니다. 밖에서 보면 존재하지 않는 주소와 똑같은 응답이라 실제로 동작하는지 알 수 없어서, 정상으로 표시하지 않고 그대로 알려 드립니다. 실제 내용을 보여주던 페이지가 빈 화면만 내보내기 시작하면 장애로 알립니다.',
     'office.report.incidents': '지난 장애 기록',
+    'office.report.pagesDown': '장애 중인 메뉴',
     'status.report.lede':
       '장애가 확정될 때 관측된 내용과, 복구되었을 때 무엇이 달라졌는지입니다.',
     'status.report.summaryOnly': '요약만 있음',

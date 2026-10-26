@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { toPatternList } from '../monitor/assertions.js';
+import { DEFAULT_DISCOVER_LIMIT, MAX_DISCOVER_LIMIT } from '../monitor/discover.js';
 import {
   DASHBOARD_DEFAULTS,
   FALLBACK_DEFAULTS,
@@ -209,7 +210,24 @@ function resolveTarget(
       vars: fallbackInput.vars ?? {},
     },
     enabled: pick('enabled') ?? TARGET_DEFAULTS.enabled,
+    // Per target only, never from `defaults`: one line there would multiply every
+    // site's requests by ten.
+    discoverLimit: discoverLimit(target, `targets[${index}]`),
   };
+}
+
+function discoverLimit(target: TargetConfig, label: string): number {
+  if (target.discover === undefined || target.discover === false) return 0;
+  if (target.discover !== true) {
+    throw new ConfigError(`${label}.discover must be true or false, got ${JSON.stringify(target.discover)}.`);
+  }
+  const limit = target.discoverLimit ?? DEFAULT_DISCOVER_LIMIT;
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_DISCOVER_LIMIT) {
+    throw new ConfigError(
+      `${label}.discoverLimit must be a whole number from 1 to ${MAX_DISCOVER_LIMIT}, got ${JSON.stringify(limit)}.`,
+    );
+  }
+  return limit;
 }
 
 function isBuiltinTemplateName(name: string): boolean {

@@ -34,8 +34,14 @@
  * response, the checks leading up to it, and — on recovery — what is observably
  * different now that it works. See src/store/incident.ts for why that is recorded
  * as evidence and never as a cause.
+ *
+ * A target with `discover: true` also has the pages its home page links to
+ * checked on every run, stored inside its own entry so they cost no extra storage
+ * commands. See src/monitor/discover.ts for how a page the site only draws in the
+ * browser is told apart from one that works.
  */
-import { probe } from '../../dist/monitor/probe.js';
+import { probeWithBody } from '../../dist/monitor/probe.js';
+import { checkPages, describePageChange, probeShell } from '../../dist/monitor/subpages.js';
 import { resolveRoster } from '../../dist/store/roster.js';
 import { applyCheck, readEntry } from '../../dist/store/uptime.js';
 import { recordCheck } from '../../dist/store/stats-store.js';
@@ -148,7 +154,11 @@ export default async function handler(req, res) {
   const reportFailures = [];
 
   const checks = await Promise.all(targets.map(async (target) => {
-    const result = await probe(target);
+    // The request for a path that cannot exist overlaps the home check, so
+    // discovery adds the time of the menu pages and nothing more.
+    const shellPending = target.discoverLimit > 0 ? probeShell(target, probeWithBody) : null;
+    const home = await probeWithBody(target);
+    const result = home.result;
     const base = {
       id: target.id,
       ok: result.ok,
@@ -172,7 +182,43 @@ export default async function handler(req, res) {
         vantageName: vantage?.name,
       });
 
+      // Linked pages, judged only when the home check says something about the site.
+      // Any failure here costs the pages for this run and never the check itself.
+      let pagesRun = null;
+      if (shellPending) {
+        try {
+          pagesRun = await checkPages({
+            parent: target,
+            home,
+            conclusive: verdict.conclusive,
+            shell: await shellPending,
+            previous: before.pages,
+            prober: probeWithBody,
+          });
+        } catch (err) {
+          pagesRun = { pages: before.pages, changes: [], frozen: 'error', error: err.message };
+        }
+        for (const change of pagesRun.changes) {
+          alerts.push({
+            kind: 'page',
+            event: change.event === 'unverifiable' ? undefined : change.event,
+            severity: change.event === 'down' ? 'critical' : 'info',
+            summary: describePageChange(target, change),
+            target: { id: target.id, name: target.name, url: target.url },
+            at: change.page.checkedAt ?? result.checkedAt,
+            data: {
+              event: change.event,
+              path: change.page.path,
+              name: change.page.name,
+              status: change.page.status,
+              reason: change.page.reason,
+            },
+          });
+        }
+      }
+
       const { entry, transitioned, previousState, cert } = await applyCheck(kv, target, result, {
+        pages: pagesRun?.pages,
         inconclusive: !verdict.conclusive,
         disputeRun: nextDisputeCount(before.consecutiveDisputes, verdict.outcome),
         // Already read above. Reading it again would be a second command per target
@@ -272,6 +318,14 @@ export default async function handler(req, res) {
         vantage: verdict.outcome,
         conclusive: verdict.conclusive,
         certDaysRemaining: cert.daysRemaining,
+        ...(pagesRun && {
+          pages: {
+            checked: pagesRun.frozen ? 0 : pagesRun.pages.length,
+            frozen: pagesRun.frozen,
+            changes: pagesRun.changes.map((change) => `${change.page.path}:${change.event}`),
+            ...(pagesRun.error && { error: pagesRun.error }),
+          },
+        }),
       };
     } catch (err) {
       // A storage failure must not hide the check itself.
@@ -365,6 +419,9 @@ export default async function handler(req, res) {
     schedulerAlerts: alerts
       .filter((alert) => alert.kind === 'monitor-stale')
       .map((alert) => alert.data.state),
+    pageAlerts: alerts
+      .filter((alert) => alert.kind === 'page')
+      .map((alert) => `${alert.target.id}${alert.data.path}:${alert.data.event}`),
     alerts: { notifiers: notifiers.length, attempted, delivered, failed, outcomes },
     checks,
   });

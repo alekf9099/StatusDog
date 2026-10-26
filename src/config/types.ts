@@ -75,6 +75,14 @@ export interface TargetConfig {
   /** Page served for this target while it is down. */
   fallback?: FallbackConfig;
   enabled?: boolean;
+  /**
+   * Also check the pages this one links to on the same site — its menus — on
+   * every run. Pages the site only draws in the browser are reported as
+   * unverifiable rather than up. See src/monitor/discover.ts.
+   */
+  discover?: boolean;
+  /** At most this many linked pages. Defaults to 10; capped at 20. */
+  discoverLimit?: number;
 }
 
 /** Target defaults; every field is optional and inherited by each target. */
@@ -166,6 +174,8 @@ export interface ResolvedTarget {
   certExpiryWarnDays: number[];
   fallback: Required<Omit<FallbackConfig, 'vars'>> & { vars: Record<string, string> };
   enabled: boolean;
+  /** Linked pages checked alongside this one; `0` when discovery is off. */
+  discoverLimit: number;
 }
 
 export interface ResolvedConfig {

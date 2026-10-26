@@ -222,6 +222,42 @@ then headers, then body, and latency last. A 404 with a missing header reports t
 
 `/api/check` takes `forbid` as a comma-separated list for one-off checks.
 
+### Menu pages from one URL
+
+Give a home page `"discover": true` and every run also checks the pages it links
+to on the same site — its menus — without listing each one in the roster.
+
+```json
+{ "id": "copykiller", "url": "https://www.copykiller.com/", "discover": true }
+```
+
+- **Same site only.** Links to another host, scheme or port are ignored, as are
+  anchors, `mailto:`/`tel:`, files (`.pdf`, images, scripts) and logout links. At
+  most `discoverLimit` pages (default 10, ceiling 20), in the order they appear.
+- **The home page's own rules stay on the home page.** Linked pages keep the
+  site-wide ones — accepted statuses, `forbidBody`, request headers — and drop
+  `expectBody`, `expectRedirects`, `expectFinalUrl` and `maxResponseTimeMs`, which
+  describe one page and would fail every other.
+- **"Can't verify" instead of a false green.** Many sites answer every path with the
+  same empty app shell and draw the real page in the browser. StatusDog does not run
+  JavaScript, so a shell looks like a healthy 200 — even for a path that does not
+  exist. Each run therefore also requests a path that cannot exist, and any page
+  whose visible text matches that response (sizes within 10%, so a per-request nonce
+  does not matter) is reported as **unverifiable**, never as up, and never alerts.
+- **The blank-page outage is caught.** A page that has served real content and then
+  serves only the shell is **down**: the failure no status code shows. After a full
+  day of nothing but the shell it is accepted as redrawn in the browser by design,
+  and one notice says so.
+- **Same thresholds, no alert storms.** A page is down after `failureThreshold`
+  failures in a row, like a target. When the home check fails or is disputed, the
+  pages are left exactly as they were — one outage is one alert, not eleven.
+  Page alerts are `kind: "page"` and obey `STATUSDOG_WEBHOOK_ON`.
+- **Free.** Page states live inside the parent target's stored entry, so checking
+  ten pages costs no extra key-value commands. The extra requests overlap: on
+  copykiller.com a run with eight linked pages took under a second.
+
+The status page lists each page with its state; the office report counts them.
+
 ### The scheduler
 
 `POST /api/cron/check` probes every roster target and persists the results.
@@ -732,6 +768,8 @@ fully annotated file. The short version:
 | `maxRedirects` | `5` | Redirect hop limit |
 | `failureThreshold` | `2` | Consecutive failures before the target is marked **down** |
 | `recoveryThreshold` | `1` | Consecutive successes before it is marked **up** |
+| `discover` | `false` | Also check the same-site pages this one links to (per target only; ignored in `defaults`) |
+| `discoverLimit` | `10` | At most this many linked pages, 1–20 |
 | `fallback` | see below | Page served while this target is down |
 | `enabled` | `true` | Set `false` to keep a target in the config but skip it |
 
