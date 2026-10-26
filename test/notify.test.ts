@@ -288,3 +288,44 @@ test('STATUSDOG_WEBHOOK_FORMAT is read from the environment', () => {
     'webhook(https://chat.googleapis.com)',
   );
 });
+
+/* ---------------- a delivery error never carries a webhook's credential ---------------- */
+
+test('a URL inside a delivery error keeps its origin and loses its path', async () => {
+  const { redactUrls } = await import('../src/notify/dispatch.js');
+  // For Slack, Google Chat and Discord the path *is* the credential.
+  const leaked = 'POST https://chat.googleapis.com/v1/spaces/AAAA/messages?key=SECRET&token=XYZ failed';
+  const clean = redactUrls(leaked);
+  assert.equal(clean, 'POST https://chat.googleapis.com/… failed');
+  assert.ok(!clean.includes('SECRET'));
+  assert.ok(!clean.includes('spaces'));
+});
+
+test('several URLs are all redacted, and plain errors pass through untouched', async () => {
+  const { redactUrls } = await import('../src/notify/dispatch.js');
+  assert.equal(
+    redactUrls('a https://hooks.slack.com/services/T/B/C b http://x.example/p?q=1'),
+    'a https://hooks.slack.com/… b http://x.example/…',
+  );
+  assert.equal(redactUrls('getaddrinfo ENOTFOUND hooks.slack.com'), 'getaddrinfo ENOTFOUND hooks.slack.com');
+  assert.equal(redactUrls('webhook responded 404'), 'webhook responded 404');
+  assert.equal(redactUrls(undefined as unknown as string), '');
+});
+
+test('a failed delivery reports a redacted error, never the webhook path', async () => {
+  const { dispatchAlerts } = await import('../src/notify/dispatch.js');
+  const secretPath = '/services/T000/B000/SUPERSECRET';
+  const notifier = {
+    name: 'webhook(https://hooks.slack.com)',
+    async notify() {},
+    async notifyAlert() {
+      throw new Error(`request to https://hooks.slack.com${secretPath} failed`);
+    },
+  };
+  const result = await dispatchAlerts([notifier], [{
+    kind: 'test', severity: 'info', summary: 'test', target: null, at: '2026-10-26T00:00:00.000Z',
+  }]);
+  assert.equal(result.failed, 1);
+  assert.ok(!JSON.stringify(result).includes('SUPERSECRET'), 'the credential never leaves');
+  assert.equal(result.outcomes[0]!.error, 'request to https://hooks.slack.com/… failed');
+});

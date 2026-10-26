@@ -235,6 +235,22 @@ then headers, then body, and latency last. A 404 with a missing header reports t
 | `STATUSDOG_WEBHOOK_FORMAT` | Optional. `full` or `text`; per-host default otherwise. |
 | `STATUSDOG_STALE_AFTER_MINUTES` | Optional. Overrides the staleness threshold. Left unset, it is three times the cadence this deployment actually runs at. |
 
+**Cadence.** GitHub Actions alone is too slow: its scheduled jobs are delayed or
+skipped, and measured in October 2026 they arrived every two to five hours, which
+turns `failureThreshold: 2` into an outage nobody hears about for most of a day.
+The fix is free — an external cron such as cron-job.org calling
+`POST /api/cron/check` every five minutes with `Authorization: Bearer $CRON_SECRET`.
+Five, not one: a run costs 14 key-value commands, so every five minutes is about
+4,000 a day, under half the common 10,000/day free quota, with room for eight
+sites. Every minute would exceed it and stop monitoring altogether.
+
+The threshold stays at two. The external cron sends no second opinion, so a single
+network blip from the Seoul region would otherwise page someone; two checks five
+minutes apart is ten minutes, which keeps that protection. `/alerts` has the
+step-by-step setup and an owner-only **test send** that posts a labelled message to
+every destination, so a broken webhook is found on a quiet day rather than during
+an outage. Delivery errors in every response have URLs reduced to their origin.
+
 [`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) calls it every 15
 minutes and needs two repository secrets, `MONITOR_ENDPOINT` and `CRON_SECRET`.
 GitHub Actions rather than Vercel Cron because the Hobby plan caps cron at once a

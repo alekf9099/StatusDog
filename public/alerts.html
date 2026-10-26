@@ -126,9 +126,26 @@
   </section>
 
   <section class="block">
+    <h2 data-i18n="alerts.speed.h2">Getting alerts within minutes</h2>
+    <p data-i18n="alerts.speed.p1"></p>
+    <div class="notice" data-i18n="alerts.speed.why"></div>
+    <div data-i18n-html="alerts.speed.stepsHtml"></div>
+    <pre><code>URL      https://status-dog.vercel.app/api/cron/check
+Method   POST
+Header   Authorization: Bearer &lt;CRON_SECRET&gt;
+Every    5 minutes</code></pre>
+    <table class="kv">
+      <tr><th data-i18n="alerts.speed.limit"></th><td data-i18n="alerts.speed.limitV"></td></tr>
+      <tr><th data-i18n="alerts.speed.threshold"></th><td data-i18n="alerts.speed.thresholdV"></td></tr>
+      <tr><th data-i18n="alerts.speed.actions"></th><td data-i18n="alerts.speed.actionsV"></td></tr>
+    </table>
+    <p class="small muted" data-i18n="alerts.speed.secret"></p>
+  </section>
+
+  <section class="block">
     <h2 data-i18n="alerts.check.h2">Checking it works</h2>
     <p data-i18n="alerts.check.p1"></p>
-    <p class="small muted" data-i18n="alerts.check.p2"></p>
+    <div id="test-send"></div>
   </section>
 
 </main>
@@ -144,11 +161,107 @@
 </footer>
 
 <script type="module">
-import { initI18n } from '/assets/i18n.js';
-import { markCurrentNav } from '/assets/statusdog.js';
+import { initI18n, t } from '/assets/i18n.js';
+import { escapeHtml, markCurrentNav } from '/assets/statusdog.js';
 
 initI18n();
 markCurrentNav();
+
+/**
+ * The test send.
+ *
+ * Owners only, because it posts into real channels. Everyone else is told how to
+ * check instead, and a deployment with no admin surface shows neither — a button
+ * that can only answer 503 is worse than no button.
+ */
+const box = document.getElementById('test-send');
+let viewer = null;
+let last = null;
+let sending = false;
+
+async function loadViewer() {
+  try {
+    const response = await fetch('/api/auth/me', { cache: 'no-store' });
+    viewer = response.ok ? await response.json() : { configured: false, signedIn: false };
+  } catch {
+    viewer = { configured: false, signedIn: false };
+  }
+  render();
+}
+
+function resultHtml() {
+  if (!last) return '';
+  if (last.error) {
+    return `<div class="notice error small" style="margin-top:12px">${escapeHtml(last.error)}</div>`;
+  }
+  if (last.notifiers === 0) {
+    return `<div class="notice small" style="margin-top:12px">${escapeHtml(t('alerts.test.none'))}</div>`;
+  }
+  const rows = last.outcomes.map((outcome) => `
+    <li>
+      <span class="${outcome.delivered ? 'test-ok' : 'test-bad'}">${outcome.delivered ? '✓' : '✗'}</span>
+      <code>${escapeHtml(outcome.notifier)}</code>
+      ${outcome.delivered ? '' : `<span class="small muted">${escapeHtml(outcome.error ?? '')}</span>`}
+    </li>`).join('');
+  const tone = last.failed > 0 ? 'error' : '';
+  return `
+    <div class="notice ${tone} small" style="margin-top:12px">${escapeHtml(t('alerts.test.summary', {
+      delivered: last.delivered, attempted: last.attempted,
+    }))}</div>
+    <ul class="test-results">${rows}</ul>`;
+}
+
+function render() {
+  if (!viewer?.configured) {
+    box.innerHTML = `<p class="small muted">${escapeHtml(t('alerts.test.unavailable'))}</p>`;
+    return;
+  }
+  if (!viewer.signedIn) {
+    box.innerHTML = `<p class="small muted">${escapeHtml(t('alerts.test.signInFirst'))}
+      <a href="/signin?next=${encodeURIComponent('/alerts')}">${escapeHtml(t('signin.in'))}</a></p>`;
+    return;
+  }
+  box.innerHTML = `
+    <button type="button" data-test-send ${sending ? 'disabled' : ''}>${escapeHtml(sending ? t('alerts.test.sending') : t('alerts.test.button'))}</button>
+    <span class="small muted" style="margin-left:8px">${escapeHtml(t('alerts.test.hint'))}</span>
+    ${resultHtml()}`;
+}
+
+box.addEventListener('click', async (event) => {
+  if (!event.target.closest('[data-test-send]') || sending) return;
+  sending = true;
+  last = null;
+  render();
+  try {
+    const response = await fetch('/api/admin/test-alert', {
+      method: 'POST',
+      // The same custom header every owner write uses; the server checks it first.
+      headers: { 'content-type': 'application/json', 'x-statusdog-admin': '1' },
+      body: '{}',
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.status === 429) {
+      last = { error: t('alerts.test.cooldown', { seconds: payload.retryAfterSeconds ?? 30 }) };
+    } else if (!response.ok) {
+      last = { error: payload.error ?? t('error.requestFailed', { status: response.status }) };
+    } else {
+      last = payload;
+    }
+  } catch (err) {
+    last = { error: err.message };
+  }
+  sending = false;
+  render();
+});
+
+document.addEventListener('statusdog:languagechange', () => { if (viewer) render(); });
+document.addEventListener('statusdog:accountchange', (event) => {
+  viewer = event.detail ?? viewer;
+  last = null;
+  render();
+});
+
+loadViewer();
 </script>
 <script type="module" src="/assets/account.js"></script>
 

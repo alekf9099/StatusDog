@@ -87,11 +87,36 @@ export const LOCALES = {
       'To receive only outages and not recoveries, set <code>STATUSDOG_WEBHOOK_ON=down</code>. Both is the default.',
     'alerts.what.note':
       'That filter names up/down changes only. Certificate expiry and monitoring-stopped always go out \u2014 they are the ones you cannot afford to have filtered.',
+    'alerts.speed.h2': 'Getting alerts within minutes',
+    'alerts.speed.p1':
+      'Checks run when something calls the scheduler. By default that is GitHub Actions, which is free \u2014 and slow: its scheduled jobs are delayed or skipped, and here they arrive every two to five hours rather than every fifteen minutes. An outage could go unnoticed for hours.',
+    'alerts.speed.why':
+      'A free external cron fixes it. cron-job.org keeps its schedule to the minute and costs nothing. With it calling every five minutes, an outage is reported within about ten.',
+    'alerts.speed.stepsHtml':
+      '<ol><li>Sign up at <b>cron-job.org</b> (free, no card).</li><li><b>Create cronjob</b> and fill in the values below.</li><li>Under <b>Advanced</b>, set the request method to <b>POST</b> and add the <b>Authorization</b> header.</li><li>Save, then use <b>Test run</b> \u2014 it should answer <code>200</code>.</li></ol>',
+    'alerts.speed.limit': 'Why five minutes, not one',
+    'alerts.speed.limitV':
+      'The free key-value store allows about 10,000 commands a day. Each run uses 14, so every five minutes is about 4,000 a day \u2014 under half the quota. Every minute would be over 20,000 and would stop the monitoring entirely. Five minutes fits up to eight sites; past that, use ten.',
+    'alerts.speed.threshold': 'Two failures, still',
+    'alerts.speed.thresholdV':
+      'An outage is confirmed after two failing checks in a row. Lowering that to one would halve the delay, but the external cron sends no second opinion from another network \u2014 so a single network blip from Seoul would page you. Two checks five minutes apart is ten minutes, which is fast enough and keeps that protection.',
+    'alerts.speed.actions': 'Keep GitHub Actions on',
+    'alerts.speed.actionsV':
+      'Its runs are the ones that bring a second look from another network, and they are a backstop if the external cron ever stops. Running both costs nothing extra.',
+    'alerts.speed.secret':
+      'CRON_SECRET is the value already in your Vercel environment variables. Paste it only into cron-job.org \u2014 never into a chat, an issue or a commit. To revoke, change it in Vercel and in cron-job.org.',
+    'alerts.test.button': 'Send a test alert',
+    'alerts.test.sending': 'Sending\u2026',
+    'alerts.test.hint': 'Posts one labelled test message to every destination.',
+    'alerts.test.summary': '{delivered} of {attempted} destination(s) accepted it. Check the channel to see it arrived.',
+    'alerts.test.none': 'No destination is configured. Set STATUSDOG_WEBHOOK_URL first.',
+    'alerts.test.cooldown': 'A test was just sent. Try again in {seconds}s.',
+    'alerts.test.signInFirst': 'Owners can send a test alert to every destination from here.',
+    'alerts.test.unavailable':
+      'Owner sign-in is not configured, so there is no test button. Until there is, the delivery count on the next incident report is the check.',
     'alerts.check.h2': 'Checking it works',
     'alerts.check.p1':
       'Each outage record shows how many alert deliveries were attempted and how many landed, so a webhook that quietly stopped working shows up there.',
-    'alerts.check.p2':
-      'There is no test-send button yet. Until there is, the honest check is the delivery count on the next real incident.',
     'nav.docs': 'Docs',
     'nav.github': 'GitHub',
     'lang.switchLabel': 'Language',
@@ -761,11 +786,36 @@ export const LOCALES = {
       '복구 알림 없이 장애만 받으려면 <code>STATUSDOG_WEBHOOK_ON=down</code>으로 설정하세요. 기본값은 둘 다입니다.',
     'alerts.what.note':
       '이 필터는 정상·장애 전환에만 적용됩니다. 인증서 만료와 감시 중단은 항상 발송됩니다 \u2014 걸러지면 안 되는 알림이라서요.',
+    'alerts.speed.h2': '몇 분 안에 알림 받기',
+    'alerts.speed.p1':
+      '확인은 누군가 스케줄러를 호출할 때 실행됩니다. 기본값은 GitHub Actions인데 무료인 대신 느립니다 \u2014 예약 작업이 지연되거나 건너뛰어져서, 여기서는 15분이 아니라 2~5시간마다 들어옵니다. 장애를 몇 시간 동안 모를 수 있습니다.',
+    'alerts.speed.why':
+      '무료 외부 크론으로 해결됩니다. cron-job.org는 분 단위로 정확히 호출하고 비용이 없습니다. 5분마다 부르게 하면 장애를 약 10분 안에 알 수 있습니다.',
+    'alerts.speed.stepsHtml':
+      '<ol><li><b>cron-job.org</b>에 가입합니다 (무료, 카드 불필요).</li><li><b>Create cronjob</b>을 누르고 아래 값을 넣습니다.</li><li><b>Advanced</b>에서 요청 방식을 <b>POST</b>로, <b>Authorization</b> 헤더를 추가합니다.</li><li>저장 후 <b>Test run</b> \u2014 <code>200</code>이 나오면 됩니다.</li></ol>',
+    'alerts.speed.limit': '왜 1분이 아니라 5분인가',
+    'alerts.speed.limitV':
+      '무료 저장소는 하루 약 1만 명령까지입니다. 한 번 실행에 14개를 쓰므로 5분 주기는 하루 약 4천 개로 한도의 절반 이하입니다. 1분이면 2만 개를 넘어 감시 자체가 멈춥니다. 5분 주기로 사이트 8개까지 무료이고, 그 이상이면 10분으로 하세요.',
+    'alerts.speed.threshold': '여전히 연속 2회',
+    'alerts.speed.thresholdV':
+      '장애는 연속 2회 실패해야 확정됩니다. 1회로 낮추면 지연이 절반이 되지만, 외부 크론은 다른 네트워크의 두 번째 의견을 보내지 않아서 서울 쪽 네트워크가 한 번 튀기만 해도 알림이 갑니다. 5분 간격 2회면 10분 — 충분히 빠르고 그 보호도 유지됩니다.',
+    'alerts.speed.actions': 'GitHub Actions는 켜두세요',
+    'alerts.speed.actionsV':
+      '다른 네트워크의 두 번째 확인을 가져오는 게 이 실행이고, 외부 크론이 멈췄을 때의 예비이기도 합니다. 둘 다 돌려도 추가 비용은 없습니다.',
+    'alerts.speed.secret':
+      'CRON_SECRET은 Vercel 환경변수에 이미 들어 있는 그 값입니다. cron-job.org에만 붙여넣으세요 \u2014 채팅·이슈·커밋에는 절대 넣지 마세요. 무효화하려면 Vercel과 cron-job.org 양쪽에서 값을 바꾸면 됩니다.',
+    'alerts.test.button': '테스트 알림 보내기',
+    'alerts.test.sending': '보내는 중\u2026',
+    'alerts.test.hint': '연결된 모든 곳에 테스트 표시가 붙은 메시지를 하나 보냅니다.',
+    'alerts.test.summary': '{attempted}곳 중 {delivered}곳이 받았습니다. 채널에 실제로 도착했는지 확인해보세요.',
+    'alerts.test.none': '연결된 곳이 없습니다. 먼저 STATUSDOG_WEBHOOK_URL을 설정하세요.',
+    'alerts.test.cooldown': '방금 보냈습니다. {seconds}초 뒤에 다시 시도하세요.',
+    'alerts.test.signInFirst': '소유자는 여기서 모든 연결처로 테스트 알림을 보낼 수 있습니다.',
+    'alerts.test.unavailable':
+      '소유자 로그인이 설정되지 않아 테스트 버튼이 없습니다. 그전까지는 다음 장애 기록의 발송 건수가 확인 방법입니다.',
     'alerts.check.h2': '잘 오는지 확인하기',
     'alerts.check.p1':
       '각 장애 기록에 알림을 몇 건 시도해 몇 건이 발송됐는지 표시됩니다. 웹훅이 조용히 고장 나면 거기서 드러납니다.',
-    'alerts.check.p2':
-      '아직 테스트 발송 버튼은 없습니다. 생기기 전까지는 다음 실제 장애의 발송 건수가 정직한 확인 방법입니다.',
     'nav.docs': '문서',
     'nav.github': 'GitHub',
     'lang.switchLabel': '언어',

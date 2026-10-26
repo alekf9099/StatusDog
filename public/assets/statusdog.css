@@ -668,3 +668,9 @@ ul.changed code {
   padding: 1px 5px;
   word-break: break-all;
 }
+
+.test-results { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13px; }
+.test-results li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; padding: 3px 0; }
+.test-results code { font-family: var(--mono); font-size: 12px; }
+.test-ok { color: var(--up); font-weight: 700; }
+.test-bad { color: var(--down); font-weight: 700; }

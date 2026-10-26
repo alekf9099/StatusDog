@@ -168,6 +168,15 @@ export interface ApplyOptions {
    * fourth check forever. Defaults to "+1 while suppressed, 0 otherwise".
    */
   disputeRun?: number;
+  /**
+   * The entry as it was before this check, when the caller has already read it.
+   *
+   * The scheduler needs it anyway — to reconcile against the second vantage and to
+   * attribute downtime — and reading the same key twice per target per run is pure
+   * waste. On a free key-value tier, where the quota is counted in commands per day,
+   * that waste is the difference between checking every five minutes and not.
+   */
+  previous?: UptimeEntry;
 }
 
 export interface AppliedCheck {
@@ -198,7 +207,7 @@ export async function applyCheck(
   result: ProbeResult,
   options: ApplyOptions = {},
 ): Promise<AppliedCheck> {
-  const previous = await readEntry(kv, target);
+  const previous = options.previous ?? await readEntry(kv, target);
 
   // An inconclusive check leaves the state machine exactly where it was: the
   // streak counters must not advance either, or three disputed checks would look
