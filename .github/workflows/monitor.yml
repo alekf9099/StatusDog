@@ -9,7 +9,11 @@ name: Monitor
 #   CRON_SECRET       the same value set in the Vercel environment
 #
 # GitHub delays scheduled runs under load, so treat 15 minutes as a floor rather
-# than a guarantee.
+# than a guarantee. Measured in October 2026 they arrived every two to five hours,
+# which is far too slow to be the only scheduler: an external cron (cron-job.org,
+# free, every five minutes) is the primary cadence now, and this workflow stays on
+# because its runs are the ones that bring the second vantage point, and because it
+# is the backstop if the external cron ever stops. See /alerts for the setup.
 #
 # The runner also takes its own look at every target before waking the scheduler.
 # It sits on a different network to the Vercel region, so when the two disagree the

@@ -227,3 +227,57 @@ test('the committed monitors.json is valid', async () => {
     assert.ok(t.timeoutMs > 0);
   }
 });
+
+/* ---------------- quota: commands per check ---------------- */
+
+/** Counts every command, because a free key-value tier is metered in commands per day. */
+function countingKv(): KvClient & { gets: number; sets: number } {
+  const data = new Map<string, string>();
+  const kv = {
+    gets: 0,
+    sets: 0,
+    origin: 'memory',
+    async get(key: string) {
+      kv.gets += 1;
+      return data.get(key) ?? null;
+    },
+    async set(key: string, value: string) {
+      kv.sets += 1;
+      data.set(key, value);
+    },
+    async del(key: string) {
+      data.delete(key);
+    },
+  };
+  return kv;
+}
+
+test('applyCheck reads the entry itself when not handed one', async () => {
+  const kv = countingKv();
+  await applyCheck(kv, target(), result(true, '2026-08-20T00:00:00.000Z'));
+  assert.equal(kv.gets, 1);
+  assert.equal(kv.sets, 1);
+});
+
+test('applyCheck does not re-read an entry the caller already has', async () => {
+  // The scheduler reads the entry first to reconcile against the second vantage.
+  // Reading it again inside applyCheck cost one command per target per run — at a
+  // five-minute cadence that alone was over a thousand commands a day.
+  const kv = countingKv();
+  const t = target();
+  const before = await readEntry(kv, t);
+  kv.gets = 0;
+
+  await applyCheck(kv, t, result(true, '2026-08-20T00:00:00.000Z'), { previous: before });
+  assert.equal(kv.gets, 0, 'no second read');
+  assert.equal(kv.sets, 1);
+});
+
+test('a handed-in entry is used as the starting state', async () => {
+  const kv = countingKv();
+  const t = target();
+  await applyCheck(kv, t, result(false, '2026-08-20T00:00:00.000Z'));
+  const before = await readEntry(kv, t);
+  const applied = await applyCheck(kv, t, result(false, '2026-08-20T00:15:00.000Z'), { previous: before });
+  assert.equal(applied.entry.state, 'down', 'two failures from the handed-in state trip threshold 2');
+});

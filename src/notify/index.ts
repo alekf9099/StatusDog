@@ -15,7 +15,8 @@ import { color, createLogger, type Logger } from '../util/log.js';
  * change shape.
  */
 export interface Alert {
-  kind: 'cert-expiry' | 'monitor-stale';
+  /** `test` is the owner's test send, so a channel can be checked without an outage. */
+  kind: 'cert-expiry' | 'monitor-stale' | 'test';
   severity: 'info' | 'warning' | 'critical';
   /** One line, which is all a chat client shows. */
   summary: string;
@@ -176,7 +177,9 @@ function postJson(
     try {
       url = new URL(urlString);
     } catch {
-      reject(new Error(`Invalid webhook url: ${urlString}`));
+      // Never echo the URL: for Slack, Google Chat and Discord the path *is* the
+      // credential, and this message ends up in run summaries and API responses.
+      reject(new Error('Invalid webhook url'));
       return;
     }
     const transport = url.protocol === 'https:' ? https : http;

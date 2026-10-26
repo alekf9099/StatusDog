@@ -16,12 +16,14 @@
  *      every request so removing it revokes access immediately
  *
  * Actions:
- *   note — the cause and remedy of an incident
+ *   note        — the cause and remedy of an incident
+ *   test-alert  — send a test message to every configured destination
  */
 import { authorize, sameOriginWrite } from '../dist/auth/session.js';
 import { findNote, publicNote, readNotes, upsertNote, writeNotes } from '../dist/store/notes.js';
 import { resolveRoster } from '../dist/store/roster.js';
 import { kvEnvNames, kvFromEnv } from '../dist/store/kv.js';
+import { dispatchAlerts, notifiersFromEnv } from '../dist/notify/dispatch.js';
 import { originOf } from '../dist/util/origin.js';
 import { ROSTER } from '../dist/roster.data.js';
 
@@ -104,6 +106,74 @@ async function note(req, res, body, email) {
   }
 }
 
+/** Long enough to stop a double-click becoming two messages in the channel. */
+const TEST_COOLDOWN_MS = 30_000;
+const TEST_COOLDOWN_KEY = 'statusdog:v1:admin:last-test-alert';
+
+/**
+ * Send one clearly-labelled test message to every configured destination.
+ *
+ * The alert path only ever fires on a confirmed outage, so without this a webhook
+ * that was mistyped, revoked or pointed at a deleted channel stays silently broken
+ * until the day it is needed. This is the check that can be done on a quiet day.
+ *
+ * The response names each destination by its origin only — the path of a Slack,
+ * Google Chat or Discord webhook is its credential — and delivery errors are
+ * redacted the same way before they leave the server.
+ */
+async function testAlert(req, res, email) {
+  const notifiers = notifiersFromEnv();
+  if (notifiers.length === 0) {
+    res.status(200).json({ notifiers: 0, attempted: 0, delivered: 0, failed: 0, outcomes: [] });
+    return;
+  }
+
+  // A shared cooldown rather than a per-browser one, so two open tabs cannot
+  // double-post either. Without a store there is simply no cooldown.
+  const kv = kvFromEnv();
+  if (kv) {
+    try {
+      const last = Number(await kv.get(TEST_COOLDOWN_KEY));
+      const waitMs = Number.isFinite(last) ? last + TEST_COOLDOWN_MS - Date.now() : 0;
+      if (waitMs > 0) {
+        res.status(429).json({ error: 'cooldown', retryAfterSeconds: Math.ceil(waitMs / 1000) });
+        return;
+      }
+      await kv.set(TEST_COOLDOWN_KEY, String(Date.now()));
+    } catch {
+      // A store hiccup must not block the one check meant to catch broken alerting.
+    }
+  }
+
+  const at = new Date().toISOString();
+  const summary =
+    '🐕 StatusDog 테스트 알림 / test alert — '
+    + '이 메시지가 보이면 장애 알림이 이 채널로 정상 도착합니다. '
+    + 'If you can read this, outage alerts reach this channel.';
+
+  const result = await dispatchAlerts(notifiers, [{
+    kind: 'test',
+    severity: 'info',
+    summary,
+    target: null,
+    at,
+    data: { origin: originOf(req, process.env) },
+  }]);
+
+  res.status(200).json({
+    notifiers: notifiers.length,
+    attempted: result.attempted,
+    delivered: result.delivered,
+    failed: result.failed,
+    outcomes: result.outcomes.map((outcome) => ({
+      notifier: outcome.notifier,
+      delivered: outcome.delivered,
+      error: outcome.error ?? null,
+    })),
+    at,
+  });
+}
+
 export default async function handler(req, res) {
   res.setHeader('cache-control', 'no-store');
 
@@ -141,6 +211,8 @@ export default async function handler(req, res) {
   switch (action) {
     case 'note':
       return note(req, res, body, auth.email);
+    case 'test-alert':
+      return testAlert(req, res, auth.email);
     default:
       res.status(404).json({ error: 'Unknown admin action.' });
   }

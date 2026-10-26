@@ -121,6 +121,22 @@ export async function dispatchAlerts(
   );
 }
 
+/**
+ * Strip the path and query from any URL inside an error message.
+ *
+ * Delivery errors are returned to whoever triggered the run — the scheduler's run
+ * summary, and now the owner's test send — and for Slack, Google Chat and Discord
+ * a webhook's path is the whole credential. The message this project writes itself
+ * never includes one, but errors come from Node and from the network too, so this is
+ * applied to every outcome rather than trusted to each place that raises one.
+ */
+export function redactUrls(text: string): string {
+  return String(text ?? '').replace(
+    /\b(https?:\/\/[^\s/?#'"]+)[^\s'"]*/gi,
+    (_match, origin: string) => `${origin}/…`,
+  );
+}
+
 async function fanOut<T>(
   notifiers: Notifier[],
   items: T[],
@@ -142,7 +158,7 @@ async function fanOut<T>(
           return {
             notifier: notifier.name,
             delivered: false,
-            error: (err as Error).message,
+            error: redactUrls((err as Error).message),
             target,
           };
         }

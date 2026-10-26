@@ -175,6 +175,9 @@ export default async function handler(req, res) {
       const { entry, transitioned, previousState, cert } = await applyCheck(kv, target, result, {
         inconclusive: !verdict.conclusive,
         disputeRun: nextDisputeCount(before.consecutiveDisputes, verdict.outcome),
+        // Already read above. Reading it again would be a second command per target
+        // per run against a quota counted in commands per day.
+        previous: before,
       });
 
       if (verdict.outcome === 'disputed' || verdict.outcome === 'dispute-exhausted') {
