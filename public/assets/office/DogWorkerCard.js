@@ -6,12 +6,12 @@
  * janky than diffing five desks. The mood lives in a `data-mood` attribute so
  * every animation decision belongs to CSS, not to JavaScript.
  *
- * The dog itself is inline SVG — no images, nothing to fetch, and its coat comes
- * from CSS custom properties so a target keeps its colours in both themes.
+ * The animal is a small WebP portrait from Microsoft's Fluent Emoji 3D set (MIT),
+ * served from this site; see animals/LICENSE.txt.
  */
 import { escapeHtml, formatMs } from '../statusdog.js';
 import { t, getLanguage } from '../i18n.js';
-import { resolveDog } from './dogs.js';
+import { resolveDog, speciesImage } from './dogs.js';
 
 /**
  * How long since this dog last had a bad day.
@@ -30,78 +30,25 @@ function streakLine(tenure) {
 }
 
 /**
- * The dog, drawn once and reused. Sits behind the desk, so the lower body being
- * clipped is intentional.
+ * The animal, behind the desk.
+ *
+ * A Fluent Emoji 3D portrait (MIT, Microsoft) in a wrapper that CSS animates per
+ * mood. The image is the same for every mood on purpose — it cannot change its
+ * face — so how it moves and what appears beside it carry the state instead.
+ * Its name is in the desk's own label, so the image itself is decorative.
  */
-function dogSvg(dog) {
-  // Geometry note: the head sits high in the viewBox on purpose. The desk and
-  // monitor are drawn over the lower third, so anything below y≈70 is hidden —
-  // which is what makes the dog read as sitting *behind* a desk rather than
-  // floating in front of one.
+function animalHtml(dog) {
   return `
-    <svg class="desk-dog dog" viewBox="0 0 100 120" aria-hidden="true"
-         style="--coat:${dog.coat.body};--coat-ear:${dog.coat.ear};--coat-patch:${dog.coat.patch};--beat:${dog.beatOffsetMs}ms">
-      <!-- tail, behind everything, sticking out to one side -->
-      <g class="dog-tail">
-        <path d="M74 92 q18 -4 20 -20 q1 -9 -6 -9 q-6 0 -4 8 q2 10 -12 14 z" fill="var(--coat-ear)"/>
-      </g>
-
-      <!-- shoulders and body -->
-      <ellipse class="dog-body" cx="50" cy="100" rx="30" ry="24"/>
-
-      <!-- floppy ears, hung from the sides of the head and drawn behind it -->
-      <g class="dog-ears">
-        <path class="dog-ear" d="M26 30 q-13 2 -14 20 q-1 16 9 20 q7 3 8 -8 q1 -14 3 -24 z"/>
-        <path class="dog-ear" d="M74 30 q13 2 14 20 q1 16 -9 20 q-7 3 -8 -8 q-1 -14 -3 -24 z"/>
-      </g>
-
-      <!-- head -->
-      <ellipse class="dog-head" cx="50" cy="42" rx="26" ry="24"/>
-
-      <!-- brow patch, to give the coat some structure -->
-      <ellipse class="dog-snout" cx="50" cy="26" rx="15" ry="7" opacity=".55"/>
-
-      <!-- muzzle, well clear of the monitor -->
-      <ellipse class="dog-snout" cx="50" cy="54" rx="15" ry="11"/>
-      <ellipse class="dog-nose" cx="50" cy="49" rx="4.6" ry="3.4"/>
-      <path class="dog-mouth" d="M50 53 v4 M50 57 q-5 4 -8 0 M50 57 q5 4 8 0"
-            fill="none" stroke="#2b2f36" stroke-width="1.6" stroke-linecap="round"/>
-      <path class="dog-tongue" d="M46 60 q4 7 8 0 z"/>
-
-      <!-- eyes, with lids that blink -->
-      <circle class="dog-eye" cx="39" cy="38" r="3.6"/>
-      <circle class="dog-eye" cx="61" cy="38" r="3.6"/>
-      <circle class="dog-glint" cx="40.4" cy="36.6" r="1.2" fill="#ffffff" opacity=".85"/>
-      <circle class="dog-glint" cx="62.4" cy="36.6" r="1.2" fill="#ffffff" opacity=".85"/>
-      <rect class="dog-eyelid" x="35.4" y="34.4" width="7.2" height="7.2" rx="3.6"/>
-      <rect class="dog-eyelid" x="57.4" y="34.4" width="7.2" height="7.2" rx="3.6"/>
-
-      <!-- brows: the cheapest way to carry an expression -->
-      <g class="dog-brows">
-        <path d="M33 28 q6 -4 11 -1" fill="none" stroke="var(--coat-ear)" stroke-width="2" stroke-linecap="round"/>
-        <path d="M67 28 q-6 -4 -11 -1" fill="none" stroke="var(--coat-ear)" stroke-width="2" stroke-linecap="round"/>
-      </g>
-
-      ${accessorySvg(dog.accessory)}
-    </svg>`;
+    <span class="desk-dog dog" data-species="${escapeHtml(dog.species.key)}" style="--beat:${dog.beatOffsetMs}ms" aria-hidden="true">
+      <img src="${speciesImage(dog.species.key)}" alt="" width="160" height="160" decoding="async" draggable="false">
+    </span>`;
 }
 
-/** Paws resting on the desktop. Drawn outside the SVG so the desk cannot clip them. */
-function pawsHtml() {
-  return '<span class="desk-paws" aria-hidden="true"><i></i><i></i></span>';
-}
-
-function accessorySvg(accessory) {
-  switch (accessory) {
-    case 'collar':
-      return '<rect class="dog-collar" x="34" y="70" width="32" height="6" rx="3"/>';
-    case 'scarf':
-      return '<path class="dog-collar" d="M32 68 q18 9 36 0 l3 9 q-21 10 -42 0 z"/>';
-    case 'cap':
-      return '<path class="dog-collar" d="M28 22 q22 -17 44 0 q-22 -6 -44 0 z"/>';
-    default:
-      return '';
-  }
+/** One prop per mood; CSS decides which is visible, so a re-render never flickers. */
+function propsHtml() {
+  return ['mug', 'sweat', 'question', 'alarm', 'zzz']
+    .map((name) => `<img class="dog-prop prop-${name}" src="/assets/office/animals/prop-${name}.webp" alt="" width="96" height="96" decoding="async" draggable="false" aria-hidden="true">`)
+    .join('');
 }
 
 /**
@@ -149,16 +96,11 @@ export function renderDogWorkerCard(worker) {
     <button type="button" class="desk" data-mood="${escapeHtml(mood.mood)}"
             data-worker-id="${escapeHtml(monitor.uid)}"
             ${worker.arriving ? 'data-arriving="true"' : ''}
-            style="--coat:${dog.coat.body}"
+            style="--beat:${dog.beatOffsetMs}ms"
             aria-label="${escapeHtml(label)}">
       <div class="desk-scene">
-        ${dogSvg(dog)}
-        ${pawsHtml()}
-        <span class="dog-prop prop-mug" aria-hidden="true"><i></i></span>
-        <span class="dog-prop prop-sweat" aria-hidden="true"></span>
-        <span class="dog-prop prop-question" aria-hidden="true">❓</span>
-        <span class="dog-prop prop-alarm" aria-hidden="true">🚨</span>
-        <span class="dog-prop prop-zzz" aria-hidden="true">💤</span>
+        ${animalHtml(dog)}
+        ${propsHtml()}
         <div class="desk-monitor" aria-hidden="true"></div>
         <div class="desk-monitor-stand" aria-hidden="true"></div>
         <div class="desk-furniture" aria-hidden="true"></div>
@@ -169,7 +111,7 @@ export function renderDogWorkerCard(worker) {
 
 /** The same dog, small, for the report header. */
 export function renderDogChip(worker) {
-  return `<div class="dog-chip" data-mood="${escapeHtml(worker.mood.mood)}">${dogSvg(worker.dog)}</div>`;
+  return `<div class="dog-chip" data-mood="${escapeHtml(worker.mood.mood)}">${animalHtml(worker.dog)}</div>`;
 }
 
 /**

@@ -48,11 +48,36 @@ const COATS = [
 
 const ACCESSORIES = ['none', 'collar', 'scarf', 'cap'];
 
+/**
+ * What kind of animal sits at the desk.
+ *
+ * Drawn from Microsoft's Fluent Emoji 3D set (MIT; see animals/LICENSE.txt),
+ * shipped as small WebP files rather than hotlinked, so the office never depends
+ * on someone else's CDN being up.
+ *
+ * Dogs are listed several times in the pool on purpose: this is StatusDog, and
+ * the office should read as dogs with a few friends rather than a zoo.
+ */
+const SPECIES = [
+  { key: 'dog', en: 'Dog', ko: '강아지' },
+  { key: 'cat', en: 'Cat', ko: '고양이' },
+  { key: 'fox', en: 'Fox', ko: '여우' },
+  { key: 'hamster', en: 'Hamster', ko: '햄스터' },
+  { key: 'rabbit', en: 'Rabbit', ko: '토끼' },
+  { key: 'bear', en: 'Bear', ko: '곰' },
+  { key: 'panda', en: 'Panda', ko: '판다' },
+  { key: 'raccoon', en: 'Raccoon', ko: '너구리' },
+  { key: 'koala', en: 'Koala', ko: '코알라' },
+  { key: 'tiger', en: 'Tiger', ko: '호랑이' },
+];
+const SPECIES_POOL = ['dog', 'dog', 'dog', 'dog', ...SPECIES.slice(1).map((species) => species.key)];
+
 /** A rename cannot be longer than this, or it breaks the nameplate. */
 export const MAX_DOG_NAME_LENGTH = 20;
 
 export const DOG_KEYS = DOGS.map((dog) => dog.key);
 export const COAT_KEYS = COATS.map((coat) => coat.key);
+export const SPECIES_KEYS = SPECIES.map((species) => species.key);
 export { ACCESSORIES };
 
 export function dogByKey(key) {
@@ -61,6 +86,15 @@ export function dogByKey(key) {
 
 export function coatByKey(key) {
   return COATS.find((coat) => coat.key === key) ?? null;
+}
+
+export function speciesByKey(key) {
+  return SPECIES.find((species) => species.key === key) ?? null;
+}
+
+/** Where a species' portrait lives. */
+export function speciesImage(key) {
+  return `/assets/office/animals/${speciesByKey(key)?.key ?? 'dog'}.webp`;
 }
 
 /** FNV-1a. Small, stable, and not a security boundary — just a spread. */
@@ -83,6 +117,8 @@ export function dogIdentity(id) {
   const dog = DOGS[hash % DOGS.length];
   const coat = COATS[Math.floor(hash / DOGS.length) % COATS.length];
   const accessory = ACCESSORIES[Math.floor(hash / (DOGS.length * COATS.length)) % ACCESSORIES.length];
+  // Its own hash, so adding species did not reshuffle every existing name and coat.
+  const species = speciesByKey(SPECIES_POOL[hashString(`species:${id}`) % SPECIES_POOL.length]);
 
   return {
     key: dog.key,
@@ -90,6 +126,7 @@ export function dogIdentity(id) {
     custom: false,
     coat,
     accessory,
+    species,
     /** Per-dog animation offset so a room of dogs does not move in lockstep. */
     beatOffsetMs: hash % 900,
   };
@@ -107,6 +144,7 @@ export function randomDogAssignment(rng = Math.random) {
     dog: pick(DOG_KEYS),
     coat: pick(COAT_KEYS),
     accessory: pick(ACCESSORIES),
+    species: pick(SPECIES_POOL),
   };
 }
 
@@ -132,6 +170,7 @@ export function resolveDog(id, override = null) {
   const base = dogIdentity(id);
   const breed = override?.dog ? dogByKey(override.dog) : null;
   const coat = override?.coat ? coatByKey(override.coat) : null;
+  const species = override?.species ? speciesByKey(override.species) : null;
   const custom = sanitizeDogName(override?.name);
 
   const names = custom !== null
@@ -146,6 +185,8 @@ export function resolveDog(id, override = null) {
     custom: custom !== null,
     coat: coat ?? base.coat,
     accessory: ACCESSORIES.includes(override?.accessory) ? override.accessory : base.accessory,
+    // A look rolled before species existed has none stored; it keeps the hashed one.
+    species: species ?? base.species,
     beatOffsetMs: base.beatOffsetMs,
   };
 }

@@ -80,8 +80,10 @@ behind a web front end.
 
 ### The office
 
-[`/office`](https://status-dog.vercel.app/office) draws one dog per monitored site
-and lets its behaviour carry the status. It reads the same data as the dashboard;
+[`/office`](https://status-dog.vercel.app/office) seats one animal colleague per monitored
+site — mostly dogs, with a cat, fox, panda and a few others — and lets its behaviour
+carry the status. The portrait cannot change its face, so each mood is a different way
+of moving plus a prop: coffee, sweat, a question mark, a beacon, or zzz. It reads the same data as the dashboard;
 what it adds is a mood the table has no column for.
 
 | Mood | Meaning |
@@ -1024,3 +1026,7 @@ npm run build
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+The office animals and props are [Fluent Emoji](https://github.com/microsoft/fluentui-emoji)
+by Microsoft, used under the MIT License, resized and converted to WebP — see
+[public/assets/office/animals/LICENSE.txt](public/assets/office/animals/LICENSE.txt).
