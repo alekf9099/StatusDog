@@ -27,6 +27,8 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.txt': 'text/plain; charset=utf-8',
   '.ico': 'image/x-icon',
+  '.webp': 'image/webp',
+  '.png': 'image/png',
 };
 
 /** Mirrors the `rewrites` block in vercel.json. */

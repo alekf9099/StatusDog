@@ -233,43 +233,137 @@
 
 .desk-scene {
   position: relative;
-  height: 148px;
+  height: 166px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
 }
 
-/* The dog sits behind the desk, so it is drawn first and painted over by it. */
-.desk-dog {
+/* The colleague sits behind the desk: torso and head are drawn first and painted
+   over by the desk, the arms (below) after it so the paws land on the keyboard.
+   Both boxes share one frame, with its bottom edge on the desktop. */
+.desk-dog,
+.dog-arms {
   position: absolute;
-  bottom: 28px;
-  width: 96px;
-  height: 115px;
-  overflow: visible;
-}
-
-/* Paws on the desktop, above the desk but below the monitor. */
-.desk-paws {
-  position: absolute;
-  bottom: 32px;
   left: 50%;
-  transform: translateX(-50%);
-  width: 76px;
-  display: flex;
-  justify-content: space-between;
-  z-index: 1;
+  bottom: 34px;
+  width: 100px;
+  height: 126px;
+  margin-left: -50px;
   pointer-events: none;
 }
-.desk-paws i {
-  width: 13px;
-  height: 8px;
-  border-radius: 7px 7px 3px 3px;
-  background: var(--coat, #e8c9a0);
-  box-shadow: 0 -1px 0 rgba(0, 0, 0, .08) inset;
+.dog-arms { z-index: 3; }
+.dog-bob {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
 }
-.desk[data-mood="strained"] .desk-paws { animation: paws-type .18s steps(2, end) infinite; }
-@keyframes paws-type { 50% { transform: translateX(-50%) translateY(1.5px); } }
-.desk[data-mood="offDuty"] .desk-paws { display: none; }
+.dog-head {
+  position: absolute;
+  left: 50%;
+  bottom: 31px;
+  width: 84px;
+  height: 84px;
+  margin-left: -42px;
+  transform-origin: 50% 88%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* The coat: rounded shoulders, lit from the top left like the Fluent portraits,
+   and tucked under the desktop so it never shows a hem — only just, so that
+   slumping when off duty does not push it out below. */
+.dog-torso {
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 74px;
+  height: 47px;
+  margin-left: -37px;
+  border-radius: 36px 36px 10px 10px / 28px 28px 10px 10px;
+  background:
+    radial-gradient(ellipse 60% 50% at 32% 22%, color-mix(in srgb, white 30%, transparent), transparent 70%),
+    linear-gradient(to bottom, var(--coat), var(--coat-shade));
+  box-shadow: inset 0 -6px 10px color-mix(in srgb, black 14%, transparent);
+}
+/* The shadow the head casts on the shoulders, so it sits on them rather than
+   floating in front. */
+.dog-torso::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 46px;
+  height: 18px;
+  margin-left: -23px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 30%, color-mix(in srgb, black 26%, transparent), transparent 70%);
+}
+/* A zip down the front, so the coat reads as clothing rather than a blob. */
+.dog-torso::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--coat-trim);
+  opacity: .7;
+}
+
+/* Arms hang from the shoulders and reach in to the keyboard. Each pivots at the
+   shoulder, so a pose is one rotation; the sleeve inside carries the typing. */
+.dog-arm {
+  position: absolute;
+  bottom: 6px;
+  width: 15px;
+  height: 31px;
+  transform-origin: 50% 5px;
+  transition: transform .35s cubic-bezier(.34, 1.4, .64, 1);
+}
+.arm-l { left: calc(50% - 35px); transform: rotate(-30deg); }
+.arm-r { right: calc(50% - 35px); transform: rotate(30deg); }
+.dog-sleeve {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background:
+    linear-gradient(to bottom, transparent 70%, var(--coat-trim) 70%, var(--coat-trim) 84%, transparent 84%),
+    linear-gradient(90deg, var(--coat-shade), var(--coat) 45%, var(--coat-shade));
+}
+.dog-paw {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 17px;
+  height: 13px;
+  margin-left: -8.5px;
+  border-radius: 50% 50% 46% 46%;
+  background:
+    radial-gradient(ellipse 55% 45% at 38% 30%, color-mix(in srgb, white 35%, transparent), transparent 70%),
+    linear-gradient(to bottom, var(--fur), var(--fur-shade));
+  box-shadow: 0 1px 1px color-mix(in srgb, black 22%, transparent);
+  transition: transform .35s cubic-bezier(.34, 1.4, .64, 1);
+}
+/* Two toe creases, so it reads as a paw and not a ball. */
+.dog-paw::before,
+.dog-paw::after {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  width: 1.5px;
+  height: 5px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--fur-shade) 70%, black);
+  opacity: .45;
+}
+.dog-paw::before { left: 5.5px; }
+.dog-paw::after { right: 5.5px; }
+/* Paws keep facing the keyboard whatever angle the arm is at. */
+.arm-l .dog-paw { transform: rotate(30deg); }
+.arm-r .dog-paw { transform: rotate(-30deg); }
 
 .desk-furniture {
   position: relative;
@@ -301,14 +395,15 @@
   opacity: .55;
 }
 
-/* The monitor the dog is watching, tinted by mood. */
+/* The monitor the colleague is watching, tinted by mood. It stands at the side
+   of the desk, turned toward them, so it no longer hides who is sitting there. */
 .desk-monitor {
   position: absolute;
-  left: 50%;
-  bottom: 33px;
-  transform: translateX(-50%);
-  width: 56px;
-  height: 30px;
+  right: 7%;
+  bottom: 39px;
+  transform: perspective(160px) rotateY(-24deg);
+  width: 40px;
+  height: 28px;
   border-radius: 5px;
   background: var(--screen);
   border: 2px solid color-mix(in srgb, var(--screen) 70%, black);
@@ -343,205 +438,155 @@
 /* Monitor stand. */
 .desk-monitor-stand {
   position: absolute;
-  left: 50%;
-  bottom: 29px;
-  transform: translateX(-50%);
-  width: 14px;
-  height: 6px;
+  right: calc(7% + 16px);
+  bottom: 33px;
+  width: 8px;
+  height: 7px;
   background: color-mix(in srgb, var(--screen) 80%, black);
   border-radius: 0 0 3px 3px;
   z-index: 2;
 }
 
-/* ---------- the dog ---------- */
-
-.dog {
-  /* Set per dog from its identity hash; the desk reads --coat for the paws. */
-  --coat: #e8c9a0;
-  --coat-ear: #cda679;
-  --coat-patch: #f5e3cb;
-  --beat: 0ms;
-  transform-origin: 50% 100%;
+/* The keyboard, where the paws rest. */
+.desk-keyboard {
+  position: absolute;
+  left: 50%;
+  bottom: 33px;
+  width: 46px;
+  height: 5px;
+  margin-left: -23px;
+  border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--screen) 35%, #e7eaee), color-mix(in srgb, var(--screen) 60%, #b9bec6));
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .2);
+  z-index: 2;
 }
 
-.dog-body,
-.dog-head { fill: var(--coat); }
-.dog-ear { fill: var(--coat-ear); }
-.dog-snout { fill: var(--coat-patch); }
-.dog-eye, .dog-nose { fill: #2b2f36; }
-.dog-tongue { fill: #e8657a; }
-.dog-collar { fill: var(--mood-color); }
+/* ---------- the animal ---------- */
 
-/* Blinking, on a per-dog delay so the room is not synchronised. */
-.dog-eyelid {
-  fill: var(--coat);
-  transform-origin: center;
-  animation: dog-blink 5.5s ease-in-out infinite;
-  animation-delay: var(--beat);
+/* The portrait cannot change its face, so the body language does the talking.
+   Three parts move: the whole body (.dog-bob, shared by both layers so they stay
+   together), the head on its neck, and the arms. Everything runs on a per-animal
+   delay so a room of colleagues never moves in lockstep. */
+.desk-dog,
+.dog-arms { --beat: 0ms; }
+
+/* Working: a calm breath, a little head tilt, paws taking turns on the keys. */
+.desk[data-mood="working"] .dog-bob { animation: body-breathe 2.8s ease-in-out infinite; animation-delay: var(--beat); }
+.desk[data-mood="working"] .dog-head { animation: head-tilt 2.8s ease-in-out infinite; animation-delay: var(--beat); }
+.desk[data-mood="working"] .dog-sleeve { animation: paw-type .52s ease-in-out infinite; }
+.desk[data-mood="working"] .arm-r .dog-sleeve { animation-delay: .26s; }
+@keyframes body-breathe {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(-1.5px) scale(1.015, .99); }
 }
-@keyframes dog-blink {
-  0%, 92%, 100% { transform: scaleY(0); }
-  95%, 97% { transform: scaleY(1); }
+@keyframes head-tilt {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
 }
-
-/* Tail. Speed and swing carry as much information as the badge does. */
-.dog-tail {
-  transform-origin: 88% 78%;
-  animation: dog-tail-wag 1.9s ease-in-out infinite;
-  animation-delay: var(--beat);
-}
-@keyframes dog-tail-wag {
-  0%, 100% { transform: rotate(-9deg); }
-  50% { transform: rotate(14deg); }
-}
-.desk[data-mood="strained"] .dog-tail { animation-duration: .55s; }
-.desk[data-mood="uneasy"] .dog-tail { animation-duration: 3.4s; }
-.desk[data-mood="alarmed"] .dog-tail { animation-duration: .35s; }
-.desk[data-mood="offDuty"] .dog-tail { animation: none; transform: rotate(-14deg); }
-
-/* Expression. A worried brow reads faster than any animation. */
-.dog-brows { transform-origin: 50% 30%; transition: transform .25s; opacity: .9; }
-.desk[data-mood="strained"] .dog-brows { transform: translateY(-1.5px); }
-.desk[data-mood="uneasy"] .dog-brows { transform: translateY(1.5px) scaleY(-1); }
-.desk[data-mood="alarmed"] .dog-brows { transform: translateY(2px) scaleY(-1); }
-.desk[data-mood="offDuty"] .dog-brows { opacity: .45; }
-
-/* The tongue only shows when the dog is happy. */
-.dog-tongue { opacity: 0; transition: opacity .25s; }
-.desk[data-mood="working"] .dog-tongue { opacity: 1; }
-
-/* Eye glints go out when things are grim. */
-.desk[data-mood="alarmed"] .dog-glint,
-.desk[data-mood="offDuty"] .dog-glint { opacity: 0; }
-
-/* Ears droop when things are going badly. */
-.dog-ears { transform-origin: 50% 25%; transition: transform .3s; }
-.desk[data-mood="uneasy"] .dog-ears { transform: translateY(3px) scaleY(1.08); }
-.desk[data-mood="alarmed"] .dog-ears { transform: translateY(-3px) scaleY(.86); }
-.desk[data-mood="offDuty"] .dog-ears { transform: translateY(4px); }
-
-/* Typing bob: the whole dog, gently. Faster under strain. */
-.desk[data-mood="working"] .dog { animation: dog-bob 2.6s ease-in-out infinite; animation-delay: var(--beat); }
-.desk[data-mood="strained"] .dog { animation: dog-bob .42s ease-in-out infinite; }
-.desk[data-mood="uneasy"] .dog { animation: dog-bob 3.6s ease-in-out infinite; }
-@keyframes dog-bob {
+@keyframes paw-type {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(2.5px); }
+  50% { transform: translateY(-2.5px); }
 }
 
-/* Alarmed: out of the chair and shaking. */
-.desk[data-mood="alarmed"] .dog {
-  animation: dog-panic .5s ease-in-out infinite;
-}
-@keyframes dog-panic {
-  0%, 100% { transform: translate(0, -7px) rotate(-2.5deg); }
-  50% { transform: translate(2px, -10px) rotate(2.5deg); }
+/* Straining: hunched over and hammering the keyboard. */
+.desk[data-mood="strained"] .dog-bob { animation: body-rush .38s ease-in-out infinite; }
+.desk[data-mood="strained"] .dog-head { transform: translateY(3px) rotate(-2deg); }
+.desk[data-mood="strained"] .dog-sleeve { animation: paw-type .2s ease-in-out infinite; }
+.desk[data-mood="strained"] .arm-r .dog-sleeve { animation-delay: .1s; }
+@keyframes body-rush {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(-2.5px) scale(.985, 1.015); }
 }
 
-/* Dozing when off duty: eyes shut, and no blink cycle to reopen them. */
-.desk[data-mood="offDuty"] .dog { opacity: .72; }
-.desk[data-mood="offDuty"] .dog-eyelid { animation: none; transform: scaleY(1); }
-.desk[data-mood="offDuty"] .dog-tongue { opacity: 0; }
+/* Uneasy: still at the keyboard, looking from side to side, one paw drumming. */
+.desk[data-mood="uneasy"] .dog-head { animation: head-worry 3.2s ease-in-out infinite; animation-delay: var(--beat); }
+.desk[data-mood="uneasy"] .arm-r .dog-sleeve { animation: paw-type 1.1s ease-in-out infinite; }
+@keyframes head-worry {
+  0%, 100% { transform: rotate(-7deg); }
+  45%, 55% { transform: rotate(7deg); }
+}
+
+/* Alarmed: up out of the chair, paws flung to its cheeks, shaking. */
+.desk[data-mood="alarmed"] .dog-bob { animation: body-panic .45s ease-in-out infinite; }
+.desk[data-mood="alarmed"] .dog-head { animation: head-panic .45s ease-in-out infinite; }
+.desk[data-mood="alarmed"] .arm-l { transform: rotate(152deg); }
+.desk[data-mood="alarmed"] .arm-r { transform: rotate(-152deg); }
+.desk[data-mood="alarmed"] .arm-l .dog-paw { transform: rotate(-152deg); }
+.desk[data-mood="alarmed"] .arm-r .dog-paw { transform: rotate(152deg); }
+@keyframes body-panic {
+  0%, 100% { transform: translate(0, -9px); }
+  50% { transform: translate(2px, -11px); }
+}
+@keyframes head-panic {
+  0%, 100% { transform: rotate(-5deg) scale(1.03); }
+  50% { transform: rotate(5deg) scale(1.03); }
+}
+
+/* Off duty: slumped, nodding off, colour drained, paws idle on the desk. */
+.desk[data-mood="offDuty"] .dog-bob { animation: body-doze 4.5s ease-in-out infinite; }
+.desk[data-mood="offDuty"] .dog-head { transform: translateY(4px) rotate(-11deg); }
+.desk[data-mood="offDuty"] .desk-dog,
+.desk[data-mood="offDuty"] .dog-arms { filter: saturate(.45) brightness(.92); }
+@keyframes body-doze {
+  0%, 100% { transform: translateY(3px) scale(1.01, .99); }
+  50% { transform: translateY(4px) scale(1, 1); }
+}
 
 /* ---------- props ---------- */
 
 .dog-prop {
   position: absolute;
-  font-size: 15px;
-  line-height: 1;
+  width: 26px;
+  height: 26px;
   pointer-events: none;
   z-index: 3;
+  opacity: 0;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-/* A mug on the desk. Steam rises only while the dog is calm enough to drink it.
-   Drawn in CSS rather than as an emoji, which came out as a smudge at this size
-   and varies by platform font. */
-.prop-mug {
-  left: 9%;
-  bottom: 35px;
-  width: 13px;
-  height: 11px;
-  z-index: 3;
-}
-.prop-mug i {
-  position: absolute;
-  inset: 0;
-  border-radius: 2px 2px 4px 4px;
-  background: var(--card);
-  border: 1.5px solid var(--muted);
-}
-.prop-mug i::before {
-  /* handle */
-  content: '';
-  position: absolute;
-  right: -5px;
-  top: 2px;
-  width: 5px;
-  height: 6px;
-  border: 1.5px solid var(--muted);
-  border-left: none;
-  border-radius: 0 4px 4px 0;
-}
-.prop-mug i::after {
-  /* steam */
-  content: '';
-  position: absolute;
-  left: 3px;
-  top: -8px;
-  width: 2px;
-  height: 7px;
-  border-radius: 2px;
-  background: var(--muted);
-  opacity: 0;
-}
-.desk[data-mood="working"] .prop-mug i::after {
-  animation: prop-steam 3s ease-in-out infinite;
-  animation-delay: var(--beat);
-}
-@keyframes prop-steam {
-  0%, 100% { opacity: 0; transform: translateY(3px) scaleY(.6); }
-  45% { opacity: .5; transform: translateY(-2px) scaleY(1); }
-}
+/* A coffee on the desk, always there; set aside when nobody is at work. */
+.prop-mug { left: 8%; bottom: 33px; width: 24px; height: 24px; opacity: 1; }
+.desk[data-mood="working"] .prop-mug { animation: prop-float 3.4s ease-in-out infinite; animation-delay: var(--beat); }
 .desk[data-mood="offDuty"] .prop-mug { opacity: .45; }
 @keyframes prop-float {
-  0%, 100% { transform: translateY(0); opacity: .85; }
-  50% { transform: translateY(-3px); opacity: 1; }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
 }
 
-/* A sweat bead, falling, while straining. */
-.prop-sweat {
-  right: 22%;
-  bottom: 104px;
-  width: 6px;
-  height: 8px;
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  background: #6cb6ff;
-  opacity: 0;
-}
-.desk[data-mood="strained"] .prop-sweat { animation: prop-sweat 1.5s ease-in infinite; }
+/* Sweat while straining, falling and fading. */
+.prop-sweat { right: 19%; bottom: 130px; }
+.desk[data-mood="strained"] .prop-sweat { animation: prop-sweat 1.4s ease-in infinite; }
 @keyframes prop-sweat {
-  0% { opacity: 0; transform: translateY(0) scale(.7); }
-  25% { opacity: .95; }
-  100% { opacity: 0; transform: translateY(26px) scale(1); }
+  0% { opacity: 0; transform: translateY(-4px) scale(.7); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(18px) scale(1); }
 }
 
-/* A question mark while uneasy, an alarm while down. */
-.prop-question { right: 15%; bottom: 108px; opacity: 0; }
+/* A question mark while uneasy. */
+.prop-question { right: 15%; bottom: 132px; }
 .desk[data-mood="uneasy"] .prop-question { animation: prop-pop 2.4s ease-in-out infinite; }
 @keyframes prop-pop {
   0%, 70%, 100% { opacity: 0; transform: translateY(4px) scale(.85); }
   20%, 55% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.prop-alarm { right: 10%; bottom: 110px; font-size: 18px; opacity: 0; }
+/* The beacon while down. */
+.prop-alarm { right: 10%; bottom: 132px; width: 32px; height: 32px; }
 .desk[data-mood="alarmed"] .prop-alarm { opacity: 1; animation: prop-shake .4s ease-in-out infinite; }
 @keyframes prop-shake {
-  0%, 100% { transform: rotate(-13deg) scale(1); }
-  50% { transform: rotate(13deg) scale(1.14); }
+  0%, 100% { transform: rotate(-12deg) scale(1); }
+  50% { transform: rotate(12deg) scale(1.12); }
 }
 
-.prop-zzz { left: 14%; bottom: 108px; font-size: 14px; opacity: 0; }
-.desk[data-mood="offDuty"] .prop-zzz { opacity: .8; animation: prop-float 4s ease-in-out infinite; }
+/* Asleep. */
+.prop-zzz { right: 16%; bottom: 130px; }
+.desk[data-mood="offDuty"] .prop-zzz { opacity: .9; animation: prop-drift 4s ease-in-out infinite; }
+@keyframes prop-drift {
+  0%, 100% { transform: translate(0, 0); opacity: .7; }
+  50% { transform: translate(3px, -4px); opacity: 1; }
+}
 
 /* ---------- desk label ---------- */
 
@@ -716,16 +761,11 @@
   place-items: center;
   overflow: hidden;
 }
-.report-head .dog-chip .desk-dog {
-  position: static;
-  bottom: auto;
-  width: 40px;
-  height: 40px;
+.report-head .dog-chip .chip-face {
+  display: block;
+  width: 38px;
+  height: 38px;
 }
-/* The chip is a portrait, not a scene: no idling animation. */
-.report-head .dog-chip .dog,
-.report-head .dog-chip .dog-tail,
-.report-head .dog-chip .dog-eyelid { animation: none; }
 
 .report-title { min-width: 0; }
 .report-title h2 { margin: 0 0 2px; font-size: 17px; }
@@ -781,20 +821,25 @@
   .office-clock::after,
   .office-siren,
   .desk-monitor::before,
-  .dog,
-  .dog-tail,
-  .dog-eyelid,
+  .dog-bob,
+  .dog-head,
+  .dog-sleeve,
   .dog-prop,
-  .prop-sweat,
-  .desk-status .dot,
-  .desk-paws,
-  .prop-mug i::after {
+  .desk-status .dot {
     animation: none !important;
   }
-  /* Keep the states readable without movement: posture, colour and props stay. */
-  .desk[data-mood="alarmed"] .dog { transform: translateY(-7px) rotate(-2deg); }
-  .desk[data-mood="offDuty"] .dog-tail { transform: rotate(-14deg); }
-  .prop-sweat, .prop-question, .prop-alarm, .prop-zzz { opacity: 1; }
+  .dog-arm,
+  .dog-paw { transition: none; }
+  /* Keep the states readable without movement: posture, colour and props stay —
+     the raised paws when alarmed are a pose, not a motion, so they stay too. */
+  .desk[data-mood="alarmed"] .dog-bob { transform: translateY(-9px); }
+  .desk[data-mood="uneasy"] .dog-head { transform: rotate(-7deg); }
+  .desk[data-mood="offDuty"] .dog-bob { transform: translateY(3px); }
+  /* Only the prop for the current mood, as with motion on. */
+  .desk[data-mood="strained"] .prop-sweat,
+  .desk[data-mood="uneasy"] .prop-question,
+  .desk[data-mood="alarmed"] .prop-alarm,
+  .desk[data-mood="offDuty"] .prop-zzz { opacity: 1; }
   .office[data-worst="alarmed"] .office-siren { opacity: 1; }
   .desk:hover { transform: none; }
   .desk[data-arriving="true"] { animation: none; }
