@@ -18,8 +18,9 @@ export interface Alert {
   /**
    * `test` is the owner's test send, so a channel can be checked without an outage.
    * `page` is a linked page of a target changing state (see monitor/discover.ts).
+   * `security` is an outside-visible security change (see monitor/security.ts).
    */
-  kind: 'cert-expiry' | 'monitor-stale' | 'test' | 'page';
+  kind: 'cert-expiry' | 'monitor-stale' | 'test' | 'page' | 'security';
   severity: 'info' | 'warning' | 'critical';
   /** One line, which is all a chat client shows. */
   summary: string;

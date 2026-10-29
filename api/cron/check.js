@@ -39,9 +39,16 @@
  * checked on every run, stored inside its own entry so they cost no extra storage
  * commands. See src/monitor/discover.ts for how a page the site only draws in the
  * browser is told apart from one that works.
+ *
+ * Every target also gets its outside-visible security signals recorded — headers,
+ * scripts loaded from other hosts, defacement text, certificate changes, and once
+ * a day the certificate transparency logs — for the owner-only security tab. Only
+ * changes alert. See src/monitor/security.ts for what this can and cannot see.
  */
 import { probeWithBody } from '../../dist/monitor/probe.js';
 import { checkPages, describePageChange, probeShell } from '../../dist/monitor/subpages.js';
+import { observeSecurity } from '../../dist/monitor/security-run.js';
+import { fetchCt } from '../../dist/monitor/ct.js';
 import { resolveRoster } from '../../dist/store/roster.js';
 import { applyCheck, readEntry } from '../../dist/store/uptime.js';
 import { recordCheck } from '../../dist/store/stats-store.js';
@@ -152,6 +159,14 @@ export default async function handler(req, res) {
   const disputes = [];
   const reportsClosed = [];
   const reportFailures = [];
+  // One certificate-log lookup per domain per run, however many targets share it,
+  // and one alert per security change however many targets saw it.
+  const ctLookups = new Map();
+  const ctLookup = (pattern) => {
+    if (!ctLookups.has(pattern)) ctLookups.set(pattern, fetchCt(pattern));
+    return ctLookups.get(pattern);
+  };
+  const securityAlerted = new Set();
 
   const checks = await Promise.all(targets.map(async (target) => {
     // The request for a path that cannot exist overlaps the home check, so
@@ -217,8 +232,36 @@ export default async function handler(req, res) {
         }
       }
 
+      // Security signals. Like the pages, a failure here costs only this observation.
+      let securityRun = null;
+      try {
+        securityRun = await observeSecurity({
+          target,
+          home,
+          conclusive: verdict.conclusive,
+          previous: before.security,
+          at: result.checkedAt,
+          ctLookup,
+        });
+        for (const finding of securityRun.alerts) {
+          if (securityAlerted.has(finding.key)) continue;
+          securityAlerted.add(finding.key);
+          alerts.push({
+            kind: 'security',
+            severity: finding.severity,
+            summary: finding.summary,
+            target: { id: target.id, name: target.name, url: target.url },
+            at: result.checkedAt,
+            data: finding.data,
+          });
+        }
+      } catch {
+        securityRun = null;
+      }
+
       const { entry, transitioned, previousState, cert } = await applyCheck(kv, target, result, {
         pages: pagesRun?.pages,
+        security: securityRun?.security,
         inconclusive: !verdict.conclusive,
         disputeRun: nextDisputeCount(before.consecutiveDisputes, verdict.outcome),
         // Already read above. Reading it again would be a second command per target
@@ -419,6 +462,9 @@ export default async function handler(req, res) {
     schedulerAlerts: alerts
       .filter((alert) => alert.kind === 'monitor-stale')
       .map((alert) => alert.data.state),
+    securityAlerts: alerts
+      .filter((alert) => alert.kind === 'security')
+      .map((alert) => `${alert.target.id}:${alert.data.finding}`),
     pageAlerts: alerts
       .filter((alert) => alert.kind === 'page')
       .map((alert) => `${alert.target.id}${alert.data.path}:${alert.data.event}`),

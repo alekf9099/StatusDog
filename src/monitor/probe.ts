@@ -36,6 +36,8 @@ const REPORTED_HEADERS = [
   'content-security-policy',
   'x-frame-options',
   'x-content-type-options',
+  'referrer-policy',
+  'permissions-policy',
   'access-control-allow-origin',
   'retry-after',
   'x-cache',

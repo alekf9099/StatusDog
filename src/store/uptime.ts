@@ -8,6 +8,11 @@ import {
 import { evaluateCertExpiry, EMPTY_CERT_STATE, type CertEvaluation, type CertNotifyState } from '../monitor/cert.js';
 import type { KvClient } from './kv.js';
 import type { PageStatus } from '../monitor/discover.js';
+import type { SecurityState } from '../monitor/security.js';
+import type { CtState } from '../monitor/ct.js';
+
+/** What the security tab shows for a target. Owner-only: never in a public payload. */
+export type TargetSecurity = SecurityState & { ct: CtState | null };
 
 /** Bump when the stored shape changes so old records are simply ignored. */
 const KEY_PREFIX = 'statusdog:v1:target:';
@@ -65,6 +70,13 @@ export interface UptimeEntry extends StateSnapshot {
    * the size of the value the dashboard polls.
    */
   pages: PageStatus[];
+  /**
+   * Outside-visible security signals (see monitor/security.ts), or `null` before
+   * the first healthy check. In the same entry for the same reason as `pages`:
+   * no extra commands. Public endpoints build their payloads field by field and
+   * leave this out.
+   */
+  security: TargetSecurity | null;
 }
 
 export interface UptimeStats {
@@ -128,6 +140,7 @@ function blankEntry(target: Pick<ResolvedTarget, 'id' | 'name' | 'url'>): Uptime
     disputes: 0,
     lastDispute: null,
     pages: [],
+    security: null,
   };
 }
 
@@ -156,6 +169,7 @@ export async function readEntry(
       disputes: numberOr(parsed.disputes, 0),
       lastDispute: parsed.lastDispute ?? null,
       pages: Array.isArray(parsed.pages) ? parsed.pages : [],
+      security: parsed.security && typeof parsed.security === 'object' ? parsed.security : null,
     };
   } catch {
     return blankEntry(target);
@@ -191,6 +205,8 @@ export interface ApplyOptions {
   previous?: UptimeEntry;
   /** This run's linked pages. Left out, the stored ones stand unchanged. */
   pages?: PageStatus[];
+  /** This run's security observations. Left out, the stored ones stand. */
+  security?: TargetSecurity | null;
 }
 
 export interface AppliedCheck {
@@ -271,6 +287,7 @@ export async function applyCheck(
     consecutiveDisputes: options.disputeRun ?? (options.inconclusive ? previous.consecutiveDisputes + 1 : 0),
     disputes: previous.disputes + (options.inconclusive ? 1 : 0),
     pages: options.pages ?? previous.pages,
+    security: options.security === undefined ? previous.security : options.security,
   };
 
   await writeEntry(kv, entry);
