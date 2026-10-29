@@ -5,6 +5,11 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": {
+    "api/cron/check.js": {
+      "maxDuration": 60
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/heartbeat",

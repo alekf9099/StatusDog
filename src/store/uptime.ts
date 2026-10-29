@@ -7,6 +7,7 @@ import {
 } from '../monitor/transition.js';
 import { evaluateCertExpiry, EMPTY_CERT_STATE, type CertEvaluation, type CertNotifyState } from '../monitor/cert.js';
 import type { KvClient } from './kv.js';
+import type { PageStatus } from '../monitor/discover.js';
 
 /** Bump when the stored shape changes so old records are simply ignored. */
 const KEY_PREFIX = 'statusdog:v1:target:';
@@ -55,6 +56,15 @@ export interface UptimeEntry extends StateSnapshot {
    * hiding the disagreement entirely would be no better.
    */
   lastDispute: { at: string; message: string | null; reason: FailureReason | null } | null;
+  /**
+   * The pages this target links to, when it has `discover` on.
+   *
+   * Stored here rather than under keys of their own so that checking ten menu
+   * pages costs no extra commands against a quota counted in commands per day.
+   * Only the latest state per page is kept, never a history: that would multiply
+   * the size of the value the dashboard polls.
+   */
+  pages: PageStatus[];
 }
 
 export interface UptimeStats {
@@ -117,6 +127,7 @@ function blankEntry(target: Pick<ResolvedTarget, 'id' | 'name' | 'url'>): Uptime
     consecutiveDisputes: 0,
     disputes: 0,
     lastDispute: null,
+    pages: [],
   };
 }
 
@@ -144,6 +155,7 @@ export async function readEntry(
       consecutiveDisputes: numberOr(parsed.consecutiveDisputes, 0),
       disputes: numberOr(parsed.disputes, 0),
       lastDispute: parsed.lastDispute ?? null,
+      pages: Array.isArray(parsed.pages) ? parsed.pages : [],
     };
   } catch {
     return blankEntry(target);
@@ -177,6 +189,8 @@ export interface ApplyOptions {
    * that waste is the difference between checking every five minutes and not.
    */
   previous?: UptimeEntry;
+  /** This run's linked pages. Left out, the stored ones stand unchanged. */
+  pages?: PageStatus[];
 }
 
 export interface AppliedCheck {
@@ -256,6 +270,7 @@ export async function applyCheck(
     cert: cert.state,
     consecutiveDisputes: options.disputeRun ?? (options.inconclusive ? previous.consecutiveDisputes + 1 : 0),
     disputes: previous.disputes + (options.inconclusive ? 1 : 0),
+    pages: options.pages ?? previous.pages,
   };
 
   await writeEntry(kv, entry);

@@ -19,6 +19,8 @@ export const TARGET_DEFAULTS: Required<
     | 'expectHeaders'
     | 'expectRedirects'
     | 'expectFinalUrl'
+    | 'discover'
+    | 'discoverLimit'
   >
 > = {
   method: 'GET',

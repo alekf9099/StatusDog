@@ -27,7 +27,9 @@
       "//": "Measured 175-225ms from Seoul, so maxResponseTimeMs is set well above that: it should catch real degradation, not the normal baseline. Pointed at www directly because the apex redirect took 17s from the old US region.",
       "maxResponseTimeMs": 2000,
       "//expectRedirects": "www answers directly today. If an interstitial or locale redirect appears, that is a change worth knowing about.",
-      "expectRedirects": 0
+      "expectRedirects": 0,
+      "//discover": "Also checks the menu pages the home page links to. Pages the site only draws in the browser come back as unverifiable rather than up - see src/monitor/discover.ts.",
+      "discover": true
     },
     {
       "id": "copykiller-apex",

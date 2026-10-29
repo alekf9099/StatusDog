@@ -50,8 +50,10 @@ export default async function handler(req, res) {
         since: null,
         consecutiveFailures: 0,
         maxResponseTimeMs: target.maxResponseTimeMs,
+        discover: target.discoverLimit > 0,
         lastResult: null,
         lastDispute: null,
+        pages: [],
         stats: null,
         history: [],
       })),
@@ -65,6 +67,7 @@ export default async function handler(req, res) {
       readSchedulerState(kv),
     ]);
     const limits = new Map(targets.map((target) => [target.id, target.maxResponseTimeMs]));
+    const discovering = new Set(targets.filter((target) => target.discoverLimit > 0).map((target) => target.id));
     // No fallback here: with the env var unset the threshold comes from the
     // cadence this deployment actually runs at, which is the point.
     const configured = process.env.STATUSDOG_STALE_AFTER_MINUTES
@@ -86,10 +89,26 @@ export default async function handler(req, res) {
         consecutiveFailures: entry.consecutiveFailures,
         // Roster config, not a secret: lets a client say "close to your limit".
         maxResponseTimeMs: limits.get(entry.id) ?? 0,
+        // Whether linked pages are checked, so "none found" can be told from "off".
+        discover: discovering.has(entry.id),
         lastResult: entry.lastResult,
         // The last check two vantage points could not agree on. Reported so a
         // reader can see the network was unclear rather than being shown nothing.
         lastDispute: entry.lastDispute,
+        // Linked pages, when discovery is on. Bookkeeping that only the scheduler
+        // needs — streak counters, whether a page ever served real content — stays
+        // out of the public payload.
+        pages: (entry.pages ?? []).map((page) => ({
+          path: page.path,
+          name: page.name,
+          state: page.state,
+          since: page.since,
+          status: page.status,
+          ms: page.ms,
+          reason: page.reason,
+          message: page.message,
+          checkedAt: page.checkedAt,
+        })),
         stats: statsFor(entry),
         history: historyLimit > 0 ? entry.history.slice(-historyLimit) : [],
       })),

@@ -197,6 +197,7 @@ function renderOverview(targets) {
           <span class="${uptimeClass(month?.uptimePct)}" style="font-weight:650">${uptimeText(month?.uptimePct)}</span>
         </div>
         <div class="url">${escapeHtml(prettyUrl(target.url))}</div>
+        ${pagesSummary(monitorOf(target.id))}
         ${dayChart(target.daily ?? [], 30)}
       </a>`;
   }).join('');
@@ -225,6 +226,8 @@ function renderDetail(target) {
       ${periodCard('status.period.month', target.periods?.month)}
       ${periodCard('status.period.quarter', target.periods?.quarter)}
     </div>
+
+    ${pagesSection(monitorOf(target.id))}
 
     <h2 style="font-size:15px;margin:30px 0 4px">${escapeHtml(t('status.daily'))}</h2>
     <p class="small muted" style="margin:0 0 4px">${escapeHtml(t('status.dailyNote', { tz: tzLabel() }))}</p>
@@ -654,8 +657,81 @@ const stamp = formatTimestamp;
 
 /* ---------------- helpers ---------------- */
 
+function monitorOf(id) {
+  return monitors?.monitors?.find((monitor) => monitor.id === id) ?? null;
+}
+
 function stateOf(id) {
-  return monitors?.monitors?.find((monitor) => monitor.id === id)?.state ?? 'unknown';
+  return monitorOf(id)?.state ?? 'unknown';
+}
+
+/* ---------------- linked pages ---------------- */
+
+/** One line for the overview card; nothing at all for a site without discovery. */
+function pagesSummary(monitor) {
+  const pages = monitor?.pages ?? [];
+  if (!monitor?.discover || pages.length === 0) return '';
+  const count = (state) => pages.filter((page) => page.state === state).length;
+  const down = count('down');
+  const text = t('status.pages.summary', {
+    total: pages.length,
+    up: count('up'),
+    down,
+    unverifiable: count('unverifiable'),
+  });
+  return `<div class="small ${down > 0 ? 'pages-alarm' : 'muted'}" style="margin-top:4px">${escapeHtml(text)}</div>`;
+}
+
+function pageBadge(state) {
+  const cls = state === 'up' || state === 'down' ? state : '';
+  const known = ['up', 'down', 'unverifiable'].includes(state) ? state : 'unknown';
+  return `<span class="badge ${cls}"><span class="dot"></span>${escapeHtml(t(`status.pages.state.${known}`))}</span>`;
+}
+
+/**
+ * The pages the home page links to.
+ *
+ * "Can't verify" gets its explanation right here rather than in the docs: it is
+ * the one state a reader would otherwise take for a bug, and the honest answer —
+ * this page cannot be checked from outside — is the whole reason it exists.
+ */
+function pagesSection(monitor) {
+  if (!monitor?.discover) return '';
+  const pages = monitor.pages ?? [];
+  const head = `
+    <h2 style="font-size:15px;margin:30px 0 4px">${escapeHtml(t('status.pages'))}</h2>
+    <p class="small muted" style="margin:0 0 12px">${escapeHtml(t('status.pages.lede'))}</p>`;
+  if (pages.length === 0) {
+    return `${head}<div class="card small muted">${escapeHtml(t('status.pages.none'))}</div>`;
+  }
+
+  // Trouble first; the pages nobody can check go last, since nothing about them changes.
+  const order = { down: 0, unknown: 1, up: 2, unverifiable: 3 };
+  const sorted = [...pages].sort((a, b) => (order[a.state] ?? 1) - (order[b.state] ?? 1));
+  const rows = sorted.map((page) => {
+    const href = new URL(page.path, monitor.url).href;
+    const detail = page.state === 'down'
+      ? (page.reason === 'shell' ? t('status.pages.reason.shell') : page.message ?? page.reason ?? '')
+      : '';
+    const measured = page.status === null || page.status === undefined
+      ? ''
+      : `${page.status} · ${formatMs(page.ms)}`;
+    return `
+      <li class="page-row" data-state="${escapeHtml(page.state)}">
+        ${pageBadge(page.state)}
+        <span class="page-name">
+          ${page.name ? `<b>${escapeHtml(page.name)}</b>` : ''}
+          <a href="${escapeHtml(href)}" target="_blank" rel="noreferrer noopener">${escapeHtml(page.path)}</a>
+          ${detail ? `<span class="page-detail">${escapeHtml(detail)}</span>` : ''}
+        </span>
+        <span class="page-meta small muted" title="${escapeHtml(page.checkedAt ? formatTimestamp(page.checkedAt) : '')}">${escapeHtml(measured)}</span>
+      </li>`;
+  }).join('');
+
+  const shells = pages.some((page) => page.state === 'unverifiable');
+  return `${head}
+    <ul class="page-list card">${rows}</ul>
+    ${shells ? `<p class="small muted" style="margin:10px 0 0">${escapeHtml(t('status.pages.unverifiableNote'))}</p>` : ''}`;
 }
 
 function uptimeClass(pct) {
