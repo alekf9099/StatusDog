@@ -671,6 +671,40 @@ explaining an outage to whoever is reading is the point of writing one. Two deta
 
 Clearing both fields deletes the note.
 
+### The security tab
+
+`/security`, owner-only (the nav link appears only once an owner is signed in, and
+the data comes through `POST /api/admin/security` behind the same four gates as every
+other owner action). It shows what each site's security looks like **from outside**,
+on the responses the scheduler already receives:
+
+| Signal | Alerts when |
+| --- | --- |
+| Protection headers — HSTS (≥ 180 days), a CSP that restricts scripts, framing, `nosniff`, referrer and permissions policy | one that was in place disappears |
+| Software versions in `Server` / `X-Powered-By`, with unsupported PHP lines named | a version starts being shown |
+| Scripts and frames the home page loads from other hosts | a host never seen before appears (skimmers and injected redirects arrive this way) |
+| Defacement text (`hacked by`, `defaced by`, …) | it appears |
+| The TLS certificate's issuer | a replacement comes from a different issuer (a same-issuer renewal is routine) |
+| Certificate Transparency logs for the domain, via crt.sh, once a day | a certificate from an authority never used for the domain, or for a new host name |
+
+What it deliberately does **not** do:
+
+- **See attacks.** Hacking attempts, vulnerability scans and brute-forcing appear only
+  in the site's own access logs and firewall; a visitor cannot see who else is
+  knocking, and an "attacks blocked" figure here would be invented.
+- **Probe for exposed files** (`/.env`, `/.git/HEAD`, `phpinfo.php`). That is a
+  vulnerability scan: the target's firewall records it as an attack and may block the
+  monitor. It needs the site's security team to agree first.
+- **Publish findings.** Every fact is public, but a curated list of a site's weak
+  points does not belong on a page anyone can open.
+
+The first observation is a baseline, and a standing state never alerts — a header
+that has always been missing is a to-do item, while one that vanishes in a deploy is
+news. State lives in each target's stored entry, so this costs no extra key-value
+commands; the daily crt.sh lookup is shared by targets on the same domain, and a
+failed lookup is retried an hour later without affecting the check. Alerts are
+`kind: "security"`.
+
 ### Still a file
 
 The roster is not editable here. `monitors.json` stays a committed file for now, and

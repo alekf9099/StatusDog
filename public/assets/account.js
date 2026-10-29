@@ -39,7 +39,29 @@ function returnPath() {
   return `${location.pathname}${search}`;
 }
 
+/**
+ * The security tab's nav link, shown only to a signed-in owner. The page itself
+ * refuses everyone else; this just keeps a door nobody else can open out of sight.
+ */
+function renderOwnerLinks(nav, slot) {
+  let link = nav.querySelector('[data-owner-link="security"]');
+  if (!viewer?.signedIn) {
+    link?.remove();
+    return;
+  }
+  if (!link) {
+    link = document.createElement('a');
+    link.href = '/security';
+    link.dataset.ownerLink = 'security';
+    nav.insertBefore(link, slot);
+  }
+  link.textContent = t('nav.security');
+  if (location.pathname.replace(/\/$/, '') === '/security') link.setAttribute('aria-current', 'page');
+}
+
 function render(mount) {
+  const nav = mount.closest('.site-nav');
+  if (nav) renderOwnerLinks(nav, mount);
   if (!viewer?.configured) {
     mount.innerHTML = '';
     return;

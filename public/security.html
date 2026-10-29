@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="security.pageTitle">Security — StatusDog</title>
+<meta name="robots" content="noindex">
+<meta name="description" data-i18n-content="security.metaDescription" content="Outside-visible security signals for each monitored site. Owner only.">
+<link rel="stylesheet" href="/assets/statusdog.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <nav class="site-nav">
+      <a href="/" data-i18n="nav.home">Home</a>
+      <a href="/office" data-i18n="nav.office">Office</a>
+      <a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/status" data-i18n="nav.status">Status</a>
+      <a href="/alerts" data-i18n="nav.alerts">Alerts</a>
+      <a href="/docs" data-i18n="nav.docs">Docs</a>
+      <span class="lang-switch" role="group" data-i18n-aria-label="lang.switchLabel" aria-label="Language">
+        <button type="button" data-lang="en" data-i18n="lang.en">EN</button>
+        <button type="button" data-lang="ko" data-i18n="lang.ko">한국어</button>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding:32px 0 64px;max-width:900px">
+  <h1 style="font-size:28px;margin:0 0 8px" data-i18n="security.h1">Security</h1>
+  <p class="lede" data-i18n="security.lede"></p>
+  <div class="notice small" data-i18n-html="security.scopeHtml"></div>
+
+  <div id="security-body" style="margin-top:22px"></div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span data-i18n="footer.license">StatusDog · MIT</span>
+    <span class="spacer"></span>
+    <a href="/office" data-i18n="nav.office">Office</a>
+    <a href="/dashboard" data-i18n="footer.dashboard">Dashboard</a>
+    <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
+  </div>
+</footer>
+
+<script type="module">
+import { initI18n, t } from '/assets/i18n.js';
+import { escapeHtml, formatRelative, formatTimestamp, markCurrentNav, prettyUrl } from '/assets/statusdog.js';
+
+initI18n();
+markCurrentNav();
+
+const body = document.getElementById('security-body');
+/** `null` until asked; the report is only requested for a signed-in owner. */
+let viewer = null;
+let report = null;
+let failure = null;
+
+/** A source first seen within this long after the baseline is flagged as new. */
+const NEW_FOR_MS = 7 * 86_400_000;
+
+async function load() {
+  try {
+    const response = await fetch('/api/auth/me', { cache: 'no-store' });
+    viewer = response.ok ? await response.json() : { configured: false, signedIn: false };
+  } catch {
+    viewer = { configured: false, signedIn: false };
+  }
+  report = null;
+  failure = null;
+  if (viewer.signedIn) {
+    try {
+      const response = await fetch('/api/admin/security', {
+        method: 'POST',
+        // Same gates as every owner action: the header, then the session.
+        headers: { 'content-type': 'application/json', 'x-statusdog-admin': '1' },
+        body: '{}',
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? t('error.requestFailed', { status: response.status }));
+      report = payload;
+    } catch (err) {
+      failure = err.message;
+    }
+  }
+  render();
+}
+
+function render() {
+  if (!viewer) {
+    body.innerHTML = `<div class="small muted">${escapeHtml(t('security.loading'))}</div>`;
+    return;
+  }
+  if (!viewer.configured) {
+    body.innerHTML = `<div class="notice">${escapeHtml(t('security.notConfigured'))}</div>`;
+    return;
+  }
+  if (!viewer.signedIn) {
+    body.innerHTML = `
+      <div class="notice">
+        <p style="margin:0 0 8px">${escapeHtml(t('security.ownerOnly'))}</p>
+        <a href="/signin?next=${encodeURIComponent('/security')}">${escapeHtml(t('signin.in'))}</a>
+      </div>`;
+    return;
+  }
+  if (failure) {
+    body.innerHTML = `<div class="notice error">${escapeHtml(failure)}</div>`;
+    return;
+  }
+  if (!report) return;
+
+  body.innerHTML = report.targets.map(targetCard).join('');
+}
+
+function levelBadge(level) {
+  const cls = level === 'pass' ? 'up' : level === 'warn' ? 'warn' : '';
+  return `<span class="badge ${cls}"><span class="dot"></span>${escapeHtml(t(`security.level.${level}`))}</span>`;
+}
+
+function targetCard(target) {
+  const security = target.security;
+  const head = `
+    <div class="sec-head">
+      <h2>${escapeHtml(target.name)}</h2>
+      <a class="small" href="${escapeHtml(target.url)}" target="_blank" rel="noreferrer noopener">${escapeHtml(prettyUrl(target.url))}</a>
+      <span style="flex:1"></span>
+      ${security?.observedAt ? `<span class="small muted" title="${escapeHtml(formatTimestamp(security.observedAt))}">${escapeHtml(t('security.observed', { time: formatRelative(security.observedAt) }))}</span>` : ''}
+    </div>`;
+  if (!security || !security.observedAt) {
+    return `<section class="sec-card card">${head}<p class="small muted">${escapeHtml(t('security.none'))}</p>${ctBlock(security?.ct ?? null)}</section>`;
+  }
+
+  const warnings = security.headers.filter((check) => check.level === 'warn').length;
+  return `
+    <section class="sec-card card">
+      ${head}
+      <p class="small ${warnings > 0 ? '' : 'muted'}" style="margin:0 0 10px">${escapeHtml(t('security.headersSummary', {
+        pass: security.headers.filter((check) => check.level === 'pass').length,
+        total: security.headers.length,
+        warn: warnings,
+      }))}</p>
+      ${defacementBlock(security)}
+      <h3>${escapeHtml(t('security.headers'))}</h3>
+      <div class="scroll-x"><table class="sec-table">${security.headers.map(headerRow).join('')}</table></div>
+      ${sourcesBlock(security)}
+      ${certBlock(security.cert)}
+      ${ctBlock(security.ct)}
+    </section>`;
+}
+
+function headerRow(check) {
+  const note = check.note ? t(`security.note.${check.note}`) : '';
+  return `
+    <tr>
+      <th>${escapeHtml(t(`security.check.${check.id}`))}</th>
+      <td>${levelBadge(check.level)}</td>
+      <td>
+        ${check.value ? `<code>${escapeHtml(check.value)}</code>` : `<span class="muted">${escapeHtml(t('security.absent'))}</span>`}
+        ${note ? `<div class="sec-note">${escapeHtml(note)}</div>` : ''}
+        <div class="small muted">${escapeHtml(t(`security.why.${check.id}`))}</div>
+      </td>
+    </tr>`;
+}
+
+function defacementBlock(security) {
+  if (!security.defacement) return '';
+  return `<div class="notice error" style="margin:0 0 12px">${escapeHtml(t('security.defaced', {
+    time: formatRelative(security.defacement.at),
+    excerpt: security.defacement.excerpt,
+  }))}</div>`;
+}
+
+function sourcesBlock(security) {
+  const baseline = Date.parse(security.baselineAt ?? '');
+  const now = Date.now();
+  const rows = (security.sources ?? []).map((source) => {
+    const first = Date.parse(source.firstSeen);
+    const fresh = first > baseline && now - first < NEW_FOR_MS;
+    return `
+      <li>
+        <code>${escapeHtml(source.origin)}</code>
+        <span class="small muted">${escapeHtml(t(`security.kind.${source.kind}`))}</span>
+        ${fresh ? `<span class="badge warn"><span class="dot"></span>${escapeHtml(t('security.new'))}</span>` : ''}
+        <span class="small muted" title="${escapeHtml(formatTimestamp(source.firstSeen))}">${escapeHtml(
+          first > baseline ? t('security.firstSeen', { time: formatRelative(source.firstSeen) }) : t('security.sinceBaseline'),
+        )}</span>
+      </li>`;
+  }).join('');
+  return `
+    <h3>${escapeHtml(t('security.sources'))}</h3>
+    <p class="small muted" style="margin:0 0 8px">${escapeHtml(t('security.sourcesWhy'))}</p>
+    ${rows ? `<ul class="sec-list">${rows}</ul>` : `<p class="small muted">${escapeHtml(t('security.sourcesNone'))}</p>`}`;
+}
+
+function certBlock(cert) {
+  if (!cert) return '';
+  const changed = cert.changedAt
+    ? t('security.certChanged', {
+        time: formatRelative(cert.changedAt),
+        from: cert.previousIssuer ?? '—',
+      })
+    : t('security.certUnchanged');
+  return `
+    <h3>${escapeHtml(t('security.cert'))}</h3>
+    <table class="kv">
+      <tr><th>${escapeHtml(t('security.certIssuer'))}</th><td>${escapeHtml(cert.issuer ?? '—')}</td></tr>
+      <tr><th>${escapeHtml(t('security.certValidTo'))}</th><td>${escapeHtml(cert.validTo ?? '—')}</td></tr>
+      <tr><th>${escapeHtml(t('security.certHistory'))}</th><td>${escapeHtml(changed)}</td></tr>
+    </table>`;
+}
+
+function ctBlock(ct) {
+  if (!ct) return '';
+  const status = ct.checkedAt
+    ? t('security.ctChecked', { time: formatRelative(ct.checkedAt), count: ct.seen ?? 0 })
+    : t('security.ctNever');
+  const recent = (ct.recent ?? []).slice().reverse().map((cert) => `
+    <li>
+      <a href="https://crt.sh/?id=${encodeURIComponent(cert.id)}" target="_blank" rel="noreferrer noopener">${escapeHtml(cert.names.slice(0, 3).join(', '))}</a>
+      <span class="small muted">${escapeHtml(cert.issuerOrg)} · ${escapeHtml(formatRelative(cert.firstSeen))}</span>
+      ${cert.newIssuer ? `<span class="badge warn"><span class="dot"></span>${escapeHtml(t('security.ctNewIssuer'))}</span>` : ''}
+      ${cert.newNames?.length ? `<span class="badge"><span class="dot"></span>${escapeHtml(t('security.ctNewName'))}</span>` : ''}
+    </li>`).join('');
+  return `
+    <h3>${escapeHtml(t('security.ct'))}</h3>
+    <p class="small muted" style="margin:0 0 8px">${escapeHtml(t('security.ctWhy', { domain: ct.domain }))}</p>
+    <table class="kv">
+      <tr><th>${escapeHtml(t('security.ctStatus'))}</th><td>${escapeHtml(status)}${ct.error ? ` <span class="sec-note">(${escapeHtml(t('security.ctError'))})</span>` : ''}</td></tr>
+      <tr><th>${escapeHtml(t('security.ctIssuers'))}</th><td>${escapeHtml((ct.issuers ?? []).join(', ') || '—')}</td></tr>
+      <tr><th>${escapeHtml(t('security.ctNames'))}</th><td>${escapeHtml((ct.names ?? []).join(', ') || '—')}</td></tr>
+    </table>
+    ${recent ? `<ul class="sec-list">${recent}</ul>` : ''}`;
+}
+
+load();
+document.addEventListener('statusdog:languagechange', render);
+// Signing out in the header should take the report away immediately.
+document.addEventListener('statusdog:accountchange', load);
+</script>
+<script type="module" src="/assets/account.js"></script>
+</body>
+</html>

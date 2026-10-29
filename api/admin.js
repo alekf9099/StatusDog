@@ -18,11 +18,14 @@
  * Actions:
  *   note        — the cause and remedy of an incident
  *   test-alert  — send a test message to every configured destination
+ *   security    — read the security tab; a POST like the rest, so it sits behind
+ *                 the same four gates rather than a weaker read-only path
  */
 import { authorize, sameOriginWrite } from '../dist/auth/session.js';
 import { findNote, publicNote, readNotes, upsertNote, writeNotes } from '../dist/store/notes.js';
 import { resolveRoster } from '../dist/store/roster.js';
 import { kvEnvNames, kvFromEnv } from '../dist/store/kv.js';
+import { readAll } from '../dist/store/uptime.js';
 import { dispatchAlerts, notifiersFromEnv } from '../dist/notify/dispatch.js';
 import { originOf } from '../dist/util/origin.js';
 import { ROSTER } from '../dist/roster.data.js';
@@ -174,6 +177,51 @@ async function testAlert(req, res, email) {
   });
 }
 
+/**
+ * What the security tab shows.
+ *
+ * Behind the owner gate even though every fact in it is public: anyone can read a
+ * site's headers, but a curated list of what is missing is a to-do list for an
+ * attacker, and it does not belong on a page anyone can open.
+ */
+async function security(req, res) {
+  let targets;
+  try {
+    targets = resolveRoster(ROSTER);
+  } catch (err) {
+    res.status(500).json({ error: `Invalid monitors.json: ${err.message}` });
+    return;
+  }
+  const kv = kvFromEnv();
+  if (!kv) {
+    res.status(503).json({
+      error: 'No key-value store is configured, so nothing has been observed yet.',
+      hint: `Set one of these credential pairs: ${kvEnvNames().join(', ')}`,
+    });
+    return;
+  }
+  try {
+    const entries = await readAll(kv, targets);
+    res.status(200).json({
+      generatedAt: new Date().toISOString(),
+      targets: entries.map((entry) => {
+        const security = entry.security;
+        // seenIds is bookkeeping for the next lookup, and the bulk of the value.
+        const ct = security?.ct ? { ...security.ct, seenIds: undefined, seen: security.ct.seenIds?.length ?? 0 } : null;
+        return {
+          id: entry.id,
+          name: entry.name,
+          url: entry.url,
+          state: entry.state,
+          security: security ? { ...security, ct } : null,
+        };
+      }),
+    });
+  } catch (err) {
+    res.status(502).json({ error: `Could not read the store: ${err.message}` });
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('cache-control', 'no-store');
 
@@ -213,6 +261,8 @@ export default async function handler(req, res) {
       return note(req, res, body, auth.email);
     case 'test-alert':
       return testAlert(req, res, auth.email);
+    case 'security':
+      return security(req, res);
     default:
       res.status(404).json({ error: 'Unknown admin action.' });
   }
