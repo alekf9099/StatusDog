@@ -82,8 +82,11 @@ behind a web front end.
 
 [`/office`](https://status-dog.vercel.app/office) seats one animal colleague per monitored
 site — mostly dogs, with a cat, fox, panda and a few others — and lets its behaviour
-carry the status. The portrait cannot change its face, so each mood is a different way
-of moving plus a prop: coffee, sweat, a question mark, a beacon, or zzz. It reads the same data as the dashboard;
+carry the status. Each one is a 3D portrait on a drawn body — a coat in its own colour,
+arms, and paws in its own fur on the keyboard. The face cannot change, so each mood is a
+different way of moving plus a prop: typing over a coffee, hammering the keys in a sweat,
+looking around with a question mark, paws to its cheeks under a beacon, or slumped with
+zzz. It reads the same data as the dashboard;
 what it adds is a mood the table has no column for.
 
 | Mood | Meaning |

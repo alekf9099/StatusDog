@@ -29,18 +29,52 @@ function streakLine(tenure) {
   return `<div class="desk-streak${tenure.record ? ' record' : ''}">${escapeHtml(text)}</div>`;
 }
 
+/** The colours a colleague's body is drawn in: its own fur, and the coat it wears. */
+function bodyStyle(dog) {
+  const { species, coat } = dog;
+  return [
+    `--beat:${dog.beatOffsetMs}ms`,
+    `--fur:${species.fur}`,
+    `--fur-shade:${species.furShade}`,
+    `--coat:${coat.body}`,
+    `--coat-shade:${coat.ear}`,
+    `--coat-trim:${coat.patch}`,
+  ].join(';');
+}
+
+function faceHtml(dog, className) {
+  return `<img class="${className}" src="${speciesImage(dog.species.key)}" alt="" width="160" height="160" decoding="async" draggable="false">`;
+}
+
 /**
- * The animal, behind the desk.
+ * The animal, at the desk.
  *
- * A Fluent Emoji 3D portrait (MIT, Microsoft) in a wrapper that CSS animates per
- * mood. The image is the same for every mood on purpose — it cannot change its
- * face — so how it moves and what appears beside it carry the state instead.
- * Its name is in the desk's own label, so the image itself is decorative.
+ * The face is a Fluent Emoji 3D portrait (MIT, Microsoft); the set only has
+ * heads, so the body under it — a coat, and arms ending in paws of the animal's
+ * own fur — is drawn here in the same soft, shaded style.
+ *
+ * It comes in two layers because the desk sits between them: the torso and head
+ * behind the desk, the arms in front of it so the paws can rest on the keyboard.
+ * Both layers bob to the same keyframes on the same delay, so they move as one.
+ *
+ * The face is the same for every mood on purpose — it cannot change — so how
+ * the whole body moves and what appears beside it carry the state instead.
+ * Its name is in the desk's own label, so all of it is decorative.
  */
 function animalHtml(dog) {
+  const style = bodyStyle(dog);
   return `
-    <span class="desk-dog dog" data-species="${escapeHtml(dog.species.key)}" style="--beat:${dog.beatOffsetMs}ms" aria-hidden="true">
-      <img src="${speciesImage(dog.species.key)}" alt="" width="160" height="160" decoding="async" draggable="false">
+    <span class="desk-dog" data-species="${escapeHtml(dog.species.key)}" style="${style}" aria-hidden="true">
+      <span class="dog-bob">
+        <span class="dog-torso"></span>
+        ${faceHtml(dog, 'dog-head')}
+      </span>
+    </span>
+    <span class="dog-arms" style="${style}" aria-hidden="true">
+      <span class="dog-bob">
+        <span class="dog-arm arm-l"><span class="dog-sleeve"><span class="dog-paw"></span></span></span>
+        <span class="dog-arm arm-r"><span class="dog-sleeve"><span class="dog-paw"></span></span></span>
+      </span>
     </span>`;
 }
 
@@ -103,15 +137,16 @@ export function renderDogWorkerCard(worker) {
         ${propsHtml()}
         <div class="desk-monitor" aria-hidden="true"></div>
         <div class="desk-monitor-stand" aria-hidden="true"></div>
+        <div class="desk-keyboard" aria-hidden="true"></div>
         <div class="desk-furniture" aria-hidden="true"></div>
       </div>
       ${plate(worker)}
     </button>`;
 }
 
-/** The same dog, small, for the report header. */
+/** The same face, small, for the report header: a portrait, not the whole scene. */
 export function renderDogChip(worker) {
-  return `<div class="dog-chip" data-mood="${escapeHtml(worker.mood.mood)}">${animalHtml(worker.dog)}</div>`;
+  return `<div class="dog-chip" data-mood="${escapeHtml(worker.mood.mood)}" aria-hidden="true">${faceHtml(worker.dog, 'chip-face')}</div>`;
 }
 
 /**
