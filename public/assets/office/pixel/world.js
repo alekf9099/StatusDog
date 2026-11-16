@@ -242,22 +242,51 @@ export function findPath(grid, from, to) {
     x: (at % grid.cols) * CELL + CELL / 2,
     y: Math.floor(at / grid.cols) * CELL + CELL / 2,
   }));
+  const route = smooth(grid, from, points);
   // Finish on the exact spot, not the middle of its cell.
-  points.push({ x: to.x, y: to.y });
-  return simplify(points);
+  route.push({ x: to.x, y: to.y });
+  return route;
 }
 
-/** Drop the points in the middle of straight runs; the walk looks the same and costs less. */
-function simplify(points) {
-  if (points.length < 3) return points;
-  const out = [points[0]];
-  for (let i = 1; i < points.length - 1; i++) {
-    const a = out[out.length - 1];
-    const b = points[i];
-    const c = points[i + 1];
-    const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
-    if (cross !== 0) out.push(b);
+/**
+ * Is the straight line from a to b clear for someone about ten pixels wide?
+ * Sampled every two pixels, checking either side of the line as well as on it.
+ */
+export function lineClear(grid, a, b) {
+  const dist = Math.hypot(b.x - a.x, b.y - a.y);
+  const steps = Math.max(1, Math.ceil(dist / 2));
+  for (let i = 1; i <= steps; i++) {
+    const x = a.x + ((b.x - a.x) * i) / steps;
+    const y = a.y + ((b.y - a.y) * i) / steps;
+    for (const [ox, oy] of [[0, 0], [-3, 0], [3, 0], [0, -2], [0, 2]]) {
+      const c = Math.floor((x + ox) / CELL);
+      const r = Math.floor((y + oy) / CELL);
+      if (!isOpen(grid, c, r)) return false;
+    }
   }
-  out.push(points[points.length - 1]);
+  return true;
+}
+
+/**
+ * Straighten a cell-by-cell route: from each corner, head for the furthest
+ * point still in plain sight. A grid route moves in 45° steps like a chess
+ * piece; this one cuts across the floor the way a person would.
+ */
+function smooth(grid, from, points) {
+  const out = [];
+  let anchor = from;
+  let i = 0;
+  while (i < points.length) {
+    let far = i;
+    for (let j = points.length - 1; j > i; j--) {
+      if (lineClear(grid, anchor, points[j])) {
+        far = j;
+        break;
+      }
+    }
+    out.push(points[far]);
+    anchor = points[far];
+    i = far + 1;
+  }
   return out;
 }

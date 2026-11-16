@@ -18,7 +18,11 @@ const MAX_HISTORY = 480;
 const DEFAULT_HISTORY = 60;
 
 export default async function handler(req, res) {
-  res.setHeader('cache-control', 'no-store');
+  // Every open office, dashboard and phone polls this, and each answer costs
+  // storage reads (one per target, plus the scheduler). The data only changes
+  // when a check runs, minutes apart, so the edge may share one answer for half
+  // a minute; browsers themselves never keep it.
+  res.setHeader('cache-control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=30');
 
   let targets;
   try {

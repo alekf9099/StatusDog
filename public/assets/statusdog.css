@@ -100,6 +100,54 @@ h3 { font-size: 15px; margin: 0 0 8px; }
 section.block { padding: 44px 0; }
 section.block + section.block { border-top: 1px solid var(--border); }
 
+/* ---------- the watch (assets/watch.js) ---------- */
+
+/* A warning strip inside the sticky header, so it stays in view on a phone. */
+.watch-banner { font-size: 13.5px; line-height: 1.45; }
+.watch-banner[data-level="down"] { background: #d73a31; color: #fff; }
+.watch-banner[data-level="failing"] { background: #c4661f; color: #fff; }
+.watch-banner[data-level="slow"] { background: #e3a21a; color: #1b1f24; }
+.watch-banner[data-level="offline"] { background: var(--bg-soft); color: var(--fg); border-top: 1px solid var(--border); }
+.watch-inner { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 0; }
+.watch-icon {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, .25);
+}
+.watch-banner[data-level="down"] .watch-icon { animation: watch-blink 1s steps(2, end) infinite; }
+@keyframes watch-blink { 50% { opacity: .2; } }
+.watch-text { flex: 1 1 auto; min-width: 0; }
+.watch-part strong { font-weight: 700; }
+.watch-sep { margin: 0 8px; opacity: .6; }
+.watch-more { flex: none; color: inherit; font-weight: 650; text-decoration: underline; white-space: nowrap; }
+.watch-dismiss {
+  flex: none;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.watch-dismiss:hover { filter: none; opacity: .75; }
+@media (prefers-reduced-motion: reduce) {
+  .watch-banner[data-level="down"] .watch-icon { animation: none; }
+}
+
+/* "Install app", in the footer, only where the browser can install the site. */
+.install-app {
+  padding: 5px 12px;
+  font-size: 13px;
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+.install-app:hover { background: var(--bg-soft); filter: none; }
+.install-hint { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--muted); }
+
 /* ---------- home hero ---------- */
 
 /* The check form on the left, the office live on the right; stacked on phones. */

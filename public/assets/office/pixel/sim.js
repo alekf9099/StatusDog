@@ -19,8 +19,15 @@ import { findPath } from './world.js';
 
 export const WALK_SPEED = 22;
 export const RUN_SPEED = 48;
-/** Steps per second of the walk cycle at walking pace. */
-const STRIDE_HZ = 7;
+/** How fast a colleague gets up to speed, and how hard it can stop (px/s²). */
+const ACCEL = 110;
+const DECEL = 90;
+/** Pixels of floor per frame of the walk cycle, so feet never slide. */
+const STRIDE_PX = 4;
+/** Getting up from a chair takes a moment before the first step. */
+const RISE_S = 0.3;
+/** Nobody walks through a colleague: within this distance ahead, they slow to let them by. */
+const PERSONAL_SPACE = 9;
 
 const between = (rng, lo, hi) => lo + rng() * (hi - lo);
 const pick = (rng, list) => list[Math.floor(rng() * list.length) % list.length];
@@ -39,6 +46,10 @@ export function createAgent(uid, seat) {
     path: null,
     clock: 0,
     stride: 0,
+    /** Current walking speed, ramped up and down rather than switched. */
+    speed: 0,
+    /** Seconds to wait before moving, e.g. while getting up. */
+    delay: 0,
     /** What the renderer shows: sitting at the desk, asleep, and so on. */
     sitting: true,
     sleeping: false,
@@ -197,8 +208,16 @@ export function plan(agent, world, rng, others = []) {
   }
 }
 
+/**
+ * Face the way you are going — with some reluctance to change, so a walk at
+ * 45° does not flicker between the side view and the back view every frame.
+ */
 function faceToward(agent, dx, dy) {
-  if (Math.abs(dx) > Math.abs(dy)) {
+  const ax = Math.abs(dx);
+  const ay = Math.abs(dy);
+  const keepSide = agent.dir === 'side' && ax > ay * 0.6;
+  const keepVertical = agent.dir !== 'side' && ay > ax * 0.6;
+  if (keepSide || (!keepVertical && ax > ay)) {
     agent.dir = 'side';
     agent.flip = dx < 0;
   } else {
@@ -218,6 +237,7 @@ function applyFace(agent, face) {
 }
 
 function begin(agent, task, world) {
+  const wasSeated = agent.sitting;
   agent.task = task;
   agent.clock = 0;
   agent.sitting = false;
@@ -226,6 +246,9 @@ function begin(agent, task, world) {
   agent.shake = false;
   agent.bubble = null;
   if (task.kind === 'go') {
+    // Someone in a chair stands up before they set off.
+    agent.delay = wasSeated ? RISE_S : 0;
+    agent.speed = 0;
     agent.path = findPath(world.grid, agent, task.to);
   } else if (task.kind === 'sit') {
     agent.x = agent.seat.x;
@@ -261,27 +284,46 @@ export function step(agent, dt, world, rng, others = []) {
   agent.clock += dt;
 
   if (task.kind === 'go') {
-    const speed = task.run ? RUN_SPEED : WALK_SPEED;
-    let budget = speed * dt;
+    if (agent.delay > 0) {
+      agent.delay -= dt;
+      return;
+    }
+    const top = task.run ? RUN_SPEED : WALK_SPEED;
+    // Ease in, and ease out so as to stop on the spot rather than at it.
+    const remaining = pathLength(agent);
+    const braking = Math.sqrt(2 * DECEL * remaining);
+    let target = Math.min(top, Math.max(braking, 6));
+    if (blockedAhead(agent, others)) target = Math.min(target, top * 0.25);
+    agent.speed = agent.speed < target
+      ? Math.min(target, agent.speed + ACCEL * dt)
+      : Math.max(target, agent.speed - DECEL * dt);
+
+    let budget = agent.speed * dt;
+    let moved = 0;
     while (budget > 0 && agent.path && agent.path.length > 0) {
       const next = agent.path[0];
       const dx = next.x - agent.x;
       const dy = next.y - agent.y;
       const dist = Math.hypot(dx, dy);
-      if (dist > 0.01) faceToward(agent, dx, dy);
+      if (dist > 0.5) faceToward(agent, dx, dy);
       if (dist <= budget) {
         agent.x = next.x;
         agent.y = next.y;
         agent.path.shift();
         budget -= dist;
+        moved += dist;
       } else {
         agent.x += (dx / dist) * budget;
         agent.y += (dy / dist) * budget;
+        moved += budget;
         budget = 0;
       }
     }
-    agent.stride += dt * STRIDE_HZ * (speed / WALK_SPEED);
-    if (!agent.path || agent.path.length === 0) agent.task = null;
+    agent.stride += moved / STRIDE_PX;
+    if (!agent.path || agent.path.length === 0) {
+      agent.task = null;
+      agent.speed = 0;
+    }
     return;
   }
 
@@ -289,9 +331,47 @@ export function step(agent, dt, world, rng, others = []) {
   if (agent.clock >= task.dur) agent.task = null;
 }
 
-/** Which walk frame to show. */
+function pathLength(agent) {
+  let total = 0;
+  let from = agent;
+  for (const point of agent.path ?? []) {
+    total += Math.hypot(point.x - from.x, point.y - from.y);
+    from = point;
+  }
+  return total;
+}
+
+/**
+ * Is someone standing or walking just ahead? Only one of two people who meet
+ * gives way — the one with the later name — so they never both stop dead.
+ */
+function blockedAhead(agent, others) {
+  const next = agent.path?.[0];
+  if (!next) return false;
+  const hx = next.x - agent.x;
+  const hy = next.y - agent.y;
+  const len = Math.hypot(hx, hy) || 1;
+  for (const other of others) {
+    if (other === agent || other.sitting) continue;
+    const ox = other.x - agent.x;
+    const oy = other.y - agent.y;
+    const dist = Math.hypot(ox, oy);
+    if (dist > PERSONAL_SPACE || dist < 0.01) continue;
+    const ahead = (ox * hx + oy * hy) / (len * dist);
+    if (ahead > 0.5 && (other.task?.kind !== 'go' || agent.uid > other.uid)) return true;
+  }
+  return false;
+}
+
+/** Which walk frame to show. Still while getting up from a chair. */
 export function walkPose(agent) {
-  if (agent.task?.kind !== 'go') return 'stand';
+  if (agent.task?.kind !== 'go' || agent.delay > 0) return 'stand';
   const phase = Math.floor(agent.stride) % 4;
   return phase === 0 ? 'stepA' : phase === 2 ? 'stepB' : 'stand';
+}
+
+/** The little lift of each step: up on the passing frames, down on the strides. */
+export function walkBob(agent) {
+  if (agent.task?.kind !== 'go' || agent.delay > 0 || agent.speed < 1) return 0;
+  return Math.floor(agent.stride) % 2 === 1 ? -1 : 0;
 }

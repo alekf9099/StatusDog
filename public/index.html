@@ -6,7 +6,11 @@
 <title data-i18n="home.pageTitle">StatusDog — is your site up?</title>
 <meta name="description" data-i18n-content="home.metaDescription" content="Check any website's status, response time, redirects and SSL certificate.">
 <link rel="stylesheet" href="/assets/statusdog.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#251d2b">
+<link rel="apple-touch-icon" href="/assets/app/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="StatusDog">
+<link rel="icon" type="image/png" href="/assets/app/favicon-32.png">
 </head>
 <body>
 
@@ -161,9 +165,13 @@ function renderHeroOffice() {
 
 async function loadHeroOffice() {
   try {
-    const response = await fetch('/api/monitors?history=12', { cache: 'no-store' });
+    // Not no-store: the API is cached at the edge for half a minute, and every
+    // visitor sharing that one answer is what keeps storage reads affordable.
+    const response = await fetch('/api/monitors?history=12');
     if (!response.ok) return;
-    heroMonitors = (await response.json()).monitors ?? [];
+    const payload = await response.json();
+    heroMonitors = payload.monitors ?? [];
+    document.dispatchEvent(new CustomEvent('statusdog:monitors', { detail: payload }));
     renderHeroOffice();
   } catch {
     // The room just stays as it was; the rest of the page does not depend on it.
@@ -236,6 +244,8 @@ function renderResult(result) {
 </script>
 
 <script type="module" src="/assets/account.js"></script>
+
+<script type="module" src="/assets/watch.js"></script>
 
 </body>
 </html>

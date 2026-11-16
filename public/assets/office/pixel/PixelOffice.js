@@ -11,7 +11,7 @@
  */
 import { FRAME_H, FRAME_W, drawFrame, spriteSheet } from './sprites.js';
 import { CELL, WALL, baseline, buildLayout } from './world.js';
-import { createAgent, reseat, setMood, settle, step, walkPose } from './sim.js';
+import { createAgent, reseat, setMood, settle, step, walkBob, walkPose } from './sim.js';
 
 const MOOD_COLOUR = {
   working: '#3fb950',
@@ -596,6 +596,7 @@ export class PixelOffice {
     if (agent.shake && !this.reduced.matches) ox = Math.floor(this.time * 20) % 2 === 0 ? -1 : 1;
     if (agent.sleeping && !this.reduced.matches) oy = Math.floor(this.time * 0.8 + agent.seat.x) % 2;
     if (agent.typing === 'fast' && agent.sitting && !this.reduced.matches) oy = Math.floor(this.time * 8) % 2;
+    if (!agent.sitting) oy += walkBob(agent);
 
     // A shadow under anyone on their feet.
     if (!agent.sitting) rect(ctx, 'rgba(40, 20, 5, 0.25)', agent.x - 5, agent.y - 1, 10, 2);

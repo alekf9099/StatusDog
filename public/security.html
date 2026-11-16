@@ -7,7 +7,11 @@
 <meta name="robots" content="noindex">
 <meta name="description" data-i18n-content="security.metaDescription" content="Outside-visible security signals for each monitored site. Owner only.">
 <link rel="stylesheet" href="/assets/statusdog.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#251d2b">
+<link rel="apple-touch-icon" href="/assets/app/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="StatusDog">
+<link rel="icon" type="image/png" href="/assets/app/favicon-32.png">
 </head>
 <body>
 
@@ -242,5 +246,7 @@ document.addEventListener('statusdog:languagechange', render);
 document.addEventListener('statusdog:accountchange', load);
 </script>
 <script type="module" src="/assets/account.js"></script>
+<script type="module" src="/assets/watch.js"></script>
+
 </body>
 </html>

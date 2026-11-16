@@ -623,6 +623,16 @@ export const LOCALES = {
     'office.pageTitle': 'The Office — StatusDog',
     'office.metaDescription':
       'A room of animal colleagues, one per monitored site. Each one shows how its site is doing; click a desk for the report.',
+    'watch.down': 'Down:',
+    'watch.failing': 'Connection errors:',
+    'watch.slow': 'Slow to respond:',
+    'watch.others': { one: 'and {count} more', other: 'and {count} more' },
+    'watch.offline': 'You are offline — the status shown may be out of date.',
+    'watch.unreachable': 'StatusDog cannot be reached right now — the status shown may be out of date.',
+    'watch.more': 'Details',
+    'watch.dismiss': 'Dismiss',
+    'install.button': 'Install app',
+    'install.iosHtml': 'In Safari, tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.',
     'office.h1': 'StatusDog Office',
     'office.hint': 'Click a colleague for their report',
     'office.lede':
@@ -1406,6 +1416,16 @@ export const LOCALES = {
     'office.pageTitle': '오피스 — StatusDog',
     'office.metaDescription':
       '감시 중인 사이트마다 동물 동료가 한 명. 각자 담당 사이트의 상태를 몸으로 보여줍니다. 책상을 클릭하면 리포트가 열립니다.',
+    'watch.down': '장애:',
+    'watch.failing': '접속 오류:',
+    'watch.slow': '응답 지연:',
+    'watch.others': { one: '외 {count}곳', other: '외 {count}곳' },
+    'watch.offline': '인터넷 연결이 끊겼습니다 — 보이는 상태가 최신이 아닐 수 있습니다.',
+    'watch.unreachable': 'StatusDog 서버에 연결할 수 없습니다 — 보이는 상태가 최신이 아닐 수 있습니다.',
+    'watch.more': '자세히',
+    'watch.dismiss': '닫기',
+    'install.button': '앱 설치',
+    'install.iosHtml': 'Safari에서 <strong>공유</strong> 버튼을 누른 뒤 <strong>홈 화면에 추가</strong>를 고르세요.',
     'office.h1': 'StatusDog 오피스',
     'office.hint': '동료를 클릭하면 리포트가 열립니다',
     'office.lede':

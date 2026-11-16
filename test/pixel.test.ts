@@ -218,6 +218,80 @@ test('a long working day never leaves anyone inside the furniture', () => {
   }
 });
 
+/* ---------- walking ---------- */
+
+test('routes cut across open floor instead of stepping cell by cell', () => {
+  const layout = world.buildLayout(1, 336);
+  const from = layout.spots.rack;
+  const to = layout.spots.sofa[0];
+  const route = world.findPath(layout.grid, from, to);
+  // A cell-by-cell route across the room would have dozens of points.
+  assert.ok(route.length <= 5, `a handful of legs, got ${route.length}`);
+  // …and at least one of them runs at an angle a grid could not take.
+  let from2 = from;
+  const angled = route.some((point) => {
+    const dx = Math.abs(point.x - from2.x);
+    const dy = Math.abs(point.y - from2.y);
+    from2 = point;
+    return dx > 0 && dy > 0 && Math.abs(dx - dy) > 4;
+  });
+  assert.ok(angled, 'walks at a natural angle');
+});
+
+type Walker = Agent & { speed: number; stride: number; dir: string; delay: number };
+
+test('a walk speeds up, slows down, and keeps its feet in step with the floor', () => {
+  const layout = freshRoom(1);
+  const agent = sim.createAgent('a', layout.seats[0]) as Walker;
+  sim.setMood(agent, 'alarmed', layout);
+  const speeds: number[] = [];
+  let travelled = 0;
+  let last = { x: agent.x, y: agent.y };
+  for (let t = 0; t < 6; t += 0.05) {
+    sim.step(agent, 0.05, layout, seeded(), [agent]);
+    if (agent.task?.kind !== 'go') break;
+    speeds.push(agent.speed);
+    travelled += Math.hypot(agent.x - last.x, agent.y - last.y);
+    last = { x: agent.x, y: agent.y };
+  }
+  const moving = speeds.filter((speed) => speed > 0);
+  assert.ok(moving[0] < 10, 'starts slowly');
+  assert.ok(Math.max(...moving) > 40, 'gets up to a run');
+  assert.ok(moving[moving.length - 1] < Math.max(...moving), 'slows before arriving');
+  assert.ok(Math.abs(agent.stride - travelled / 4) < 1, 'one walk frame per four pixels');
+});
+
+test('getting up from the chair takes a moment', () => {
+  const layout = freshRoom(1);
+  const agent = sim.createAgent('a', layout.seats[0]) as Walker;
+  sim.setMood(agent, 'alarmed', layout);
+  sim.step(agent, 0.05, layout, seeded(), [agent]);
+  sim.step(agent, 0.1, layout, seeded(), [agent]);
+  assert.deepEqual({ x: agent.x, y: agent.y }, { x: layout.seats[0].x, y: layout.seats[0].y }, 'still standing up');
+});
+
+test('two colleagues meeting head-on do not both freeze', () => {
+  const layout = freshRoom(2);
+  const a = sim.createAgent('a', layout.seats[0]) as Walker;
+  const b = sim.createAgent('b', layout.seats[1]) as Walker;
+  a.sitting = false;
+  b.sitting = false;
+  a.x = 100; a.y = 130; b.x = 106; b.y = 130;
+  a.mood = b.mood = 'working';
+  a.queue = [{ kind: 'go', to: { x: 140, y: 130 } }] as never;
+  b.queue = [{ kind: 'go', to: { x: 60, y: 130 } }] as never;
+  // Once there, each plans its next errand, so record the crossing as it happens.
+  let aPassed = false;
+  let bPassed = false;
+  for (let t = 0; t < 8; t += 0.05) {
+    sim.step(a, 0.05, layout, seeded(), [a, b]);
+    sim.step(b, 0.05, layout, seeded(), [a, b]);
+    aPassed ||= a.x > 130;
+    bPassed ||= b.x < 70;
+  }
+  assert.ok(aPassed && bPassed, 'both got past each other');
+});
+
 /* ---------- sprites ---------- */
 
 test('every frame of every species is a full 16×20 grid with known colours', () => {

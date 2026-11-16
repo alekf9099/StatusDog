@@ -166,6 +166,29 @@ while a tab is open.
 **What the site cannot do.** Traffic and visitor counts are not measurable from
 outside; that needs the site's own analytics or server logs.
 
+### On a phone
+
+The site installs as an app — "Install app" in the footer on Android and desktop
+Chrome, or Safari's *Share → Add to Home Screen* on iOS — with the office dog as
+its icon. On every page, open or installed, a warning strip under the header says
+when a monitored site is **down**, has **connection errors** (a failed check being
+re-checked), or is **slow to respond**, and links to its status page. A phone
+buzzes once when something new goes wrong, the installed app's icon shows a count
+where the platform supports badges, and the strip also says when the phone itself
+is offline or StatusDog cannot be reached, so stale numbers are never mistaken for
+current ones. Dismissing it lasts until the trouble changes.
+
+This works while the app or a tab is open. For alerts when nothing is open, use
+the [webhooks](#alerts) — Slack, Discord and Google Chat deliver them to a phone
+through their own apps.
+
+The warning reads the same roster as the office and reuses it when the page has
+already fetched it. `/api/monitors` is cached at the edge for 30 seconds, so many
+open pages share one set of storage reads rather than each spending their own.
+The service worker (`public/sw.js`) is network-first and never caches the API:
+offline, it can open the last pages seen, but never presents an old status as
+current.
+
 Run the site locally with:
 
 ```bash

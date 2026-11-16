@@ -191,6 +191,8 @@ export class OfficeDashboard {
       }
       this.serverPayload = payload;
       this.serverError = null;
+      // The site-wide warning (watch.js) reads this instead of asking again.
+      document.dispatchEvent(new CustomEvent('statusdog:monitors', { detail: payload }));
     } catch (err) {
       this.serverPayload = null;
       this.serverError = err.message;
