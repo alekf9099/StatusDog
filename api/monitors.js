@@ -55,6 +55,7 @@ export default async function handler(req, res) {
         consecutiveFailures: 0,
         maxResponseTimeMs: target.maxResponseTimeMs,
         discover: target.discoverLimit > 0,
+        type: target.type,
         lastResult: null,
         lastDispute: null,
         pages: [],
@@ -72,6 +73,7 @@ export default async function handler(req, res) {
     ]);
     const limits = new Map(targets.map((target) => [target.id, target.maxResponseTimeMs]));
     const discovering = new Set(targets.filter((target) => target.discoverLimit > 0).map((target) => target.id));
+    const types = new Map(targets.map((target) => [target.id, target.type]));
     // No fallback here: with the env var unset the threshold comes from the
     // cadence this deployment actually runs at, which is the point.
     const configured = process.env.STATUSDOG_STALE_AFTER_MINUTES
@@ -95,6 +97,8 @@ export default async function handler(req, res) {
         maxResponseTimeMs: limits.get(entry.id) ?? 0,
         // Whether linked pages are checked, so "none found" can be told from "off".
         discover: discovering.has(entry.id),
+        // Website or app API: the office and the dashboard label them differently.
+        type: types.get(entry.id) ?? 'web',
         lastResult: entry.lastResult,
         // The last check two vantage points could not agree on. Reported so a
         // reader can see the network was unclear rather than being shown nothing.

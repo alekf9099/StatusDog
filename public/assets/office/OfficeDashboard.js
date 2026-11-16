@@ -25,6 +25,7 @@ import { dogOverrides } from './overrides.js';
 import { randomDogAssignment } from './dogs.js';
 import { normalizeUrlForDisplay } from './url.js';
 import { PixelOffice } from './pixel/PixelOffice.js';
+import { expectFor, typeSwitch } from '../target-type.js';
 
 const POLL_MS = 60_000;
 
@@ -85,6 +86,10 @@ export class OfficeDashboard {
 
     document.addEventListener('statusdog:languagechange', () => this.render());
 
+    this.hire.kind = this.hire.form
+      ? typeSwitch(this.hire.form, this.hire.url, { fieldAfter: this.hire.url.closest('label') })
+      : null;
+
     this.hire.form?.addEventListener('submit', (event) => {
       event.preventDefault();
       void this.hireDog();
@@ -116,7 +121,10 @@ export class OfficeDashboard {
     submit.textContent = t('office.hire.hiring');
 
     try {
-      const { monitor, added } = store.add(display);
+      const { monitor, added } = store.add(display, {
+        type: this.hire.kind?.type,
+        expect: this.hire.kind?.expect,
+      });
       const uid = `intern:${monitor.id}`;
 
       if (!added) {
@@ -208,7 +216,7 @@ export class OfficeDashboard {
 
   async runIntern(monitor) {
     try {
-      store.record(monitor.id, await check(monitor.url));
+      store.record(monitor.id, await check(monitor.url, { expect: expectFor(monitor) }));
     } catch (err) {
       // A rejected request is itself a result — record it rather than lose it.
       store.record(monitor.id, {
@@ -248,6 +256,7 @@ export class OfficeDashboard {
         id: monitor.id,
         uid: `intern:${monitor.id}`,
         kind: 'intern',
+        type: monitor.type ?? 'web',
         // A browser monitor has no display name, so the host stands in for one.
         name: monitor.url.replace(/^https?:\/\//, '').replace(/\/$/, ''),
         url: monitor.url,

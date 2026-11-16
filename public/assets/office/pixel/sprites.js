@@ -300,6 +300,117 @@ EARS.panda = EARS.bear;
 EARS.raccoon = EARS.cat;
 EARS.tiger = EARS.bear;
 
+/* The second dozen: the pool new hires are rolled from. */
+Object.assign(EARS, {
+  penguin: { front: [] },
+  // A frog's eyes sit on top of its head, so they are drawn as "ears".
+  frog: {
+    front: [
+      '................',
+      '................',
+      '....oo....oo....',
+      '...oEEo..oEEo...',
+      '...oEeooooeEo...',
+    ],
+    side: ['', '', '.....oo.........', '....oEEo........', '....oEeo........'],
+  },
+  chick: {
+    front: ['', '', '.......o........', '......oEo.......', '.......E........'],
+    side: ['', '', '.....o..........', '....oEo.........', '.....E..........'],
+  },
+  owl: {
+    front: [
+      '................',
+      '................',
+      '..o..........o..',
+      '..oEo......oEo..',
+      '..oEEo....oEEo..',
+    ],
+    side: ['', '', '....o...........', '....oEo.........', '....oEEo........'],
+  },
+  pig: {
+    front: ['', '', '', '..oo........oo..', '..oIEo....oEIo..'],
+    side: ['', '', '', '....oo..........', '....oIEo........'],
+  },
+  cow: {
+    front: [
+      '................',
+      '................',
+      '...oo......oo...',
+      '...oEo....oEo...',
+      '................',
+      '................',
+      '.oo..........oo.',
+      'oIIo........oIIo',
+      '.oo..........oo.',
+    ],
+    side: ['', '', '.....oo.........', '.....oEo........', '', '', '..oo............', '.oIIo...........', '..oo............'],
+  },
+  // Wool on top of the head, in puffs.
+  sheep: {
+    front: [
+      '................',
+      '................',
+      '....oo.oo.oo....',
+      '...oEEoEEoEEo...',
+      '..oEEIEEIEEIEo..',
+      '..oEEEEEEEEEEo..',
+    ],
+    side: ['', '', '....oo.oo.......', '...oEEoEEo......', '..oEEIEEIEo.....', '..oEEEEEEEo.....'],
+  },
+  // A mane all the way round.
+  lion: {
+    front: [
+      '................',
+      '................',
+      '....EEEEEEEE....',
+      '...EEEEEEEEEE...',
+      '..EE........EE..',
+      '.EE..........EE.',
+      'EE............EE',
+      'EE............EE',
+      'EE............EE',
+      'EE............EE',
+      'EE............EE',
+      '.EE..........EE.',
+      '..EE........EE..',
+    ],
+    side: [
+      '', '',
+      '...EEEEEE.......',
+      '..EEEEEEEE......',
+      '.EE.............',
+      'EE..............',
+      'EE..............',
+      'EE..............',
+      'EE..............',
+      'EE..............',
+      'EE..............',
+      '.EE.............',
+      '..EE............',
+    ],
+  },
+  monkey: {
+    front: ['', '', '', '', '', '', '', 'oEo..........oEo', 'oEo..........oEo', '.o............o.'],
+    side: ['', '', '', '', '', '', '', '.oEo............', '.oEo............', '..o.............'],
+  },
+  mouse: {
+    front: [
+      '................',
+      '.ooo........ooo.',
+      'oEEEo......oEEEo',
+      'oEIEo......oEIEo',
+      'oEEEo......oEEEo',
+      '.ooo........ooo.',
+    ],
+    side: ['', '.ooo............', 'oEEEo...........', 'oEIEo...........', 'oEEEo...........', '.ooo............'],
+  },
+  wolf: null, // a fox's ears
+  redPanda: null, // a bear's ears
+});
+EARS.wolf = EARS.fox;
+EARS.redPanda = EARS.bear;
+
 /** Face markings, front and side. Rows 0–12 like the ears. */
 const MARKINGS = {
   panda: {
@@ -326,6 +437,41 @@ const MARKINGS = {
   fox: {
     front: ['', '', '', '', '', '', '', '', '', '..offeffffeffo..', '..owwwwnnwwwwo..', '..owwwwwwwwwwo..'],
   },
+  // A white face under a black cap, and an orange beak (its "nose").
+  penguin: {
+    front: ['', '', '', '', '', '', '.....ww..ww.....', '....wwwwwwww....', '....wewwwwew....', '....wewwwwew....'],
+    side: ['', '', '', '', '', '', '', '.......wwww.....', '.......wwwew....', '.......wwwewwo..'],
+  },
+  // No eyes where a face has them (they are on top), and a wide mouth.
+  frog: {
+    front: ['', '', '', '', '', '', '', '', '.....f....f.....', '.....f....f.....', '..okffffffffko..', '..oFfmmmmmmfFo..'],
+    side: ['', '', '', '', '', '', '', '', '..........f.....', '..........f.....', '..oFfffffkffo...', '..oFFffmmmmo....'],
+  },
+  chick: {
+    front: ['', '', '', '', '', '', '', '', '', '', '', '.......nn.......'],
+  },
+  owl: {
+    front: ['', '', '', '', '', '', '', '....mmm..mmm....', '....mem..mem....', '....mem..mem....'],
+    side: ['', '', '', '', '', '', '', '.........mmm....', '.........mem....', '.........mem....'],
+  },
+  pig: {
+    front: ['', '', '', '', '', '', '', '', '', '', '..okffmnnmffko..', '..oFffmmmmffFo..'],
+    side: ['', '', '', '', '', '', '', '', '', '', '..oFfffffkfmnm..', '..oFFfffffmmm...'],
+  },
+  cow: {
+    front: ['', '', '', '', '', '....mm..........', '...mmm.....mm...', '..mmm......mm...'],
+    side: ['', '', '', '', '', '...mm...........', '...mmm..........'],
+  },
+  monkey: {
+    front: ['', '', '', '', '', '', '.....ww..ww.....', '....wwwwwwww....', '....wewwwwew....', '....wewwwwew....'],
+    side: ['', '', '', '', '', '', '', '........wwww....', '........wwew....', '........wwewwo..'],
+  },
+  wolf: {
+    front: ['', '', '', '', '', '', '', '', '', '..offeffffeffo..', '..owwwwnnwwwwo..', '..owwwwwwwwwwo..'],
+  },
+  redPanda: {
+    front: ['', '', '', '', '', '', '', '.....w....w.....', '', '', '..owwwwnnwwwwo..', '..owwwwwwwwwwo..'],
+  },
 };
 
 /**
@@ -343,6 +489,18 @@ const SPECIES_PALETTE = {
   raccoon: { light: '#ecebf0', ear: '#83838e', inner: '#4a4954', nose: '#26232d', mark: '#3a3944' },
   koala: { light: '#e8e8ee', ear: '#a3a3ab', inner: '#f2f2f5', nose: '#2f2d36', mark: '#2f2d36' },
   tiger: { light: '#fff3e6', ear: '#cf651c', inner: '#3b2b26', nose: '#e0717a', mark: '#3b2b26' },
+  penguin: { light: '#f7f8fb', ear: '#23262f', inner: '#23262f', nose: '#f5a524', mark: '#f7f8fb' },
+  frog: { light: '#c9ef9a', ear: '#ffffff', inner: '#1d1a22', nose: '#4a9a35', mark: '#2f6b22' },
+  chick: { light: '#ffeb94', ear: '#e3a91c', inner: '#e3a91c', nose: '#f28c28', mark: '#e3a91c' },
+  owl: { light: '#ead4b4', ear: '#6e4a32', inner: '#6e4a32', nose: '#f0a52c', mark: '#f6ecdc' },
+  pig: { light: '#ffd3db', ear: '#e58c9d', inner: '#c96479', nose: '#a8455c', mark: '#ee8299' },
+  cow: { light: '#f6b9c2', ear: '#e9ddc2', inner: '#f2a7b3', nose: '#b9606f', mark: '#2c2b30' },
+  sheep: { light: '#7d6a60', ear: '#fbf7ef', inner: '#e3d9c6', nose: '#231c19', mark: '#231c19' },
+  lion: { light: '#fbe4b2', ear: '#a3531c', inner: '#a3531c', nose: '#5a3a2a', mark: '#a3531c' },
+  monkey: { light: '#efc9a2', ear: '#efc9a2', inner: '#c99872', nose: '#5a3a2a', mark: '#efc9a2' },
+  mouse: { light: '#f1f1f5', ear: '#babac6', inner: '#f5a3b1', nose: '#ef8a9b', mark: '#8b8b99' },
+  wolf: { light: '#eef1f5', ear: '#5f6876', inner: '#2f343c', nose: '#22252b', mark: '#eef1f5' },
+  redPanda: { light: '#fbf3ea', ear: '#fbf3ea', inner: '#5a2a14', nose: '#2a1d18', mark: '#fbf3ea' },
 };
 
 /* ---------- composition ---------- */
@@ -383,10 +541,15 @@ export function frameGrids(speciesKey) {
   );
 
   const down = build(frontHead, FRONT_BODY);
-  // Eyes shut: the upper eye pixel takes the colour beside it, the lower becomes a lash line.
-  const closed = (rows) => rows.map((row, y) => (
-    y === 8 ? row.replace(/e/g, (_, x) => row[x - 1]) : y === 9 ? row.replace(/e/g, '-') : row
-  ));
+  // Eyes shut, wherever the eyes are (a frog's are on top): the lowest row of eye
+  // becomes a lash line, any row above it takes the colour beside it.
+  const closed = (rows) => {
+    const eyeRows = rows.map((row, y) => (row.includes('e') ? y : -1)).filter((y) => y >= 0);
+    const lash = eyeRows[eyeRows.length - 1];
+    return rows.map((row, y) => (
+      y === lash ? row.replace(/e/g, '-') : eyeRows.includes(y) ? row.replace(/e/g, (_, x) => row[x - 1]) : row
+    ));
+  };
   down.blink = closed(down.stand);
   down.sleep = closed(down.stand);
 
@@ -424,6 +587,7 @@ export function paletteFor(species, coat) {
     c: coat.body,
     C: coat.ear,
     t: coat.patch,
+    // A panda's and a penguin's arms are dark whatever the face is.
     p: species.key === 'panda' ? extra.ear : species.fur,
   };
 }

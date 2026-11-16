@@ -465,12 +465,20 @@ export class PixelOffice {
     const blink = mood === 'alarmed' && !this.reduced.matches && Math.floor(this.time * 4) % 2 === 0;
     rect(ctx, blink ? '#5a1d1a' : MOOD_COLOUR[mood], x + 3, y - 10, 7, 2);
 
-    // Keyboard, mug.
+    // Keyboard.
     rect(ctx, '#e3e7ec', x + 15, y + 2, 12, 3);
     rect(ctx, '#b9c0c9', x + 15, y + 4, 12, 1);
-    rect(ctx, '#f4f4f4', x + w - 8, y - 2, 4, 4);
-    rect(ctx, '#7a4a2a', x + w - 7, y - 2, 2, 1);
-    rect(ctx, '#f4f4f4', x + w - 4, y - 1, 1, 2);
+    if (worker?.monitor.type === 'api') {
+      // Whoever watches an app's API has a phone on a stand, its screen in the mood's colour.
+      rect(ctx, '#1d2027', x + w - 8, y - 6, 5, 8);
+      rect(ctx, MOOD_COLOUR[mood], x + w - 7, y - 5, 3, 5);
+      rect(ctx, '#6b7280', x + w - 9, y + 2, 7, 1);
+    } else {
+      // A mug.
+      rect(ctx, '#f4f4f4', x + w - 8, y - 2, 4, 4);
+      rect(ctx, '#7a4a2a', x + w - 7, y - 2, 2, 1);
+      rect(ctx, '#f4f4f4', x + w - 4, y - 1, 1, 2);
+    }
   }
 
   /** The chair behind a seated colleague. */
@@ -696,7 +704,7 @@ export class PixelOffice {
     if (!agent) return;
     const worker = agent.worker;
     const k = this.scale;
-    const name = worker.label ?? worker.monitor.name;
+    const name = `${worker.label ?? worker.monitor.name}${worker.monitor.type === 'api' ? ' · API' : ''}`;
     const dpr = window.devicePixelRatio || 1;
     const size = Math.round(12 * dpr);
     ctx.font = `600 ${size}px ui-sans-serif, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`;

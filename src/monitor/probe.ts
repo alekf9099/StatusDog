@@ -493,6 +493,7 @@ export function probeUrl(
     // A one-off check has nowhere to remember a warning, so it makes none.
     certExpiryWarnDays: [],
     discoverLimit: 0,
+    type: 'web',
     fallback: {
       template: 'maintenance',
       title: 'We will be right back',

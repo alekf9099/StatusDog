@@ -166,6 +166,23 @@ while a tab is open.
 **What the site cannot do.** Traffic and visitor counts are not measurable from
 outside; that needs the site's own analytics or server logs.
 
+### Websites and app APIs
+
+Every place that takes an address — the check on the home page, the dashboard and
+the office's hire form — has a **Website / App API** switch. An app API is the
+server a mobile app talks to; give StatusDog the address of something on it that
+needs no login (a `/health` endpoint is ideal) and say which status codes mean
+healthy — `2xx` by default, or `2xx,401` for an API that answers 401 to a caller
+without a login, which still proves the server is up. Never put a token in the
+address: browser monitors live in the browser, and the roster is a public file.
+API colleagues get an **API** badge, and a phone on their desk instead of a mug.
+On the roster, the same thing is `"type": "api"` in `monitors.json`.
+
+Hashed colleagues come from the original ten animals, so the roster keeps the
+faces it has; anyone hired or re-rolled is drawn from all twenty-two (dog, cat,
+fox, hamster, rabbit, bear, panda, raccoon, koala, tiger, penguin, frog, chick,
+owl, pig, cow, sheep, lion, monkey, mouse, wolf and red panda), still mostly dogs.
+
 ### On a phone
 
 The site installs as an app — "Install app" in the footer on Android and desktop
@@ -825,6 +842,7 @@ fully annotated file. The short version:
 | `id` | slug of the URL | Stable identifier used by the CLI, API and middleware |
 | `name` | `id` | Display name |
 | `url` | — | `http:` or `https:` URL (required) |
+| `type` | `"web"` | `"web"` for a website, `"api"` for the server a mobile app talks to. Checked the same way; shown with an API badge, and an API cannot set `discover` |
 | `method` | `GET` | HTTP method |
 | `headers` | `{}` | Extra request headers |
 | `body` | — | Request body (ignored for `GET`/`HEAD`) |
@@ -1060,3 +1078,8 @@ npm run build
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+The site's typeface is [Pretendard](https://github.com/orioncactus/pretendard) by
+Kil Hyung-jin, served from this site under the SIL Open Font License 1.1 — see
+[public/assets/fonts/pretendard/LICENSE.txt](public/assets/fonts/pretendard/LICENSE.txt).
+The pixel animals, furniture, icons and logo are drawn in code in this repository.

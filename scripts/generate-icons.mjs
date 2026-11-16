@@ -102,6 +102,59 @@ function encodePng(width, height, rgba) {
   ]);
 }
 
+/* ---------- the logo, as SVG ---------- */
+
+/** One <rect> per horizontal run of a colour, so the file stays small. */
+function runs(rows, colourOf, x0 = 0, y0 = 0) {
+  const out = [];
+  rows.forEach((row, y) => {
+    let x = 0;
+    while (x < row.length) {
+      const fill = colourOf(row[x]);
+      let end = x + 1;
+      while (end < row.length && colourOf(row[end]) === fill) end++;
+      if (fill) out.push(`<rect x="${x0 + x}" y="${y0 + y}" width="${end - x}" height="1" ${fill}/>`);
+      x = end;
+    }
+  });
+  return out.join('');
+}
+
+/** The pixel dog on its own, for the header. */
+function markSvg() {
+  const body = runs(grid, (ch) => (palette[ch] ? `fill="${palette[ch]}"` : null));
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${grid[0].length} ${grid.length}" shape-rendering="crispEdges">${body}</svg>\n`;
+}
+
+/* A 5×9 pixel face for the wordmark: ascenders in rows 0–1, baseline at row 6, descenders below. */
+const GLYPHS = {
+  S: ['.###.', '#...#', '#....', '.###.', '....#', '#...#', '.###.', '.....', '.....'],
+  D: ['####.', '#...#', '#...#', '#...#', '#...#', '#...#', '####.', '.....', '.....'],
+  t: ['..#..', '..#..', '#####', '..#..', '..#..', '..#..', '...##', '.....', '.....'],
+  a: ['.....', '.....', '.###.', '....#', '.####', '#...#', '.####', '.....', '.....'],
+  u: ['.....', '.....', '#...#', '#...#', '#...#', '#..##', '.##.#', '.....', '.....'],
+  s: ['.....', '.....', '.####', '#....', '.###.', '....#', '####.', '.....', '.....'],
+  o: ['.....', '.....', '.###.', '#...#', '#...#', '#...#', '.###.', '.....', '.....'],
+  g: ['.....', '.....', '.####', '#...#', '#...#', '#...#', '.####', '....#', '.###.'],
+};
+
+/**
+ * "StatusDog" in pixels: "Status" in the page's text colour (dark or light with
+ * the theme), "Dog" in the office's warm orange.
+ */
+function wordmarkSvg() {
+  const word = 'StatusDog';
+  const parts = [];
+  let x = 0;
+  for (const [i, letter] of [...word].entries()) {
+    const cls = i >= 6 ? 'ac' : 'fg';
+    parts.push(runs(GLYPHS[letter], (ch) => (ch === '#' ? `class="${cls}"` : null), x, 0));
+    x += 6;
+  }
+  const style = '.fg{fill:#1b1f24}.ac{fill:#e8772e}@media (prefers-color-scheme:dark){.fg{fill:#f1ece4}.ac{fill:#ffa24c}}';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${x - 1} 9" shape-rendering="crispEdges"><style>${style}</style>${parts.join('')}</svg>\n`;
+}
+
 const out = path.join(root, 'public/assets/app');
 mkdirSync(out, { recursive: true });
 const icons = {
@@ -113,7 +166,9 @@ const icons = {
   'apple-touch-icon.png': render(180, 8),
   'favicon-32.png': render(32, 2, { lamp: false }),
 };
-for (const [name, png] of Object.entries(icons)) {
-  writeFileSync(path.join(out, name), png);
-  console.log(`${name}  ${png.length} bytes`);
+icons['mark.svg'] = Buffer.from(markSvg());
+icons['wordmark.svg'] = Buffer.from(wordmarkSvg());
+for (const [name, file] of Object.entries(icons)) {
+  writeFileSync(path.join(out, name), file);
+  console.log(`${name}  ${file.length} bytes`);
 }

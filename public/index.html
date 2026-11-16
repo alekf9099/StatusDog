@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title data-i18n="home.pageTitle">StatusDog — is your site up?</title>
 <meta name="description" data-i18n-content="home.metaDescription" content="Check any website's status, response time, redirects and SSL certificate.">
+<link rel="stylesheet" href="/assets/fonts/pretendard/pretendard.css">
 <link rel="stylesheet" href="/assets/statusdog.css">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#251d2b">
@@ -16,7 +17,7 @@
 
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <a class="brand" href="/" aria-label="StatusDog"><img class="brand-mark" src="/assets/app/mark.svg" alt="" width="28" height="26"><img class="brand-word" src="/assets/app/wordmark.svg" alt="StatusDog" width="94" height="15"></a>
     <nav class="site-nav">
       <a href="/" data-i18n="nav.home">Home</a>
       <a href="/office" data-i18n="nav.office">Office</a>
@@ -37,6 +38,7 @@
 
   <section class="block wrap hero">
     <div class="hero-copy">
+    <p class="eyebrow" data-i18n="home.eyebrow">Websites and app APIs, watched from outside</p>
     <h1 data-i18n="home.h1">Is your site actually up?</h1>
     <p class="lede" data-i18n="home.lede">
       Paste a URL. StatusDog checks it from the outside and tells you what a
@@ -130,6 +132,7 @@ node dist/cli.js init &amp;&amp; node dist/cli.js start</code></pre>
 import { getLanguage, initI18n, t } from '/assets/i18n.js';
 import { check, escapeHtml, formatMs, markCurrentNav, prettyUrl, statusBadge } from '/assets/statusdog.js';
 import { PixelOffice } from '/assets/office/pixel/PixelOffice.js';
+import { typeSwitch } from '/assets/target-type.js';
 import { deriveMood } from '/assets/office/mood.js';
 import { makeWorker } from '/assets/office/DogWorkerCard.js';
 import { dogOverrides } from '/assets/office/overrides.js';
@@ -187,6 +190,7 @@ const form = document.getElementById('check-form');
 const input = document.getElementById('url');
 const submit = document.getElementById('submit');
 const output = document.getElementById('result');
+const kind = typeSwitch(form, input);
 
 /** Last result, kept so switching language re-renders it rather than clearing it. */
 let lastResult = null;
@@ -202,7 +206,9 @@ form.addEventListener('submit', async (event) => {
   output.innerHTML = `<div class="card muted">${escapeHtml(t('home.running'))}</div>`;
 
   try {
-    lastResult = await check(url);
+    lastResult = await check(url, { expect: kind.expect });
+    lastResult.type = kind.type;
+    lastResult.expect = kind.expect;
     output.innerHTML = renderResult(lastResult);
   } catch (err) {
     lastResult = null;
@@ -237,7 +243,7 @@ function renderResult(result) {
       </div>
       <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
         <a href="/check?url=${encodeURIComponent(result.url)}"><button type="button" class="secondary">${escapeHtml(t('home.fullReport'))}</button></a>
-        <a href="/dashboard?add=${encodeURIComponent(result.url)}"><button type="button" class="secondary">${escapeHtml(t('home.keepWatching'))}</button></a>
+        <a href="/dashboard?add=${encodeURIComponent(result.url)}${result.type === 'api' ? `&type=api&expect=${encodeURIComponent(result.expect ?? '')}` : ''}"><button type="button" class="secondary">${escapeHtml(t('home.keepWatching'))}</button></a>
       </div>
     </div>`;
 }

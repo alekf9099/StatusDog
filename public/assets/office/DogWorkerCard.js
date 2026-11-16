@@ -38,6 +38,9 @@ function avatarHtml(dog, className) {
 function plate(worker) {
   const { monitor, mood, dog } = worker;
   const name = dog.names[getLanguage()] ?? dog.names.en;
+  const api = monitor.type === 'api'
+    ? `<span class="type-badge">${escapeHtml(t('type.badge'))}</span>`
+    : '';
   const intern = monitor.kind === 'intern'
     ? `<span class="desk-badge-intern">${escapeHtml(t('office.intern'))}</span>`
     : '';
@@ -51,7 +54,7 @@ function plate(worker) {
 
   return `
     <div class="desk-plate">
-      <div class="desk-dogname">${escapeHtml(name)}${intern}</div>
+      <div class="desk-dogname">${escapeHtml(name)}${api}${intern}</div>
       <div class="desk-site" title="${escapeHtml(monitor.url)}">${escapeHtml(monitor.name)}</div>
       <div class="desk-status">
         <span class="dot"></span>${escapeHtml(t(`office.mood.${mood.mood}.short`))}

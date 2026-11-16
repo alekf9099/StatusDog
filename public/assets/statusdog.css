@@ -1,35 +1,51 @@
-/* StatusDog — shared styles for every page. No build step, no external fonts. */
+/*
+ * StatusDog — shared styles for every page. No build step.
+ *
+ * Type is Pretendard (SIL OFL 1.1), served from this site in Unicode-range
+ * subsets so a page only downloads the glyphs it uses; see assets/fonts/.
+ * The pixel art carries the personality; everything around it stays quiet,
+ * soft and roomy so the room is what you look at.
+ */
 
 :root {
   color-scheme: light dark;
 
-  --bg: #f6f7f9;
-  --bg-soft: #eef0f4;
+  --bg: #f6f6f3;
+  --bg-soft: #eeeeea;
   --card: #ffffff;
-  --fg: #1b1f24;
-  --muted: #626b76;
-  --border: #e3e6ea;
-  --accent: #2f81f7;
+  --fg: #16171b;
+  --muted: #696d78;
+  --border: #e4e4df;
+  --accent: #4b57f0;
   --accent-fg: #ffffff;
-  --up: #2da44e;
-  --down: #e5534b;
-  --warn: #d29922;
+  /* The office's own warm orange, for the brand. */
+  --brand: #e8772e;
+  --up: #22a053;
+  --down: #e5484d;
+  --warn: #d39a1b;
   --unknown: #8b949e;
 
-  --radius: 14px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px rgba(0, 0, 0, .05);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 1px 2px rgba(20, 20, 30, .04), 0 12px 32px -12px rgba(20, 20, 30, .12);
+  --ring: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+  --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
+    "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1216;
-    --bg-soft: #151a20;
-    --card: #171b21;
-    --fg: #e9edf2;
-    --muted: #98a2ae;
-    --border: #262c34;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+    --bg: #0b0c10;
+    --bg-soft: #15171d;
+    --card: #121419;
+    --fg: #eceef3;
+    --muted: #9a9fab;
+    --border: #23262f;
+    --accent: #7f88ff;
+    --accent-fg: #0b0c10;
+    --brand: #ffa24c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 16px 40px -16px rgba(0, 0, 0, .6);
   }
 }
 
@@ -39,15 +55,20 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font: 16px/1.65 var(--font);
+  letter-spacing: -.011em;
+  font-feature-settings: "ss06", "tnum" 0;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-a { color: var(--accent); }
+a { color: var(--accent); text-underline-offset: 3px; }
 a:hover { text-decoration: underline; }
+::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
 
 .wrap { width: min(1080px, 100% - 40px); margin-inline: auto; }
+/* Decorative glows may reach past the edges; they must never make the page scroll sideways. */
+main { overflow-x: clip; }
 
 /* ---------- header ---------- */
 
@@ -55,50 +76,92 @@ a:hover { text-decoration: underline; }
   position: sticky;
   top: 0;
   z-index: 10;
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: saturate(1.6) blur(14px);
+  -webkit-backdrop-filter: saturate(1.6) blur(14px);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
 }
 .site-header .wrap {
   display: flex;
   align-items: center;
   gap: 20px;
-  height: 60px;
+  height: 64px;
 }
+/* The pixel dog and a pixel wordmark, both drawn by scripts/generate-icons.mjs. */
 .brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-weight: 650;
-  letter-spacing: -.01em;
-  color: inherit;
+  gap: 10px;
+  flex: none;
   text-decoration: none;
-  font-size: 17px;
 }
 .brand:hover { text-decoration: none; }
-.brand .mark { font-size: 20px; line-height: 1; }
-.site-nav { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+.brand-mark { width: 28px; height: 26px; image-rendering: pixelated; }
+.brand-word { height: 17px; width: auto; image-rendering: pixelated; }
+.site-nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .site-nav a {
   color: var(--muted);
   text-decoration: none;
-  font-size: 14px;
-  padding: 6px 11px;
-  border-radius: 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
 }
 .site-nav a:hover { background: var(--bg-soft); color: var(--fg); text-decoration: none; }
-.site-nav a[aria-current="page"] { color: var(--fg); font-weight: 600; }
+.site-nav a[aria-current="page"] { color: var(--fg); font-weight: 650; background: var(--bg-soft); }
+
+/* On a phone: the logo on one line, the menu as one scrolling row under it,
+   rather than three wrapped lines of links. */
+@media (max-width: 760px) {
+  .site-header .wrap { flex-wrap: wrap; height: auto; gap: 6px 12px; padding: 10px 0 8px; }
+  .site-nav {
+    order: 3;
+    width: 100%;
+    margin: 0 -4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent);
+    mask-image: linear-gradient(to right, #000 88%, transparent);
+  }
+  .site-nav::-webkit-scrollbar { display: none; }
+  .site-nav a { padding: 6px 11px; font-size: 14px; }
+}
 
 /* ---------- typography ---------- */
 
-h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.2; letter-spacing: -.02em; margin: 0 0 14px; }
-h2 { font-size: 21px; letter-spacing: -.01em; margin: 0 0 14px; }
-h3 { font-size: 15px; margin: 0 0 8px; }
-.lede { font-size: 17px; color: var(--muted); margin: 0 0 26px; max-width: 62ch; }
+h1 { font-size: clamp(32px, 4.6vw, 52px); line-height: 1.12; letter-spacing: -.035em; font-weight: 800; margin: 0 0 16px; }
+h2 { font-size: clamp(22px, 2.4vw, 28px); line-height: 1.25; letter-spacing: -.028em; font-weight: 750; margin: 0 0 16px; }
+h3 { font-size: 16px; letter-spacing: -.015em; font-weight: 700; margin: 0 0 8px; }
+.lede { font-size: 17.5px; line-height: 1.65; color: var(--muted); margin: 0 0 28px; max-width: 60ch; }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 
-section.block { padding: 44px 0; }
-section.block + section.block { border-top: 1px solid var(--border); }
+section.block { padding: 56px 0; }
+section.block + section.block { border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent); }
+
+/* A small label over a heading. */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 5px 12px 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.eyebrow::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--up);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--up) 25%, transparent);
+}
 
 /* ---------- the watch (assets/watch.js) ---------- */
 
@@ -152,10 +215,31 @@ section.block + section.block { border-top: 1px solid var(--border); }
 
 /* The check form on the left, the office live on the right; stacked on phones. */
 .hero {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  gap: 22px 44px;
+  gap: 22px 48px;
   align-items: center;
+  padding-top: 64px;
+}
+/* A soft glow behind the hero, in the brand and accent colours. */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -40px -10% auto;
+  height: 520px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 22% 30%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    radial-gradient(35% 45% at 78% 40%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 70%);
+  filter: blur(10px);
+}
+.hero h1 {
+  background: linear-gradient(180deg, var(--fg) 30%, color-mix(in srgb, var(--fg) 62%, var(--accent)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .hero-copy { min-width: 0; }
 .hero-result { grid-column: 1 / -1; }
@@ -221,37 +305,119 @@ section.block + section.block { border-top: 1px solid var(--border); }
   .hero-live::before { animation: none; }
 }
 
+/* ---------- website or app API (assets/target-type.js) ---------- */
+
+/* A segmented switch over the URL field. */
+.type-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+}
+.type-switch button {
+  min-height: 0;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: none;
+}
+.type-switch button:hover { color: var(--fg); filter: none; transform: none; }
+.type-switch button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--fg);
+  box-shadow: 0 1px 3px rgba(20, 20, 30, .12);
+}
+/* "Healthy status codes", beside the URL. */
+.check-form .type-expect {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 0 1 150px;
+  min-width: 0;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+}
+.check-form .type-expect[hidden] { display: none; }
+.check-form .type-expect span { font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1.2; }
+.check-form .type-expect input[type="text"] {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+  font-size: 15px;
+  font-family: var(--mono);
+  color: var(--fg);
+  outline: none;
+}
+.type-hint { max-width: 640px; margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.type-hint[hidden] { display: none; }
+/* Marks an app API wherever a monitor is listed. */
+.type-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  vertical-align: 1px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 /* ---------- forms ---------- */
 
-.check-form { display: flex; gap: 10px; flex-wrap: wrap; max-width: 620px; }
+.check-form { display: flex; gap: 10px; flex-wrap: wrap; max-width: 640px; }
 .check-form input[type="url"], .check-form input[type="text"] {
   flex: 1 1 280px;
   min-width: 0;
   font: inherit;
-  padding: 12px 15px;
+  font-size: 16px;
+  height: 52px;
+  padding: 0 18px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--card);
   color: var(--fg);
+  box-shadow: 0 1px 2px rgba(20, 20, 30, .04);
+  transition: border-color .15s, box-shadow .15s;
 }
-.check-form input:focus-visible, button:focus-visible, a:focus-visible {
+.check-form input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+button:focus-visible, a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 button {
   font: inherit;
-  font-weight: 550;
-  padding: 12px 20px;
-  border-radius: 10px;
+  font-weight: 650;
+  padding: 12px 22px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background: var(--accent);
   color: var(--accent-fg);
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 8px 20px -10px color-mix(in srgb, var(--accent) 80%, transparent);
+  transition: transform .12s, filter .15s, box-shadow .15s;
 }
-button:hover { filter: brightness(1.06); }
-button[disabled] { opacity: .55; cursor: progress; }
-button.secondary { background: var(--card); color: var(--fg); border-color: var(--border); }
+.check-form button { height: 52px; padding: 0 24px; }
+button:hover { filter: brightness(1.07); transform: translateY(-1px); }
+button:active { transform: translateY(0); }
+button[disabled] { opacity: .55; cursor: progress; transform: none; }
+button.secondary { background: var(--card); color: var(--fg); border-color: var(--border); box-shadow: none; }
 button.secondary:hover { background: var(--bg-soft); filter: none; }
 button.ghost {
   background: none;
@@ -268,7 +434,7 @@ button.ghost:hover { color: var(--down); filter: none; }
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px 22px;
+  padding: 22px 24px;
   box-shadow: var(--shadow);
 }
 

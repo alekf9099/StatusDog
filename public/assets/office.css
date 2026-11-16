@@ -116,6 +116,9 @@
   color: var(--fg);
 }
 .office-hire .hire-url { flex: 1 1 240px; min-width: 0; }
+.office-hire .type-expect { flex: 0 1 140px; min-width: 0; }
+.office-hire .type-expect[hidden] { display: none; }
+.office-hire .type-expect input { font-family: var(--mono); }
 .office-hire .hire-name { flex: 0 1 150px; min-width: 0; }
 .office-hire button { align-self: flex-end; white-space: nowrap; }
 .office-hire .hire-note { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted); }

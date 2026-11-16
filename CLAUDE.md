@@ -36,6 +36,8 @@ node scripts/dev-web.mjs --port 3000   # 로컬 사이트 (build 먼저)
   - `assets/office/` — 오피스 화면(동물 동료). `pixel/` 아래가 캔버스 픽셀아트 사무실:
     `sprites.js`(캐릭터를 문자 격자로 그림), `world.js`(배치·경로 찾기), `sim.js`(상태별 행동),
     `PixelOffice.js`(그리기). 이미지 파일 없이 전부 코드로 그립니다. 홈 첫 화면에도 같은 사무실이 나옵니다.
+- `assets/target-type.js` — 웹사이트 / 앱 API 전환 스위치(홈 확인, 대시보드, 오피스 채용 폼 공용). 로스터에서는 `monitors.json`의 `"type": "api"`.
+- `assets/fonts/pretendard/` — Pretendard(OFL) 서브셋을 직접 서빙. 로고(`assets/app/mark.svg`, `wordmark.svg`)와 앱 아이콘은 `scripts/generate-icons.mjs`로 생성.
 - `assets/watch.js` — 모든 페이지에 붙는 경고 배너와 앱 설치 버튼. 페이지가 이미 받은 감시 목록을 `statusdog:monitors` 이벤트로 재사용하므로, 감시 목록을 받아오는 새 코드도 이 이벤트를 보내 주세요(KV 사용량).
 - `test/` — node:test.
 
@@ -123,4 +125,5 @@ PR 번호 순서대로 보면 됩니다(`gh pr list --state merged`).
 - #26: 오피스 동물을 3D Fluent 얼굴 + 직접 그린 몸통으로 교체.
 - #27: 이 CLAUDE.md 추가.
 - 픽셀 오피스: 오피스를 동료가 돌아다니는 픽셀아트 사무실(캔버스)로 바꾸고 홈 첫 화면에 실시간으로 넣음. Fluent 에셋 제거.
+- 동물은 22종. 해시로 정해지는 동료는 원래 10종 풀만 써서 기존 얼굴이 유지되고, 채용·다시 뽑기는 22종 전체에서 뽑습니다(`dogs.js`의 SPECIES_POOL / HIRE_POOL). 풀을 바꾸면 기존 동료 얼굴이 바뀌니 주의.
 - 같은 PR: 자연스러운 걷기(경로 직선화·가감속·서로 비켜 가기), 앱 설치(PWA: manifest, sw.js, 아이콘은 scripts/generate-icons.mjs로 생성), 모든 페이지 상단의 장애·접속 오류·응답 지연 경고(assets/watch.js), /api/monitors 30초 엣지 캐시.

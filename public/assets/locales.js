@@ -222,6 +222,7 @@ export const LOCALES = {
     'home.pageTitle': 'StatusDog — is your site up?',
     'home.metaDescription':
       "Check any website's status, response time, redirects and SSL certificate. Then keep watching it, and serve a maintenance page when it goes down.",
+    'home.eyebrow': 'Websites and app APIs, watched from outside',
     'home.h1': 'Is your site actually up?',
     'home.lede':
       'Paste a URL. StatusDog checks it from the outside — status code, response time, redirect chain and SSL certificate — and tells you what a visitor would see right now.',
@@ -623,6 +624,15 @@ export const LOCALES = {
     'office.pageTitle': 'The Office — StatusDog',
     'office.metaDescription':
       'A room of animal colleagues, one per monitored site. Each one shows how its site is doing; click a desk for the report.',
+    'type.switch': 'What to check',
+    'type.web': 'Website',
+    'type.api': 'App API',
+    'type.badge': 'API',
+    'type.webPlaceholder': 'example.com',
+    'type.apiPlaceholder': 'https://api.example.com/health',
+    'type.expectLabel': 'Healthy status codes',
+    'type.apiHint': 'The server your mobile app talks to — ideally a health-check address that needs no login. Never put a token here. If the API answers 401 when called without a login, add 401 as healthy.',
+    'type.invalidExpect': 'Use status codes like 200, 2xx or 200-299, separated by commas.',
     'watch.down': 'Down:',
     'watch.failing': 'Connection errors:',
     'watch.slow': 'Slow to respond:',
@@ -770,7 +780,7 @@ export const LOCALES = {
       '<strong>Nothing is being checked right now.</strong> The last check was {ago}, and this deployment normally checks every {interval} minutes. Everything below is history, not the current state.',
     'stale.bannerNever':
       'No check has run yet. Numbers will appear once the scheduler has been set up.',
-    'office.hire.urlLabel': 'Website to watch',
+    'office.hire.urlLabel': 'Address to watch',
     'office.hire.urlPlaceholder': 'example.com',
     'office.hire.nameLabel': 'Name (optional)',
     'office.hire.namePlaceholder': 'leave blank to roll one',
@@ -1015,6 +1025,7 @@ export const LOCALES = {
     'home.pageTitle': 'StatusDog — 사이트가 살아 있나요?',
     'home.metaDescription':
       '웹사이트의 상태 코드, 응답 시간, 리다이렉트, SSL 인증서를 확인하세요. 계속 감시하고, 장애 시 점검 화면을 대신 띄울 수 있습니다.',
+    'home.eyebrow': '웹사이트와 앱 API를 밖에서 지켜봅니다',
     'home.h1': '사이트가 정말 살아 있나요?',
     'home.lede':
       'URL만 넣으세요. StatusDog가 외부에서 접속해 상태 코드, 응답 시간, 리다이렉트 경로, SSL 인증서를 확인하고, 지금 방문자가 무엇을 보게 되는지 알려줍니다.',
@@ -1416,6 +1427,15 @@ export const LOCALES = {
     'office.pageTitle': '오피스 — StatusDog',
     'office.metaDescription':
       '감시 중인 사이트마다 동물 동료가 한 명. 각자 담당 사이트의 상태를 몸으로 보여줍니다. 책상을 클릭하면 리포트가 열립니다.',
+    'type.switch': '검사 대상',
+    'type.web': '웹사이트',
+    'type.api': '앱 API',
+    'type.badge': 'API',
+    'type.webPlaceholder': 'example.com',
+    'type.apiPlaceholder': 'https://api.example.com/health',
+    'type.expectLabel': '정상 응답 코드',
+    'type.apiHint': '모바일 앱이 접속하는 서버 주소를 넣으세요 — 로그인 없이 부를 수 있는 상태 확인 주소(예: /health)가 가장 좋습니다. 토큰은 넣지 마세요. 로그인 없이 부르면 401이 오는 API라면 정상 코드에 401을 추가하세요.',
+    'type.invalidExpect': '200, 2xx, 200-299처럼 쉼표로 구분해 적어주세요.',
     'watch.down': '장애:',
     'watch.failing': '접속 오류:',
     'watch.slow': '응답 지연:',
@@ -1563,7 +1583,7 @@ export const LOCALES = {
       '<strong>지금 아무것도 확인되지 않고 있습니다.</strong> 마지막 확인이 {ago}이고, 이 배포는 보통 {interval}분마다 확인합니다. 아래 내용은 현재 상태가 아니라 과거 기록입니다.',
     'stale.bannerNever':
       '아직 확인이 실행되지 않았습니다. 스케줄러를 설정하면 숫자가 채워집니다.',
-    'office.hire.urlLabel': '감시할 웹사이트',
+    'office.hire.urlLabel': '감시할 주소',
     'office.hire.urlPlaceholder': 'example.com',
     'office.hire.nameLabel': '이름 (선택)',
     'office.hire.namePlaceholder': '비워두면 랜덤',
