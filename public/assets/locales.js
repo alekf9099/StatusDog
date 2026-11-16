@@ -594,10 +594,10 @@ export const LOCALES = {
     'dash.officeView': 'See the office',
     'docs.office.h2': 'The office view',
     'docs.office.pHtml':
-      '<a href="/office">/office</a> shows one dog per monitored site. It is the same data as the dashboard, read as behaviour rather than as a table — which turns out to be the faster way to spot the one desk that is wrong.',
-    'docs.office.hire.h3': 'Hiring a dog',
+      '<a href="/office">/office</a> is a little pixel-art office with one animal colleague per monitored site, who acts out how that site is doing — typing at the desk, dashing for coffee, pacing, running to the server rack, or napping on the sofa. It is the same data as the dashboard, read as behaviour rather than as a table — which turns out to be the faster way to spot the one colleague that is in trouble. The same colleagues are listed as cards under the room.',
+    'docs.office.hire.h3': 'Hiring a colleague',
     'docs.office.hire.pHtml':
-      'The form at the top of the office adds a site and gives it a dog. The look is <strong>rolled once and stored</strong> — not derived from the URL — so a dog you recognise today is the same one tomorrow, and two sites cannot end up sharing a face by coincidence. Leave the name blank and one is picked for you.',
+      'The form at the top of the office adds a site and gives it a colleague, who walks in through the door. The look is <strong>rolled once and stored</strong> — not derived from the URL — so a dog you recognise today is the same one tomorrow, and two sites cannot end up sharing a face by coincidence. Leave the name blank and one is picked for you.',
     'docs.office.rename.h3': 'Naming and re-rolling',
     'docs.office.rename.pHtml':
       'Open a dog\'s report to rename it, roll a different one, or let an intern go. Saving a blank name restores the rolled one. <strong>These are saved in your browser only</strong> — the site has no accounts, so a server-side rename would let any visitor rename dogs for everyone. Roster dogs can be renamed but not removed here; that means editing <code>monitors.json</code>.',
@@ -607,19 +607,24 @@ export const LOCALES = {
     'docs.office.staffHtml':
       'Dogs on the roster are permanent staff. Monitors you added in this browser show up as <strong>interns</strong>, because they only work while the tab is open — the badge is there so you never mistake a browser-only monitor for round-the-clock coverage.',
     'docs.office.clickHtml':
-      'Click any desk for that site\'s report: status, response time against its usual, TLS expiry, response headers, and the recent history as a sparkline. Keyboard works too — desks are buttons, and <kbd>Esc</kbd> closes the panel.',
+      'Click anyone in the room, or their desk, for that site\'s report: status, response time against its usual, TLS expiry, response headers, and the recent history as a sparkline. Keyboard works too — the cards under the room are buttons, and <kbd>Esc</kbd> closes the panel.',
     'docs.office.mood.workingV': 'Up, and answering at its usual speed.',
     'docs.office.mood.strainedV': 'Up, but much slower than usual or close to its configured limit.',
     'docs.office.mood.uneasyV': 'A check failed, but not enough times in a row to count as an outage.',
-    'docs.office.mood.alarmedV': 'Confirmed down. The wall siren comes on too.',
+    'docs.office.mood.alarmedV': 'Confirmed down. Its colleague runs for the server rack, and the rack\'s beacon turns red.',
     'docs.office.mood.offDutyV': 'No check has run yet, so there is nothing to report.',
-    'home.office.h2': 'Meet the office',
+    'home.office.h2': 'The office, right now',
+    'home.office.live': 'Live',
+    'home.office.enter': 'Enter the office',
+    'home.office.count': { one: '{count} on duty', other: '{count} on duty' },
+    'home.office.down': { one: '{count} site down', other: '{count} sites down' },
     'home.office.ledeHtml':
-      'Every monitored site gets an animal colleague who watches it — mostly dogs, with a few friends. They sip coffee when things are calm, sweat when the site slows down, and leap out of their chair when it goes down. <a href="/office">Visit the office →</a>',
+      'One animal colleague per monitored site. They type away while all is well, run for the server rack when a site goes down, and nap on the sofa when there is nothing to check. <a href="/office">Enter the office →</a>',
     'office.pageTitle': 'The Office — StatusDog',
     'office.metaDescription':
       'A room of animal colleagues, one per monitored site. Each one shows how its site is doing; click a desk for the report.',
     'office.h1': 'StatusDog Office',
+    'office.hint': 'Click a colleague for their report',
     'office.lede':
       'One colleague per monitored site — mostly dogs, with a few friends. How they behave is how their site is doing: click a desk for the full report.',
     'office.tableView': 'View as a table',
@@ -1372,10 +1377,10 @@ export const LOCALES = {
     'dash.officeView': '오피스에서 보기',
     'docs.office.h2': '오피스 화면',
     'docs.office.pHtml':
-      '<a href="/office">/office</a>는 감시 중인 사이트마다 강아지 한 마리를 보여줍니다. 대시보드와 같은 데이터를 표가 아니라 행동으로 읽는 것인데, 잘못된 책상 하나를 찾는 데는 이쪽이 더 빠릅니다.',
-    'docs.office.hire.h3': '강아지 채용하기',
+      '<a href="/office">/office</a>는 감시 중인 사이트마다 동물 동료가 한 명씩 일하는 픽셀아트 사무실입니다. 동료는 담당 사이트의 상태를 행동으로 보여줍니다 — 자리에서 타자를 치고, 커피를 마시러 뛰어가고, 서성이고, 서버랙으로 달려가고, 소파에서 낮잠을 잡니다. 대시보드와 같은 데이터를 표가 아니라 행동으로 읽는 것인데, 곤란한 동료 하나를 찾는 데는 이쪽이 더 빠릅니다. 같은 동료들이 사무실 아래에 카드로도 나옵니다.',
+    'docs.office.hire.h3': '동료 채용하기',
     'docs.office.hire.pHtml':
-      '오피스 상단 입력창에서 사이트를 추가하면 강아지가 배정됩니다. 외형은 <strong>한 번 무작위로 뽑아 저장</strong>되며 URL에서 계산하지 않습니다 — 그래서 오늘 알아본 강아지가 내일도 같은 강아지이고, 서로 다른 사이트가 우연히 같은 얼굴을 갖는 일도 없습니다. 이름을 비워두면 알아서 정해집니다.',
+      '오피스 상단 입력창에서 사이트를 추가하면 동료가 배정되어 문으로 걸어 들어옵니다. 외형은 <strong>한 번 무작위로 뽑아 저장</strong>되며 URL에서 계산하지 않습니다 — 그래서 오늘 알아본 강아지가 내일도 같은 강아지이고, 서로 다른 사이트가 우연히 같은 얼굴을 갖는 일도 없습니다. 이름을 비워두면 알아서 정해집니다.',
     'docs.office.rename.h3': '이름 변경과 다시 뽑기',
     'docs.office.rename.pHtml':
       '강아지 리포트를 열면 이름을 바꾸거나, 다른 강아지로 다시 뽑거나, 인턴을 내보낼 수 있습니다. 이름을 비우고 저장하면 원래 이름으로 돌아갑니다. <strong>이 설정은 사용 중인 브라우저에만 저장됩니다</strong> — 이 사이트에는 계정이 없어서 서버에 저장하면 아무나 남의 강아지 이름을 바꿀 수 있기 때문입니다. 감시 목록 소속 강아지는 이름 변경만 되고 내보내기는 <code>monitors.json</code>을 수정해야 합니다.',
@@ -1385,19 +1390,24 @@ export const LOCALES = {
     'docs.office.staffHtml':
       '감시 목록에 등록된 강아지는 정규직입니다. 이 브라우저에서 추가한 모니터는 <strong>인턴</strong>으로 표시되는데, 탭이 열려 있는 동안만 일하기 때문입니다. 브라우저 전용 모니터를 24시간 감시로 착각하지 않도록 붙여둔 배지입니다.',
     'docs.office.clickHtml':
-      '아무 책상이나 클릭하면 그 사이트의 리포트가 열립니다: 상태 코드, 평소 대비 응답 시간, TLS 만료, 응답 헤더, 최근 이력 스파크라인. 키보드로도 됩니다 — 책상은 버튼이고 <kbd>Esc</kbd>로 패널을 닫습니다.',
+      '사무실의 동료나 책상을 클릭하면 그 사이트의 리포트가 열립니다: 상태 코드, 평소 대비 응답 시간, TLS 만료, 응답 헤더, 최근 이력 스파크라인. 키보드로도 됩니다 — 사무실 아래 카드가 버튼이고 <kbd>Esc</kbd>로 패널을 닫습니다.',
     'docs.office.mood.workingV': '정상이고, 평소 속도로 응답합니다.',
     'docs.office.mood.strainedV': '정상이지만 평소보다 훨씬 느리거나 설정된 한계에 가깝습니다.',
     'docs.office.mood.uneasyV': '확인이 실패했지만 장애로 볼 만큼 연속되지는 않았습니다.',
-    'docs.office.mood.alarmedV': '장애가 확정됐습니다. 벽면 경보등도 함께 켜집니다.',
+    'docs.office.mood.alarmedV': '장애가 확정됐습니다. 담당 동료가 서버랙으로 달려가고, 랙의 경광등이 빨갛게 켜집니다.',
     'docs.office.mood.offDutyV': '아직 확인이 실행되지 않아 보고할 것이 없습니다.',
-    'home.office.h2': '오피스 구경하기',
+    'home.office.h2': '지금 오피스는',
+    'home.office.live': 'LIVE',
+    'home.office.enter': '오피스 들어가기',
+    'home.office.count': { one: '{count}명 근무 중', other: '{count}명 근무 중' },
+    'home.office.down': { one: '장애 {count}건', other: '장애 {count}건' },
     'home.office.ledeHtml':
-      '감시 중인 사이트마다 담당 동물 동료가 한 명씩 붙습니다 — 대부분 강아지고, 친구들이 조금 섞여 있습니다. 평온할 때는 커피를 마시고, 사이트가 느려지면 땀을 흘리며, 장애가 나면 의자에서 벌떡 일어납니다. <a href="/office">오피스 구경하기 →</a>',
+      '감시 중인 사이트마다 동물 동료가 한 명씩 일합니다. 평소엔 자리에서 타자를 치고, 사이트가 죽으면 서버랙으로 달려가고, 확인할 게 없으면 소파에서 낮잠을 잡니다. <a href="/office">오피스 들어가기 →</a>',
     'office.pageTitle': '오피스 — StatusDog',
     'office.metaDescription':
       '감시 중인 사이트마다 동물 동료가 한 명. 각자 담당 사이트의 상태를 몸으로 보여줍니다. 책상을 클릭하면 리포트가 열립니다.',
     'office.h1': 'StatusDog 오피스',
+    'office.hint': '동료를 클릭하면 리포트가 열립니다',
     'office.lede':
       '감시 중인 사이트마다 동료 한 명 — 대부분 강아지고, 친구들이 조금 섞여 있습니다. 동료의 행동이 곧 그 사이트의 상태입니다. 책상을 클릭하면 전체 리포트가 열립니다.',
     'office.tableView': '표로 보기',

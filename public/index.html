@@ -31,7 +31,8 @@
 
 <main>
 
-  <section class="block wrap">
+  <section class="block wrap hero">
+    <div class="hero-copy">
     <h1 data-i18n="home.h1">Is your site actually up?</h1>
     <p class="lede" data-i18n="home.lede">
       Paste a URL. StatusDog checks it from the outside and tells you what a
@@ -57,7 +58,22 @@
       No sign-up. Nothing is stored on our side.
     </p>
 
-    <div id="result" style="margin-top:28px" hidden></div>
+    </div>
+
+    <!-- The office, live: the colleagues for the sites this deployment watches. -->
+    <figure class="hero-office">
+      <figcaption class="hero-office-bar">
+        <span class="hero-live" data-i18n="home.office.live">Live</span>
+        <strong data-i18n="home.office.h2">Live from the office</strong>
+        <span class="hero-office-count" id="hero-office-count"></span>
+      </figcaption>
+      <a class="hero-office-stage" href="/office" data-i18n-aria-label="home.office.enter" aria-label="Enter the office">
+        <canvas id="hero-office-canvas" aria-hidden="true"></canvas>
+      </a>
+      <p class="hero-office-note small" data-i18n-html="home.office.ledeHtml"></p>
+    </figure>
+
+    <div id="result" class="hero-result" hidden></div>
   </section>
 
   <section class="block wrap">
@@ -76,11 +92,6 @@
         <p class="muted small" style="margin:0" data-i18n-html="home.f3.pHtml"></p>
       </div>
     </div>
-  </section>
-
-  <section class="block wrap">
-    <h2 data-i18n="home.office.h2">Meet the office</h2>
-    <p class="lede" style="margin-bottom:18px" data-i18n-html="home.office.ledeHtml"></p>
   </section>
 
   <section class="block wrap">
@@ -112,11 +123,57 @@ node dist/cli.js init &amp;&amp; node dist/cli.js start</code></pre>
 </footer>
 
 <script type="module">
-import { initI18n, t } from '/assets/i18n.js';
+import { getLanguage, initI18n, t } from '/assets/i18n.js';
 import { check, escapeHtml, formatMs, markCurrentNav, prettyUrl, statusBadge } from '/assets/statusdog.js';
+import { PixelOffice } from '/assets/office/pixel/PixelOffice.js';
+import { deriveMood } from '/assets/office/mood.js';
+import { makeWorker } from '/assets/office/DogWorkerCard.js';
+import { dogOverrides } from '/assets/office/overrides.js';
 
 initI18n();
 markCurrentNav();
+
+/*
+ * The office, live, in the hero. Only the roster — the sites this deployment
+ * watches around the clock — so the first thing a visitor sees is real. Clicking
+ * the room goes to the office itself.
+ */
+const heroCanvas = document.getElementById('hero-office-canvas');
+const heroCount = document.getElementById('hero-office-count');
+const heroOffice = new PixelOffice(heroCanvas, { onSelect: () => { location.href = '/office'; } });
+let heroMonitors = [];
+
+function renderHeroOffice() {
+  const workers = heroMonitors.map((monitor) => {
+    const staff = { ...monitor, uid: `staff:${monitor.id}`, kind: 'staff' };
+    const worker = makeWorker(staff, deriveMood(staff), dogOverrides.get(staff.uid));
+    return { ...worker, label: worker.dog.names[getLanguage()] ?? worker.dog.names.en };
+  });
+  heroOffice.setWorkers(workers);
+  const down = workers.filter((worker) => worker.mood.mood === 'alarmed').length;
+  heroCount.textContent = workers.length === 0
+    ? ''
+    : down > 0
+      ? t('home.office.down', { count: down })
+      : t('home.office.count', { count: workers.length });
+  heroCount.dataset.down = down > 0 ? 'true' : 'false';
+}
+
+async function loadHeroOffice() {
+  try {
+    const response = await fetch('/api/monitors?history=12', { cache: 'no-store' });
+    if (!response.ok) return;
+    heroMonitors = (await response.json()).monitors ?? [];
+    renderHeroOffice();
+  } catch {
+    // The room just stays as it was; the rest of the page does not depend on it.
+  }
+}
+
+heroOffice.start();
+void loadHeroOffice();
+setInterval(() => void loadHeroOffice(), 60_000);
+document.addEventListener('statusdog:languagechange', renderHeroOffice);
 
 const form = document.getElementById('check-form');
 const input = document.getElementById('url');

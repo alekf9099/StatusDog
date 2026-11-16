@@ -58,11 +58,13 @@
   </form>
 
   <div class="office-room" id="office-room">
-    <div class="office-wall">
-      <div class="office-clock" aria-hidden="true"></div>
+    <div class="office-hud">
+      <span class="hud-lamp" aria-hidden="true"></span>
       <div class="office-board" id="office-board" role="status" aria-live="polite"></div>
-      <div class="office-siren" aria-hidden="true"></div>
+      <span class="hud-hint" data-i18n="office.hint">Click a colleague for their report</span>
     </div>
+    <!-- The room is a picture of the roster below it, which carries the same facts as buttons. -->
+    <div class="office-stage"><canvas id="office-canvas" aria-hidden="true"></canvas></div>
     <div id="office-floor"></div>
   </div>
 
@@ -76,8 +78,6 @@
     <a href="/docs" data-i18n="footer.docs">Docs</a>
     <a href="/api/monitors" data-i18n="footer.api">API</a>
     <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
-    <!-- The animals are Microsoft's Fluent Emoji, used under MIT, which asks for this notice. -->
-    <a href="/assets/office/animals/LICENSE.txt">Fluent Emoji © Microsoft · MIT</a>
   </div>
 </footer>
 
@@ -92,6 +92,7 @@ markCurrentNav();
 const office = new OfficeDashboard({
   room: document.getElementById('office'),
   floor: document.getElementById('office-floor'),
+  canvas: document.getElementById('office-canvas'),
   board: document.getElementById('office-board'),
   hireForm: document.getElementById('hire-form'),
   hireUrl: document.getElementById('hire-url'),

@@ -80,21 +80,29 @@ behind a web front end.
 
 ### The office
 
-[`/office`](https://status-dog.vercel.app/office) seats one animal colleague per monitored
-site — mostly dogs, with a cat, fox, panda and a few others — and lets its behaviour
-carry the status. Each one is a 3D portrait on a drawn body — a coat in its own colour,
-arms, and paws in its own fur on the keyboard. The face cannot change, so each mood is a
-different way of moving plus a prop: typing over a coffee, hammering the keys in a sweat,
-looking around with a question mark, paws to its cheeks under a beacon, or slumped with
-zzz. It reads the same data as the dashboard;
-what it adds is a mood the table has no column for.
+[`/office`](https://status-dog.vercel.app/office) is a small pixel-art office, drawn on a
+canvas, with one animal colleague per monitored site — mostly dogs, with a cat, fox, panda
+and a few others. They walk about like the staff of a management game, and what they do
+is the status: typing at the desk with the odd coffee or chat, hammering the keys in a
+sweat, getting up to pace with a question mark, running to the server rack while its
+beacon turns red, or asleep on the sofa. The window shows the sky over Seoul and the
+clock tells Seoul time; the whiteboard shows each site's last twelve checks. The home
+page shows the same room, live.
+
+Every sprite and piece of furniture is drawn in code (`public/assets/office/pixel/`),
+so there are no image assets or licences to carry. The room sizes itself to the team
+and scales by whole pixels. Under it, the same colleagues are listed as cards — real
+buttons, which is how a keyboard or screen reader reaches them — and with
+`prefers-reduced-motion` everyone simply stands where their mood puts them.
+It reads the same data as the dashboard; what it adds is a mood the table has no
+column for.
 
 | Mood | Meaning |
 | --- | --- |
 | **On it** | Up, answering at its usual speed |
 | **Server is panting** | Up, but far slower than usual, or past 70% of its configured `maxResponseTimeMs` |
 | **Something twitched** | A check failed, but not enough times in a row to be an outage |
-| **Down** | Confirmed down; the wall siren comes on |
+| **Down** | Confirmed down; its colleague runs for the server rack |
 | **Not started** | No check has run yet |
 
 **Hiring.** The form at the top of the office adds a site and assigns it a dog.
@@ -1029,7 +1037,3 @@ npm run build
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-The office animals and props are [Fluent Emoji](https://github.com/microsoft/fluentui-emoji)
-by Microsoft, used under the MIT License, resized and converted to WebP — see
-[public/assets/office/animals/LICENSE.txt](public/assets/office/animals/LICENSE.txt).

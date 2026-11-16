@@ -33,8 +33,9 @@ node scripts/dev-web.mjs --port 3000   # 로컬 사이트 (build 먼저)
 - `api/` — Vercel 서버리스 함수. `api/cron/check.js`가 실제 점검 실행.
 - `public/` — 정적 HTML + ES 모듈 프론트엔드, **빌드 단계 없음**.
   - `assets/locales.js` — en/ko 문구. `data-i18n` / `data-i18n-html` 속성으로 연결.
-  - `assets/office/` — 오피스 화면(동물 동료). 얼굴은 Fluent Emoji 3D(MIT, Microsoft)
-    WebP, 몸통·팔·앞발은 CSS로 그림.
+  - `assets/office/` — 오피스 화면(동물 동료). `pixel/` 아래가 캔버스 픽셀아트 사무실:
+    `sprites.js`(캐릭터를 문자 격자로 그림), `world.js`(배치·경로 찾기), `sim.js`(상태별 행동),
+    `PixelOffice.js`(그리기). 이미지 파일 없이 전부 코드로 그립니다. 홈 첫 화면에도 같은 사무실이 나옵니다.
 - `test/` — node:test.
 
 ## 반드시 지킬 것
@@ -119,3 +120,5 @@ PR 번호 순서대로 보면 됩니다(`gh pr list --state merged`).
 - #24: 홈 URL 하나로 하위 메뉴 페이지까지 점검.
 - #25: 소유자 전용 보안 탭.
 - #26: 오피스 동물을 3D Fluent 얼굴 + 직접 그린 몸통으로 교체.
+- #27: 이 CLAUDE.md 추가.
+- 픽셀 오피스: 오피스를 동료가 돌아다니는 픽셀아트 사무실(캔버스)로 바꾸고 홈 첫 화면에 실시간으로 넣음. Fluent 에셋 제거.

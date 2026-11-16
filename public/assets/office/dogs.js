@@ -56,9 +56,8 @@ const ACCESSORIES = ['none', 'collar', 'scarf', 'cap'];
 /**
  * What kind of animal sits at the desk.
  *
- * Drawn from Microsoft's Fluent Emoji 3D set (MIT; see animals/LICENSE.txt),
- * shipped as small WebP files rather than hotlinked, so the office never depends
- * on someone else's CDN being up.
+ * Drawn as pixel sprites by pixel/sprites.js, which reads `fur` and
+ * `furShade` from here.
  *
  * Dogs are listed several times in the pool on purpose: this is StatusDog, and
  * the office should read as dogs with a few friends rather than a zoo.
@@ -97,11 +96,6 @@ export function coatByKey(key) {
 
 export function speciesByKey(key) {
   return SPECIES.find((species) => species.key === key) ?? null;
-}
-
-/** Where a species' portrait lives. */
-export function speciesImage(key) {
-  return `/assets/office/animals/${speciesByKey(key)?.key ?? 'dog'}.webp`;
 }
 
 /** FNV-1a. Small, stable, and not a security boundary — just a spread. */

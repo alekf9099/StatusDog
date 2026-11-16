@@ -100,6 +100,79 @@ h3 { font-size: 15px; margin: 0 0 8px; }
 section.block { padding: 44px 0; }
 section.block + section.block { border-top: 1px solid var(--border); }
 
+/* ---------- home hero ---------- */
+
+/* The check form on the left, the office live on the right; stacked on phones. */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 22px 44px;
+  align-items: center;
+}
+.hero-copy { min-width: 0; }
+.hero-result { grid-column: 1 / -1; }
+@media (max-width: 860px) {
+  .hero { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* A window into the pixel office: its own dark frame, the same in both themes. */
+.hero-office {
+  margin: 0;
+  min-width: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #2b2231;
+  box-shadow: var(--shadow), 0 0 0 1px rgba(0, 0, 0, .25);
+}
+.hero-office-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  background: #251d2b;
+  border-bottom: 3px solid #171219;
+  color: #cbbcaa;
+  font-size: 13px;
+}
+.hero-office-bar strong { color: #fff6e6; font-weight: 650; }
+.hero-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: #ff8f86;
+}
+.hero-live::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  background: #ff5a4f;
+  animation: hero-live 1.2s steps(2, end) infinite;
+}
+@keyframes hero-live { 50% { opacity: .25; } }
+.hero-office-count { margin-left: auto; font-size: 12px; color: #a8998a; }
+.hero-office-count[data-down="true"] { color: #ff8f86; font-weight: 600; }
+.hero-office-stage {
+  display: flex;
+  justify-content: center;
+  background: #3a2f3f;
+  line-height: 0;
+}
+.hero-office-stage canvas { display: block; image-rendering: pixelated; max-width: 100%; }
+.hero-office-note {
+  margin: 0;
+  padding: 10px 14px 12px;
+  color: #b9ab9b;
+  background: #251d2b;
+  line-height: 1.55;
+}
+.hero-office-note a { color: #ffc46b; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-live::before { animation: none; }
+}
+
 /* ---------- forms ---------- */
 
 .check-form { display: flex; gap: 10px; flex-wrap: wrap; max-width: 620px; }
