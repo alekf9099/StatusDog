@@ -83,10 +83,18 @@ export interface TargetConfig {
   discover?: boolean;
   /** At most this many linked pages. Defaults to 10; capped at 20. */
   discoverLimit?: number;
+  /**
+   * What this target is: a website (`web`, the default) or the server a mobile
+   * app talks to (`api`). Checked the same way; it changes how it is shown, and
+   * an API cannot have `discover` — it has no menu pages to follow.
+   */
+  type?: TargetType;
 }
 
+export type TargetType = 'web' | 'api';
+
 /** Target defaults; every field is optional and inherited by each target. */
-export type TargetDefaults = Omit<Partial<TargetConfig>, 'id' | 'url' | 'name'>;
+export type TargetDefaults = Omit<Partial<TargetConfig>, 'id' | 'url' | 'name' | 'type'>;
 
 export interface ConsoleNotifierConfig {
   type: 'console';
@@ -176,6 +184,7 @@ export interface ResolvedTarget {
   enabled: boolean;
   /** Linked pages checked alongside this one; `0` when discovery is off. */
   discoverLimit: number;
+  type: TargetType;
 }
 
 export interface ResolvedConfig {

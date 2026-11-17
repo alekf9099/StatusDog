@@ -5,14 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title data-i18n="dash.pageTitle">Dashboard — StatusDog</title>
 <meta name="description" data-i18n-content="dash.metaDescription" content="Uptime and response time for monitored URLs.">
+<link rel="stylesheet" href="/assets/fonts/pretendard/pretendard.css">
 <link rel="stylesheet" href="/assets/statusdog.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#251d2b">
+<link rel="apple-touch-icon" href="/assets/app/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="StatusDog">
+<link rel="icon" type="image/png" href="/assets/app/favicon-32.png">
 </head>
 <body>
 
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <a class="brand" href="/" aria-label="StatusDog"><img class="brand-mark" src="/assets/app/mark.svg" alt="" width="28" height="26"><img class="brand-word" src="/assets/app/wordmark.svg" alt="StatusDog" width="94" height="15"></a>
     <nav class="site-nav">
       <a href="/" data-i18n="nav.home">Home</a>
       <a href="/office" data-i18n="nav.office">Office</a>
@@ -88,6 +93,7 @@ import {
   check, escapeHtml, formatMs, formatRelative, markCurrentNav, prettyUrl,
   reflectStateInTab, renderStaleBanner, sparkline, stateBadge, statusBadge, store, uptimePct,
 } from '/assets/statusdog.js';
+import { expectFor, normalizeExpect, typeSwitch } from '/assets/target-type.js';
 
 const INTERVAL_MS = 60_000;
 
@@ -108,6 +114,7 @@ async function loadServerMonitors() {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error ?? t('error.requestFailed', { status: response.status }));
     serverPayload = payload;
+    document.dispatchEvent(new CustomEvent('statusdog:monitors', { detail: payload }));
     renderServerMonitors();
   } catch (err) {
     serverPayload = null;
@@ -197,7 +204,7 @@ function serverCard(monitor) {
         <span class="small muted" style="margin-left:auto">${escapeHtml(monitor.name)}</span>
       </div>
       <div style="font-weight:600;word-break:break-all;margin-bottom:14px">
-        <a href="/check?url=${encodeURIComponent(monitor.url)}">${escapeHtml(prettyUrl(monitor.url))}</a>
+        <a href="/check?url=${encodeURIComponent(monitor.url)}">${escapeHtml(prettyUrl(monitor.url))}</a>${monitor.type === 'api' ? ` <span class="type-badge">${escapeHtml(t('type.badge'))}</span>` : ''}
       </div>
       ${sparkline(monitor.history ?? [])}
       <div class="metrics" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
@@ -221,12 +228,17 @@ const addForm = document.getElementById('add-form');
 const input = document.getElementById('url');
 const refresh = document.getElementById('refresh');
 
-// `?add=` arrives from the landing page and the report page.
-const pending = new URLSearchParams(location.search).get('add');
+const kind = typeSwitch(addForm, input);
+
+// `?add=` arrives from the landing page and the report page, with `type` and
+// `expect` when what was checked there was an app's API.
+const params = new URLSearchParams(location.search);
+const pending = params.get('add');
 if (pending) {
-  store.add(pending);
+  const type = params.get('type') === 'api' ? 'api' : 'web';
+  store.add(pending, { type, expect: type === 'api' ? normalizeExpect(params.get('expect')) ?? undefined : undefined });
   const url = new URL(location.href);
-  url.searchParams.delete('add');
+  for (const key of ['add', 'type', 'expect']) url.searchParams.delete(key);
   history.replaceState(null, '', url);
 }
 
@@ -251,7 +263,7 @@ addForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const url = input.value.trim();
   if (!url) return;
-  const { monitor, added } = store.add(url);
+  const { monitor, added } = store.add(url, { type: kind.type, expect: kind.expect });
   input.value = '';
   render();
   if (added) void runOne(monitor.id);
@@ -285,7 +297,7 @@ async function runOne(id) {
   const monitor = store.list().find((m) => m.id === id);
   if (!monitor) return;
   try {
-    store.record(id, await check(monitor.url));
+    store.record(id, await check(monitor.url, { expect: expectFor(monitor) }));
   } catch (err) {
     // A rejected request is itself a signal — record it as a failed check.
     store.record(id, {
@@ -334,7 +346,7 @@ function card(monitor) {
           style="margin-left:auto" aria-label="${escapeHtml(t('dash.removeLabel'))}">${escapeHtml(t('dash.remove'))}</button>
       </div>
       <div style="font-weight:600;word-break:break-all;margin-bottom:14px">
-        <a href="/check?url=${encodeURIComponent(monitor.url)}">${escapeHtml(prettyUrl(monitor.url))}</a>
+        <a href="/check?url=${encodeURIComponent(monitor.url)}">${escapeHtml(prettyUrl(monitor.url))}</a>${monitor.type === 'api' ? ` <span class="type-badge">${escapeHtml(t('type.badge'))}</span>` : ''}
       </div>
       ${sparkline(history)}
       <div class="metrics" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
@@ -351,6 +363,8 @@ function card(monitor) {
 </script>
 
 <script type="module" src="/assets/account.js"></script>
+
+<script type="module" src="/assets/watch.js"></script>
 
 </body>
 </html>

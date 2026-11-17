@@ -1,13 +1,11 @@
 /**
- * StatusDog Office — the room.
+ * StatusDog Office — the page around the room.
  *
- * Built on the design tokens in statusdog.css, so the office inherits both
- * themes. Every dog is inline SVG driven by CSS custom properties: no images, no
- * external requests, and one mood class on the desk decides how it behaves.
- *
- * Motion is the whole point of this view, so `prefers-reduced-motion` gets a
- * genuine still version rather than a broken one — states stay distinguishable
- * by posture, colour and badge.
+ * The room itself is pixel art on a canvas (office/pixel/PixelOffice.js), with
+ * its own palette that is the same in both themes, like a window into another
+ * place. What is styled here is the frame around it, and the roster under it:
+ * the same colleagues as real buttons, which is how a keyboard or a screen
+ * reader gets to them.
  */
 
 .office {
@@ -40,106 +38,52 @@
 
 .office-room {
   position: relative;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background:
-    linear-gradient(to bottom, var(--wall) 0 118px, var(--floor) 118px 100%),
-    var(--floor);
-  padding: 26px 22px 30px;
   overflow: hidden;
-  box-shadow: var(--shadow);
+  background: #2b2231;
+  box-shadow: var(--shadow), 0 0 0 1px rgba(0, 0, 0, .25);
 }
 
-/* Floorboards, faint enough to read as texture rather than stripes. */
-.office-room::after {
-  content: '';
-  position: absolute;
-  inset: 118px 0 0 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 62px,
-    var(--floor-line) 62px 63px
-  );
-  opacity: .55;
-  pointer-events: none;
-}
-
-.office-wall {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 118px;
+/* A strip over the room, like the top bar of a management game. */
+.office-hud {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 0 24px;
-  pointer-events: none;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #251d2b;
+  border-bottom: 3px solid #171219;
+  color: #cbbcaa;
+  font-size: 13px;
+  line-height: 1.45;
 }
-
-/* Wall clock, and a whiteboard that reports the room's overall tone. */
-.office-clock {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 3px solid var(--border);
-  background: var(--card);
-  position: relative;
+.office-hud .office-board strong { color: #fff6e6; font-weight: 650; }
+.office-hud .board-interns { color: #a8998a; }
+/* The room's tone, as a single square lamp. */
+.hud-lamp {
   flex: none;
+  width: 12px;
+  height: 12px;
+  background: var(--mood-offduty);
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, .3), inset 2px 2px 0 rgba(255, 255, 255, .25);
 }
-.office-clock::before,
-.office-clock::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 50%;
-  background: var(--muted);
-  transform-origin: bottom center;
-  border-radius: 2px;
-}
-.office-clock::before { width: 2px; height: 11px; animation: office-hand 60s linear infinite; }
-.office-clock::after { width: 2px; height: 8px; animation: office-hand 720s linear infinite; }
-@keyframes office-hand { to { transform: rotate(360deg); } }
+.office[data-worst="working"] .hud-lamp { background: var(--mood-working); }
+.office[data-worst="strained"] .hud-lamp { background: var(--mood-strained); }
+.office[data-worst="uneasy"] .hud-lamp { background: var(--mood-uneasy); }
+.office[data-worst="alarmed"] .hud-lamp { background: var(--mood-alarmed); animation: hud-blink 1s steps(2, end) infinite; }
+@keyframes hud-blink { 50% { opacity: .35; } }
+.office-board { flex: 1 1 auto; min-width: 0; }
+.hud-hint { flex: none; font-size: 11.5px; color: #8f8172; }
 
-.office-board {
-  flex: 1 1 auto;
-  max-width: 340px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12.5px;
-  color: var(--muted);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, .06);
+.office-stage {
+  display: flex;
+  justify-content: center;
+  background: #3a2f3f;
+  line-height: 0;
 }
-.office-board strong { color: var(--fg); font-weight: 650; }
-
-/* A rotating hazard light on the wall, only while something is actually down. */
-.office-siren {
-  margin-left: auto;
-  flex: none;
-  width: 20px;
-  height: 15px;
-  border-radius: 10px 10px 2px 2px;
-  background: var(--mood-alarmed);
-  opacity: 0;
-  transition: opacity .3s;
-}
-.office-siren::after {
-  /* The bracket it hangs from. */
-  content: '';
+.office-stage canvas {
   display: block;
-  width: 26px;
-  height: 3px;
-  margin: 15px 0 0 -3px;
-  border-radius: 2px;
-  background: var(--border);
-}
-.office[data-worst="alarmed"] .office-siren {
-  opacity: 1;
-  animation: office-siren 1.1s ease-in-out infinite;
-}
-@keyframes office-siren {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(229, 83, 75, .55); filter: brightness(1); }
-  50% { box-shadow: 0 0 0 14px rgba(229, 83, 75, 0); filter: brightness(1.45); }
+  image-rendering: pixelated;
+  max-width: 100%;
 }
 
 /* ---------- hiring ---------- */
@@ -172,6 +116,9 @@
   color: var(--fg);
 }
 .office-hire .hire-url { flex: 1 1 240px; min-width: 0; }
+.office-hire .type-expect { flex: 0 1 140px; min-width: 0; }
+.office-hire .type-expect[hidden] { display: none; }
+.office-hire .type-expect input { font-family: var(--mono); }
 .office-hire .hire-name { flex: 0 1 150px; min-width: 0; }
 .office-hire button { align-self: flex-end; white-space: nowrap; }
 .office-hire .hire-note { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted); }
@@ -182,48 +129,42 @@
   color: var(--mood-alarmed);
 }
 
-/* ---------- desk grid ---------- */
+/* ---------- roster ---------- */
 
-.office-floor {
-  position: relative;
-  z-index: 1;
-  margin-top: 104px;
+.office-roster {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
-  gap: 22px 18px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+  padding: 14px;
+  background: var(--card);
 }
-
 .office-empty {
-  position: relative;
-  z-index: 1;
-  margin-top: 104px;
+  padding: 22px 18px;
   text-align: center;
-  padding: 40px 20px;
   color: var(--muted);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--card) 70%, transparent);
+  background: var(--card);
 }
 
-/* ---------- one desk ---------- */
-
+/* One colleague, as a button: opens the same report as clicking them in the room. */
 .desk {
   --mood-color: var(--mood-offduty);
-  position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  text-align: center;
-  padding: 0 0 10px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: left;
   font: inherit;
   color: inherit;
-  transition: transform .18s ease;
+  cursor: pointer;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--mood-color);
+  border-radius: 10px;
+  transition: border-color .15s, transform .15s;
 }
-.desk:hover { transform: translateY(-3px); filter: none; }
-.desk:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.desk:hover { border-color: var(--mood-color); transform: translateY(-1px); filter: none; }
+.desk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 [data-mood="working"] { --mood-color: var(--mood-working); }
 [data-mood="strained"] { --mood-color: var(--mood-strained); }
@@ -231,371 +172,23 @@
 [data-mood="alarmed"] { --mood-color: var(--mood-alarmed); }
 [data-mood="offDuty"] { --mood-color: var(--mood-offduty); }
 
-.desk-scene {
-  position: relative;
-  height: 166px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-/* The colleague sits behind the desk: torso and head are drawn first and painted
-   over by the desk, the arms (below) after it so the paws land on the keyboard.
-   Both boxes share one frame, with its bottom edge on the desktop. */
-.desk-dog,
-.dog-arms {
-  position: absolute;
-  left: 50%;
-  bottom: 34px;
-  width: 100px;
-  height: 126px;
-  margin-left: -50px;
-  pointer-events: none;
-}
-.dog-arms { z-index: 3; }
-.dog-bob {
-  position: absolute;
-  inset: 0;
-  transform-origin: 50% 100%;
-}
-.dog-head {
-  position: absolute;
-  left: 50%;
-  bottom: 31px;
-  width: 84px;
-  height: 84px;
-  margin-left: -42px;
-  transform-origin: 50% 88%;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-/* The coat: rounded shoulders, lit from the top left like the Fluent portraits,
-   and tucked under the desktop so it never shows a hem — only just, so that
-   slumping when off duty does not push it out below. */
-.dog-torso {
-  position: absolute;
-  left: 50%;
-  bottom: -3px;
-  width: 74px;
-  height: 47px;
-  margin-left: -37px;
-  border-radius: 36px 36px 10px 10px / 28px 28px 10px 10px;
-  background:
-    radial-gradient(ellipse 60% 50% at 32% 22%, color-mix(in srgb, white 30%, transparent), transparent 70%),
-    linear-gradient(to bottom, var(--coat), var(--coat-shade));
-  box-shadow: inset 0 -6px 10px color-mix(in srgb, black 14%, transparent);
-}
-/* The shadow the head casts on the shoulders, so it sits on them rather than
-   floating in front. */
-.dog-torso::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 46px;
-  height: 18px;
-  margin-left: -23px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 30%, color-mix(in srgb, black 26%, transparent), transparent 70%);
-}
-/* A zip down the front, so the coat reads as clothing rather than a blob. */
-.dog-torso::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 16px;
-  bottom: 0;
-  width: 2px;
-  margin-left: -1px;
-  border-radius: 1px;
-  background: var(--coat-trim);
-  opacity: .7;
-}
-
-/* Arms hang from the shoulders and reach in to the keyboard. Each pivots at the
-   shoulder, so a pose is one rotation; the sleeve inside carries the typing. */
-.dog-arm {
-  position: absolute;
-  bottom: 6px;
-  width: 15px;
-  height: 31px;
-  transform-origin: 50% 5px;
-  transition: transform .35s cubic-bezier(.34, 1.4, .64, 1);
-}
-.arm-l { left: calc(50% - 35px); transform: rotate(-30deg); }
-.arm-r { right: calc(50% - 35px); transform: rotate(30deg); }
-.dog-sleeve {
-  position: absolute;
-  inset: 0;
-  border-radius: 8px;
-  background:
-    linear-gradient(to bottom, transparent 70%, var(--coat-trim) 70%, var(--coat-trim) 84%, transparent 84%),
-    linear-gradient(90deg, var(--coat-shade), var(--coat) 45%, var(--coat-shade));
-}
-.dog-paw {
-  position: absolute;
-  left: 50%;
-  bottom: -5px;
-  width: 17px;
-  height: 13px;
-  margin-left: -8.5px;
-  border-radius: 50% 50% 46% 46%;
-  background:
-    radial-gradient(ellipse 55% 45% at 38% 30%, color-mix(in srgb, white 35%, transparent), transparent 70%),
-    linear-gradient(to bottom, var(--fur), var(--fur-shade));
-  box-shadow: 0 1px 1px color-mix(in srgb, black 22%, transparent);
-  transition: transform .35s cubic-bezier(.34, 1.4, .64, 1);
-}
-/* Two toe creases, so it reads as a paw and not a ball. */
-.dog-paw::before,
-.dog-paw::after {
-  content: '';
-  position: absolute;
-  bottom: 1px;
-  width: 1.5px;
-  height: 5px;
-  border-radius: 1px;
-  background: color-mix(in srgb, var(--fur-shade) 70%, black);
-  opacity: .45;
-}
-.dog-paw::before { left: 5.5px; }
-.dog-paw::after { right: 5.5px; }
-/* Paws keep facing the keyboard whatever angle the arm is at. */
-.arm-l .dog-paw { transform: rotate(30deg); }
-.arm-r .dog-paw { transform: rotate(-30deg); }
-
-.desk-furniture {
-  position: relative;
-  width: 100%;
+/* The colleague's pixel portrait, at a whole multiple of its pixels. */
+.desk-avatar {
+  flex: none;
+  width: 32px;
   height: 34px;
-}
-
-/* Desktop surface and modesty panel. */
-.desk-furniture::before {
-  content: '';
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  top: 0;
-  height: 8px;
-  border-radius: 4px 4px 2px 2px;
-  background: linear-gradient(to bottom, var(--desk) 60%, var(--desk-edge));
-  box-shadow: 0 1px 0 rgba(0, 0, 0, .18);
-}
-.desk-furniture::after {
-  content: '';
-  position: absolute;
-  left: 14%;
-  right: 14%;
-  top: 8px;
-  height: 18px;
-  background: color-mix(in srgb, var(--desk-edge) 82%, black);
-  border-radius: 0 0 3px 3px;
-  opacity: .55;
-}
-
-/* The monitor the colleague is watching, tinted by mood. It stands at the side
-   of the desk, turned toward them, so it no longer hides who is sitting there. */
-.desk-monitor {
-  position: absolute;
-  right: 7%;
-  bottom: 39px;
-  transform: perspective(160px) rotateY(-24deg);
-  width: 40px;
-  height: 28px;
-  border-radius: 5px;
-  background: var(--screen);
-  border: 2px solid color-mix(in srgb, var(--screen) 70%, black);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, .05) inset;
-  overflow: hidden;
-  z-index: 2;
-}
-.desk-monitor::before {
-  /* A little status line on the screen. */
-  content: '';
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  top: 8px;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--mood-color);
-  box-shadow: 0 6px 0 color-mix(in srgb, var(--mood-color) 45%, transparent),
-              0 12px 0 color-mix(in srgb, var(--mood-color) 22%, transparent);
-}
-.desk-monitor::after {
-  /* Screen glow, brighter when things are going wrong. */
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 120%, color-mix(in srgb, var(--mood-color) 40%, transparent), transparent 70%);
-}
-.desk[data-mood="strained"] .desk-monitor::before { animation: office-flicker 1.4s steps(2, end) infinite; }
-.desk[data-mood="alarmed"] .desk-monitor::before { animation: office-flicker .45s steps(2, end) infinite; }
-@keyframes office-flicker { 50% { opacity: .35; } }
-
-/* Monitor stand. */
-.desk-monitor-stand {
-  position: absolute;
-  right: calc(7% + 16px);
-  bottom: 33px;
-  width: 8px;
-  height: 7px;
-  background: color-mix(in srgb, var(--screen) 80%, black);
-  border-radius: 0 0 3px 3px;
-  z-index: 2;
-}
-
-/* The keyboard, where the paws rest. */
-.desk-keyboard {
-  position: absolute;
-  left: 50%;
-  bottom: 33px;
-  width: 46px;
-  height: 5px;
-  margin-left: -23px;
-  border-radius: 2px 2px 1px 1px;
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--screen) 35%, #e7eaee), color-mix(in srgb, var(--screen) 60%, #b9bec6));
-  box-shadow: 0 1px 0 rgba(0, 0, 0, .2);
-  z-index: 2;
-}
-
-/* ---------- the animal ---------- */
-
-/* The portrait cannot change its face, so the body language does the talking.
-   Three parts move: the whole body (.dog-bob, shared by both layers so they stay
-   together), the head on its neck, and the arms. Everything runs on a per-animal
-   delay so a room of colleagues never moves in lockstep. */
-.desk-dog,
-.dog-arms { --beat: 0ms; }
-
-/* Working: a calm breath, a little head tilt, paws taking turns on the keys. */
-.desk[data-mood="working"] .dog-bob { animation: body-breathe 2.8s ease-in-out infinite; animation-delay: var(--beat); }
-.desk[data-mood="working"] .dog-head { animation: head-tilt 2.8s ease-in-out infinite; animation-delay: var(--beat); }
-.desk[data-mood="working"] .dog-sleeve { animation: paw-type .52s ease-in-out infinite; }
-.desk[data-mood="working"] .arm-r .dog-sleeve { animation-delay: .26s; }
-@keyframes body-breathe {
-  0%, 100% { transform: translateY(0) scale(1, 1); }
-  50% { transform: translateY(-1.5px) scale(1.015, .99); }
-}
-@keyframes head-tilt {
-  0%, 100% { transform: rotate(0); }
-  25% { transform: rotate(-3deg); }
-  75% { transform: rotate(3deg); }
-}
-@keyframes paw-type {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2.5px); }
-}
-
-/* Straining: hunched over and hammering the keyboard. */
-.desk[data-mood="strained"] .dog-bob { animation: body-rush .38s ease-in-out infinite; }
-.desk[data-mood="strained"] .dog-head { transform: translateY(3px) rotate(-2deg); }
-.desk[data-mood="strained"] .dog-sleeve { animation: paw-type .2s ease-in-out infinite; }
-.desk[data-mood="strained"] .arm-r .dog-sleeve { animation-delay: .1s; }
-@keyframes body-rush {
-  0%, 100% { transform: translateY(0) scale(1, 1); }
-  50% { transform: translateY(-2.5px) scale(.985, 1.015); }
-}
-
-/* Uneasy: still at the keyboard, looking from side to side, one paw drumming. */
-.desk[data-mood="uneasy"] .dog-head { animation: head-worry 3.2s ease-in-out infinite; animation-delay: var(--beat); }
-.desk[data-mood="uneasy"] .arm-r .dog-sleeve { animation: paw-type 1.1s ease-in-out infinite; }
-@keyframes head-worry {
-  0%, 100% { transform: rotate(-7deg); }
-  45%, 55% { transform: rotate(7deg); }
-}
-
-/* Alarmed: up out of the chair, paws flung to its cheeks, shaking. */
-.desk[data-mood="alarmed"] .dog-bob { animation: body-panic .45s ease-in-out infinite; }
-.desk[data-mood="alarmed"] .dog-head { animation: head-panic .45s ease-in-out infinite; }
-.desk[data-mood="alarmed"] .arm-l { transform: rotate(152deg); }
-.desk[data-mood="alarmed"] .arm-r { transform: rotate(-152deg); }
-.desk[data-mood="alarmed"] .arm-l .dog-paw { transform: rotate(-152deg); }
-.desk[data-mood="alarmed"] .arm-r .dog-paw { transform: rotate(152deg); }
-@keyframes body-panic {
-  0%, 100% { transform: translate(0, -9px); }
-  50% { transform: translate(2px, -11px); }
-}
-@keyframes head-panic {
-  0%, 100% { transform: rotate(-5deg) scale(1.03); }
-  50% { transform: rotate(5deg) scale(1.03); }
-}
-
-/* Off duty: slumped, nodding off, colour drained, paws idle on the desk. */
-.desk[data-mood="offDuty"] .dog-bob { animation: body-doze 4.5s ease-in-out infinite; }
-.desk[data-mood="offDuty"] .dog-head { transform: translateY(4px) rotate(-11deg); }
-.desk[data-mood="offDuty"] .desk-dog,
-.desk[data-mood="offDuty"] .dog-arms { filter: saturate(.45) brightness(.92); }
-@keyframes body-doze {
-  0%, 100% { transform: translateY(3px) scale(1.01, .99); }
-  50% { transform: translateY(4px) scale(1, 1); }
-}
-
-/* ---------- props ---------- */
-
-.dog-prop {
-  position: absolute;
-  width: 26px;
-  height: 26px;
-  pointer-events: none;
-  z-index: 3;
-  opacity: 0;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-/* A coffee on the desk, always there; set aside when nobody is at work. */
-.prop-mug { left: 8%; bottom: 33px; width: 24px; height: 24px; opacity: 1; }
-.desk[data-mood="working"] .prop-mug { animation: prop-float 3.4s ease-in-out infinite; animation-delay: var(--beat); }
-.desk[data-mood="offDuty"] .prop-mug { opacity: .45; }
-@keyframes prop-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
-}
-
-/* Sweat while straining, falling and fading. */
-.prop-sweat { right: 19%; bottom: 130px; }
-.desk[data-mood="strained"] .prop-sweat { animation: prop-sweat 1.4s ease-in infinite; }
-@keyframes prop-sweat {
-  0% { opacity: 0; transform: translateY(-4px) scale(.7); }
-  25% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(18px) scale(1); }
-}
-
-/* A question mark while uneasy. */
-.prop-question { right: 15%; bottom: 132px; }
-.desk[data-mood="uneasy"] .prop-question { animation: prop-pop 2.4s ease-in-out infinite; }
-@keyframes prop-pop {
-  0%, 70%, 100% { opacity: 0; transform: translateY(4px) scale(.85); }
-  20%, 55% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* The beacon while down. */
-.prop-alarm { right: 10%; bottom: 132px; width: 32px; height: 32px; }
-.desk[data-mood="alarmed"] .prop-alarm { opacity: 1; animation: prop-shake .4s ease-in-out infinite; }
-@keyframes prop-shake {
-  0%, 100% { transform: rotate(-12deg) scale(1); }
-  50% { transform: rotate(12deg) scale(1.12); }
-}
-
-/* Asleep. */
-.prop-zzz { right: 16%; bottom: 130px; }
-.desk[data-mood="offDuty"] .prop-zzz { opacity: .9; animation: prop-drift 4s ease-in-out infinite; }
-@keyframes prop-drift {
-  0%, 100% { transform: translate(0, 0); opacity: .7; }
-  50% { transform: translate(3px, -4px); opacity: 1; }
+  image-rendering: pixelated;
 }
 
 /* ---------- desk label ---------- */
 
 .desk-plate {
-  margin-top: 8px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 3px;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 .desk-dogname {
   font-size: 13.5px;
@@ -636,7 +229,7 @@
   background: currentColor;
   flex: none;
 }
-.desk[data-mood="alarmed"] .desk-status .dot { animation: office-siren 1.1s ease-in-out infinite; }
+.desk[data-mood="alarmed"] .desk-status .dot { animation: hud-blink 1s steps(2, end) infinite; }
 .desk-latency { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* A new hire walks in rather than blinking into existence. */
@@ -763,8 +356,9 @@
 }
 .report-head .dog-chip .chip-face {
   display: block;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 34px;
+  image-rendering: pixelated;
 }
 
 .report-title { min-width: 0; }
@@ -810,37 +404,17 @@
 
 @media (max-width: 560px) {
   .report-panel { width: 100%; }
-  .office-board { max-width: none; }
-  .office-wall { gap: 10px; padding: 0 14px; }
+  .hud-hint { display: none; }
 }
 
 /* ---------- reduced motion ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .office-clock::before,
-  .office-clock::after,
-  .office-siren,
-  .desk-monitor::before,
-  .dog-bob,
-  .dog-head,
-  .dog-sleeve,
-  .dog-prop,
+  /* The room settles everyone where their mood puts them (PixelOffice). */
+  .hud-lamp,
   .desk-status .dot {
     animation: none !important;
   }
-  .dog-arm,
-  .dog-paw { transition: none; }
-  /* Keep the states readable without movement: posture, colour and props stay —
-     the raised paws when alarmed are a pose, not a motion, so they stay too. */
-  .desk[data-mood="alarmed"] .dog-bob { transform: translateY(-9px); }
-  .desk[data-mood="uneasy"] .dog-head { transform: rotate(-7deg); }
-  .desk[data-mood="offDuty"] .dog-bob { transform: translateY(3px); }
-  /* Only the prop for the current mood, as with motion on. */
-  .desk[data-mood="strained"] .prop-sweat,
-  .desk[data-mood="uneasy"] .prop-question,
-  .desk[data-mood="alarmed"] .prop-alarm,
-  .desk[data-mood="offDuty"] .prop-zzz { opacity: 1; }
-  .office[data-worst="alarmed"] .office-siren { opacity: 1; }
   .desk:hover { transform: none; }
   .desk[data-arriving="true"] { animation: none; }
 }

@@ -5,14 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title data-i18n="home.pageTitle">StatusDog — is your site up?</title>
 <meta name="description" data-i18n-content="home.metaDescription" content="Check any website's status, response time, redirects and SSL certificate.">
+<link rel="stylesheet" href="/assets/fonts/pretendard/pretendard.css">
 <link rel="stylesheet" href="/assets/statusdog.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#251d2b">
+<link rel="apple-touch-icon" href="/assets/app/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="StatusDog">
+<link rel="icon" type="image/png" href="/assets/app/favicon-32.png">
 </head>
 <body>
 
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <a class="brand" href="/" aria-label="StatusDog"><img class="brand-mark" src="/assets/app/mark.svg" alt="" width="28" height="26"><img class="brand-word" src="/assets/app/wordmark.svg" alt="StatusDog" width="94" height="15"></a>
     <nav class="site-nav">
       <a href="/" data-i18n="nav.home">Home</a>
       <a href="/office" data-i18n="nav.office">Office</a>
@@ -31,7 +36,9 @@
 
 <main>
 
-  <section class="block wrap">
+  <section class="block wrap hero">
+    <div class="hero-copy">
+    <p class="eyebrow" data-i18n="home.eyebrow">Websites and app APIs, watched from outside</p>
     <h1 data-i18n="home.h1">Is your site actually up?</h1>
     <p class="lede" data-i18n="home.lede">
       Paste a URL. StatusDog checks it from the outside and tells you what a
@@ -57,7 +64,22 @@
       No sign-up. Nothing is stored on our side.
     </p>
 
-    <div id="result" style="margin-top:28px" hidden></div>
+    </div>
+
+    <!-- The office, live: the colleagues for the sites this deployment watches. -->
+    <figure class="hero-office">
+      <figcaption class="hero-office-bar">
+        <span class="hero-live" data-i18n="home.office.live">Live</span>
+        <strong data-i18n="home.office.h2">Live from the office</strong>
+        <span class="hero-office-count" id="hero-office-count"></span>
+      </figcaption>
+      <a class="hero-office-stage" href="/office" data-i18n-aria-label="home.office.enter" aria-label="Enter the office">
+        <canvas id="hero-office-canvas" aria-hidden="true"></canvas>
+      </a>
+      <p class="hero-office-note small" data-i18n-html="home.office.ledeHtml"></p>
+    </figure>
+
+    <div id="result" class="hero-result" hidden></div>
   </section>
 
   <section class="block wrap">
@@ -76,11 +98,6 @@
         <p class="muted small" style="margin:0" data-i18n-html="home.f3.pHtml"></p>
       </div>
     </div>
-  </section>
-
-  <section class="block wrap">
-    <h2 data-i18n="home.office.h2">Meet the office</h2>
-    <p class="lede" style="margin-bottom:18px" data-i18n-html="home.office.ledeHtml"></p>
   </section>
 
   <section class="block wrap">
@@ -112,16 +129,68 @@ node dist/cli.js init &amp;&amp; node dist/cli.js start</code></pre>
 </footer>
 
 <script type="module">
-import { initI18n, t } from '/assets/i18n.js';
+import { getLanguage, initI18n, t } from '/assets/i18n.js';
 import { check, escapeHtml, formatMs, markCurrentNav, prettyUrl, statusBadge } from '/assets/statusdog.js';
+import { PixelOffice } from '/assets/office/pixel/PixelOffice.js';
+import { typeSwitch } from '/assets/target-type.js';
+import { deriveMood } from '/assets/office/mood.js';
+import { makeWorker } from '/assets/office/DogWorkerCard.js';
+import { dogOverrides } from '/assets/office/overrides.js';
 
 initI18n();
 markCurrentNav();
+
+/*
+ * The office, live, in the hero. Only the roster — the sites this deployment
+ * watches around the clock — so the first thing a visitor sees is real. Clicking
+ * the room goes to the office itself.
+ */
+const heroCanvas = document.getElementById('hero-office-canvas');
+const heroCount = document.getElementById('hero-office-count');
+const heroOffice = new PixelOffice(heroCanvas, { onSelect: () => { location.href = '/office'; } });
+let heroMonitors = [];
+
+function renderHeroOffice() {
+  const workers = heroMonitors.map((monitor) => {
+    const staff = { ...monitor, uid: `staff:${monitor.id}`, kind: 'staff' };
+    const worker = makeWorker(staff, deriveMood(staff), dogOverrides.get(staff.uid));
+    return { ...worker, label: worker.dog.names[getLanguage()] ?? worker.dog.names.en };
+  });
+  heroOffice.setWorkers(workers);
+  const down = workers.filter((worker) => worker.mood.mood === 'alarmed').length;
+  heroCount.textContent = workers.length === 0
+    ? ''
+    : down > 0
+      ? t('home.office.down', { count: down })
+      : t('home.office.count', { count: workers.length });
+  heroCount.dataset.down = down > 0 ? 'true' : 'false';
+}
+
+async function loadHeroOffice() {
+  try {
+    // Not no-store: the API is cached at the edge for half a minute, and every
+    // visitor sharing that one answer is what keeps storage reads affordable.
+    const response = await fetch('/api/monitors?history=12');
+    if (!response.ok) return;
+    const payload = await response.json();
+    heroMonitors = payload.monitors ?? [];
+    document.dispatchEvent(new CustomEvent('statusdog:monitors', { detail: payload }));
+    renderHeroOffice();
+  } catch {
+    // The room just stays as it was; the rest of the page does not depend on it.
+  }
+}
+
+heroOffice.start();
+void loadHeroOffice();
+setInterval(() => void loadHeroOffice(), 60_000);
+document.addEventListener('statusdog:languagechange', renderHeroOffice);
 
 const form = document.getElementById('check-form');
 const input = document.getElementById('url');
 const submit = document.getElementById('submit');
 const output = document.getElementById('result');
+const kind = typeSwitch(form, input);
 
 /** Last result, kept so switching language re-renders it rather than clearing it. */
 let lastResult = null;
@@ -137,7 +206,9 @@ form.addEventListener('submit', async (event) => {
   output.innerHTML = `<div class="card muted">${escapeHtml(t('home.running'))}</div>`;
 
   try {
-    lastResult = await check(url);
+    lastResult = await check(url, { expect: kind.expect });
+    lastResult.type = kind.type;
+    lastResult.expect = kind.expect;
     output.innerHTML = renderResult(lastResult);
   } catch (err) {
     lastResult = null;
@@ -172,13 +243,15 @@ function renderResult(result) {
       </div>
       <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
         <a href="/check?url=${encodeURIComponent(result.url)}"><button type="button" class="secondary">${escapeHtml(t('home.fullReport'))}</button></a>
-        <a href="/dashboard?add=${encodeURIComponent(result.url)}"><button type="button" class="secondary">${escapeHtml(t('home.keepWatching'))}</button></a>
+        <a href="/dashboard?add=${encodeURIComponent(result.url)}${result.type === 'api' ? `&type=api&expect=${encodeURIComponent(result.expect ?? '')}` : ''}"><button type="button" class="secondary">${escapeHtml(t('home.keepWatching'))}</button></a>
       </div>
     </div>`;
 }
 </script>
 
 <script type="module" src="/assets/account.js"></script>
+
+<script type="module" src="/assets/watch.js"></script>
 
 </body>
 </html>

@@ -26,13 +26,23 @@ export const store = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(monitors));
   },
 
-  /** Returns the monitor, whether it was newly added or already present. */
-  add(url) {
+  /**
+   * Returns the monitor, whether it was newly added or already present.
+   * `type` is 'web' or 'api'; an API keeps the status codes that mean healthy.
+   */
+  add(url, { type = 'web', expect } = {}) {
     const monitors = store.list();
     const existing = monitors.find((m) => m.url === url);
     if (existing) return { monitor: existing, added: false };
 
-    const monitor = { id: cryptoId(), url, addedAt: new Date().toISOString(), history: [] };
+    const monitor = {
+      id: cryptoId(),
+      url,
+      type: type === 'api' ? 'api' : 'web',
+      ...(type === 'api' && expect ? { expect } : {}),
+      addedAt: new Date().toISOString(),
+      history: [],
+    };
     monitors.push(monitor);
     store.save(monitors);
     return { monitor, added: true };

@@ -21,6 +21,7 @@ export const TARGET_DEFAULTS: Required<
     | 'expectFinalUrl'
     | 'discover'
     | 'discoverLimit'
+    | 'type'
   >
 > = {
   method: 'GET',

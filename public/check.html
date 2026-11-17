@@ -5,14 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title data-i18n="check.pageTitle">Report — StatusDog</title>
 <meta name="description" data-i18n-content="check.metaDescription" content="Full diagnostic report for a URL.">
+<link rel="stylesheet" href="/assets/fonts/pretendard/pretendard.css">
 <link rel="stylesheet" href="/assets/statusdog.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#251d2b">
+<link rel="apple-touch-icon" href="/assets/app/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="StatusDog">
+<link rel="icon" type="image/png" href="/assets/app/favicon-32.png">
 </head>
 <body>
 
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="/"><span class="mark">🐕</span> StatusDog</a>
+    <a class="brand" href="/" aria-label="StatusDog"><img class="brand-mark" src="/assets/app/mark.svg" alt="" width="28" height="26"><img class="brand-word" src="/assets/app/wordmark.svg" alt="StatusDog" width="94" height="15"></a>
     <nav class="site-nav">
       <a href="/" data-i18n="nav.home">Home</a>
       <a href="/office" data-i18n="nav.office">Office</a>
@@ -224,6 +229,8 @@ function raw(result) {
 </script>
 
 <script type="module" src="/assets/account.js"></script>
+
+<script type="module" src="/assets/watch.js"></script>
 
 </body>
 </html>

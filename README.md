@@ -80,21 +80,29 @@ behind a web front end.
 
 ### The office
 
-[`/office`](https://status-dog.vercel.app/office) seats one animal colleague per monitored
-site — mostly dogs, with a cat, fox, panda and a few others — and lets its behaviour
-carry the status. Each one is a 3D portrait on a drawn body — a coat in its own colour,
-arms, and paws in its own fur on the keyboard. The face cannot change, so each mood is a
-different way of moving plus a prop: typing over a coffee, hammering the keys in a sweat,
-looking around with a question mark, paws to its cheeks under a beacon, or slumped with
-zzz. It reads the same data as the dashboard;
-what it adds is a mood the table has no column for.
+[`/office`](https://status-dog.vercel.app/office) is a small pixel-art office, drawn on a
+canvas, with one animal colleague per monitored site — mostly dogs, with a cat, fox, panda
+and a few others. They walk about like the staff of a management game, and what they do
+is the status: typing at the desk with the odd coffee or chat, hammering the keys in a
+sweat, getting up to pace with a question mark, running to the server rack while its
+beacon turns red, or asleep on the sofa. The window shows the sky over Seoul and the
+clock tells Seoul time; the whiteboard shows each site's last twelve checks. The home
+page shows the same room, live.
+
+Every sprite and piece of furniture is drawn in code (`public/assets/office/pixel/`),
+so there are no image assets or licences to carry. The room sizes itself to the team
+and scales by whole pixels. Under it, the same colleagues are listed as cards — real
+buttons, which is how a keyboard or screen reader reaches them — and with
+`prefers-reduced-motion` everyone simply stands where their mood puts them.
+It reads the same data as the dashboard; what it adds is a mood the table has no
+column for.
 
 | Mood | Meaning |
 | --- | --- |
 | **On it** | Up, answering at its usual speed |
 | **Server is panting** | Up, but far slower than usual, or past 70% of its configured `maxResponseTimeMs` |
 | **Something twitched** | A check failed, but not enough times in a row to be an outage |
-| **Down** | Confirmed down; the wall siren comes on |
+| **Down** | Confirmed down; its colleague runs for the server rack |
 | **Not started** | No check has run yet |
 
 **Hiring.** The form at the top of the office adds a site and assigns it a dog.
@@ -157,6 +165,46 @@ while a tab is open.
 
 **What the site cannot do.** Traffic and visitor counts are not measurable from
 outside; that needs the site's own analytics or server logs.
+
+### Websites and app APIs
+
+Every place that takes an address — the check on the home page, the dashboard and
+the office's hire form — has a **Website / App API** switch. An app API is the
+server a mobile app talks to; give StatusDog the address of something on it that
+needs no login (a `/health` endpoint is ideal) and say which status codes mean
+healthy — `2xx` by default, or `2xx,401` for an API that answers 401 to a caller
+without a login, which still proves the server is up. Never put a token in the
+address: browser monitors live in the browser, and the roster is a public file.
+API colleagues get an **API** badge, and a phone on their desk instead of a mug.
+On the roster, the same thing is `"type": "api"` in `monitors.json`.
+
+Hashed colleagues come from the original ten animals, so the roster keeps the
+faces it has; anyone hired or re-rolled is drawn from all twenty-two (dog, cat,
+fox, hamster, rabbit, bear, panda, raccoon, koala, tiger, penguin, frog, chick,
+owl, pig, cow, sheep, lion, monkey, mouse, wolf and red panda), still mostly dogs.
+
+### On a phone
+
+The site installs as an app — "Install app" in the footer on Android and desktop
+Chrome, or Safari's *Share → Add to Home Screen* on iOS — with the office dog as
+its icon. On every page, open or installed, a warning strip under the header says
+when a monitored site is **down**, has **connection errors** (a failed check being
+re-checked), or is **slow to respond**, and links to its status page. A phone
+buzzes once when something new goes wrong, the installed app's icon shows a count
+where the platform supports badges, and the strip also says when the phone itself
+is offline or StatusDog cannot be reached, so stale numbers are never mistaken for
+current ones. Dismissing it lasts until the trouble changes.
+
+This works while the app or a tab is open. For alerts when nothing is open, use
+the [webhooks](#alerts) — Slack, Discord and Google Chat deliver them to a phone
+through their own apps.
+
+The warning reads the same roster as the office and reuses it when the page has
+already fetched it. `/api/monitors` is cached at the edge for 30 seconds, so many
+open pages share one set of storage reads rather than each spending their own.
+The service worker (`public/sw.js`) is network-first and never caches the API:
+offline, it can open the last pages seen, but never presents an old status as
+current.
 
 Run the site locally with:
 
@@ -794,6 +842,7 @@ fully annotated file. The short version:
 | `id` | slug of the URL | Stable identifier used by the CLI, API and middleware |
 | `name` | `id` | Display name |
 | `url` | — | `http:` or `https:` URL (required) |
+| `type` | `"web"` | `"web"` for a website, `"api"` for the server a mobile app talks to. Checked the same way; shown with an API badge, and an API cannot set `discover` |
 | `method` | `GET` | HTTP method |
 | `headers` | `{}` | Extra request headers |
 | `body` | — | Request body (ignored for `GET`/`HEAD`) |
@@ -1030,6 +1079,7 @@ npm run build
 
 MIT — see [LICENSE](LICENSE).
 
-The office animals and props are [Fluent Emoji](https://github.com/microsoft/fluentui-emoji)
-by Microsoft, used under the MIT License, resized and converted to WebP — see
-[public/assets/office/animals/LICENSE.txt](public/assets/office/animals/LICENSE.txt).
+The site's typeface is [Pretendard](https://github.com/orioncactus/pretendard) by
+Kil Hyung-jin, served from this site under the SIL Open Font License 1.1 — see
+[public/assets/fonts/pretendard/LICENSE.txt](public/assets/fonts/pretendard/LICENSE.txt).
+The pixel animals, furniture, icons and logo are drawn in code in this repository.

@@ -9,20 +9,23 @@
  *   intern — monitors you added in this browser. They only work while the tab is
  *            open, and their notes are gone when localStorage is cleared.
  *
- * Re-renders the whole floor per poll and reconciles nothing: five to twenty
- * desks of static markup is cheaper to replace than to diff, and CSS animations
- * restart imperceptibly. The open report is updated in place instead, so it does
- * not shut under the reader.
+ * Two views of the same people: the pixel room on a canvas, where they walk
+ * about and act out their moods, and the roster under it as buttons. The roster
+ * is re-rendered whole per poll; the room keeps its colleagues and only tells them
+ * how they feel now, so nobody snaps back to their desk mid-stride. The open
+ * report is updated in place, so it does not shut under the reader.
  */
 import { check, escapeHtml, reflectStateInTab, renderStaleBanner, store } from '../statusdog.js';
 import { tenureOf } from './tenure.js';
-import { t } from '../i18n.js';
+import { getLanguage, t } from '../i18n.js';
 import { deriveMood, officeSummary } from './mood.js';
 import { makeWorker, renderDogWorkerCard } from './DogWorkerCard.js';
 import { ServerReportModal } from './ServerReportModal.js';
 import { dogOverrides } from './overrides.js';
 import { randomDogAssignment } from './dogs.js';
 import { normalizeUrlForDisplay } from './url.js';
+import { PixelOffice } from './pixel/PixelOffice.js';
+import { expectFor, typeSwitch } from '../target-type.js';
 
 const POLL_MS = 60_000;
 
@@ -30,7 +33,7 @@ export class OfficeDashboard {
   /**
    * @param {{ room: HTMLElement, floor: HTMLElement, board: HTMLElement }} elements
    */
-  constructor({ room, floor, board, hireForm, hireUrl, hireName, hireSubmit, hireError, staleBanner }) {
+  constructor({ room, floor, canvas, board, hireForm, hireUrl, hireName, hireSubmit, hireError, staleBanner }) {
     this.room = room;
     this.floor = floor;
     this.board = board;
@@ -63,6 +66,17 @@ export class OfficeDashboard {
     this.serverPayload = null;
     this.serverError = null;
 
+    this.pixel = canvas
+      ? new PixelOffice(canvas, {
+        onSelect: (uid) => {
+          const worker = this.workers.find((candidate) => candidate.monitor.uid === uid);
+          // Focus comes back to the colleague's card when the report closes.
+          const card = this.floor.querySelector(`[data-worker-id="${CSS.escape(uid)}"]`);
+          if (worker) this.report.open(worker, card);
+        },
+      })
+      : null;
+
     this.floor.addEventListener('click', (event) => {
       const desk = event.target.closest('.desk');
       if (!desk) return;
@@ -71,6 +85,10 @@ export class OfficeDashboard {
     });
 
     document.addEventListener('statusdog:languagechange', () => this.render());
+
+    this.hire.kind = this.hire.form
+      ? typeSwitch(this.hire.form, this.hire.url, { fieldAfter: this.hire.url.closest('label') })
+      : null;
 
     this.hire.form?.addEventListener('submit', (event) => {
       event.preventDefault();
@@ -103,7 +121,10 @@ export class OfficeDashboard {
     submit.textContent = t('office.hire.hiring');
 
     try {
-      const { monitor, added } = store.add(display);
+      const { monitor, added } = store.add(display, {
+        type: this.hire.kind?.type,
+        expect: this.hire.kind?.expect,
+      });
       const uid = `intern:${monitor.id}`;
 
       if (!added) {
@@ -138,6 +159,7 @@ export class OfficeDashboard {
   }
 
   start() {
+    this.pixel?.start();
     void this.refresh();
     setInterval(() => void this.refresh(), POLL_MS);
   }
@@ -177,6 +199,8 @@ export class OfficeDashboard {
       }
       this.serverPayload = payload;
       this.serverError = null;
+      // The site-wide warning (watch.js) reads this instead of asking again.
+      document.dispatchEvent(new CustomEvent('statusdog:monitors', { detail: payload }));
     } catch (err) {
       this.serverPayload = null;
       this.serverError = err.message;
@@ -192,7 +216,7 @@ export class OfficeDashboard {
 
   async runIntern(monitor) {
     try {
-      store.record(monitor.id, await check(monitor.url));
+      store.record(monitor.id, await check(monitor.url, { expect: expectFor(monitor) }));
     } catch (err) {
       // A rejected request is itself a result — record it rather than lose it.
       store.record(monitor.id, {
@@ -232,6 +256,7 @@ export class OfficeDashboard {
         id: monitor.id,
         uid: `intern:${monitor.id}`,
         kind: 'intern',
+        type: monitor.type ?? 'web',
         // A browser monitor has no display name, so the host stands in for one.
         name: monitor.url.replace(/^https?:\/\//, '').replace(/\/$/, ''),
         url: monitor.url,
@@ -266,7 +291,11 @@ export class OfficeDashboard {
 
     this.floor.innerHTML = this.workers.length === 0
       ? `<div class="office-empty">${t('office.emptyHtml')}</div>`
-      : `<div class="office-floor">${this.workers.map(renderDogWorkerCard).join('')}</div>`;
+      : `<div class="office-roster">${this.workers.map(renderDogWorkerCard).join('')}</div>`;
+    this.pixel?.setWorkers(this.workers.map((worker) => ({
+      ...worker,
+      label: worker.dog.names[getLanguage()] ?? worker.dog.names.en,
+    })));
 
     // The arrival animation plays once; after this render it is history.
     for (const worker of this.workers) this.seen.add(worker.monitor.uid);

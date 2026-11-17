@@ -15,6 +15,7 @@ import type {
   StatusDogConfig,
   TargetConfig,
   TargetDefaults,
+  TargetType,
 } from './types.js';
 
 export * from './types.js';
@@ -213,7 +214,19 @@ function resolveTarget(
     // Per target only, never from `defaults`: one line there would multiply every
     // site's requests by ten.
     discoverLimit: discoverLimit(target, `targets[${index}]`),
+    type: targetType(target, `targets[${index}]`),
   };
+}
+
+function targetType(target: TargetConfig, label: string): TargetType {
+  const type = target.type ?? 'web';
+  if (type !== 'web' && type !== 'api') {
+    throw new ConfigError(`${label}.type must be "web" or "api", got ${JSON.stringify(target.type)}.`);
+  }
+  if (type === 'api' && target.discover === true) {
+    throw new ConfigError(`${label}: an "api" target has no menu pages, so it cannot set discover.`);
+  }
+  return type;
 }
 
 function discoverLimit(target: TargetConfig, label: string): number {

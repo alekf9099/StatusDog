@@ -28,6 +28,7 @@ const MIME = {
   '.txt': 'text/plain; charset=utf-8',
   '.ico': 'image/x-icon',
   '.webp': 'image/webp',
+  '.webmanifest': 'application/manifest+json',
   '.png': 'image/png',
 };
 

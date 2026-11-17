@@ -56,9 +56,8 @@ const ACCESSORIES = ['none', 'collar', 'scarf', 'cap'];
 /**
  * What kind of animal sits at the desk.
  *
- * Drawn from Microsoft's Fluent Emoji 3D set (MIT; see animals/LICENSE.txt),
- * shipped as small WebP files rather than hotlinked, so the office never depends
- * on someone else's CDN being up.
+ * Drawn as pixel sprites by pixel/sprites.js, which reads `fur` and
+ * `furShade` from here.
  *
  * Dogs are listed several times in the pool on purpose: this is StatusDog, and
  * the office should read as dogs with a few friends rather than a zoo.
@@ -76,8 +75,29 @@ const SPECIES = [
   { key: 'raccoon', en: 'Raccoon', ko: '너구리', fur: '#b5b5bd', furShade: '#83838e' },
   { key: 'koala', en: 'Koala', ko: '코알라', fur: '#a3a3ab', furShade: '#74747d' },
   { key: 'tiger', en: 'Tiger', ko: '호랑이', fur: '#f39b4d', furShade: '#cf651c' },
+  // The second dozen, drawn for the pixel office.
+  { key: 'penguin', en: 'Penguin', ko: '펭귄', fur: '#3a3f4e', furShade: '#23262f' },
+  { key: 'frog', en: 'Frog', ko: '개구리', fur: '#7ccf55', furShade: '#4a9a35' },
+  { key: 'chick', en: 'Chick', ko: '병아리', fur: '#ffd84a', furShade: '#e3a91c' },
+  { key: 'owl', en: 'Owl', ko: '부엉이', fur: '#a0714f', furShade: '#6e4a32' },
+  { key: 'pig', en: 'Pig', ko: '돼지', fur: '#f6aebb', furShade: '#d97c8e' },
+  { key: 'cow', en: 'Cow', ko: '젖소', fur: '#f4f1ec', furShade: '#c9c1b5' },
+  { key: 'sheep', en: 'Sheep', ko: '양', fur: '#5e4c44', furShade: '#3f322c' },
+  { key: 'lion', en: 'Lion', ko: '사자', fur: '#e9b04c', furShade: '#c4892b' },
+  { key: 'monkey', en: 'Monkey', ko: '원숭이', fur: '#91603f', furShade: '#5f3c26' },
+  { key: 'mouse', en: 'Mouse', ko: '생쥐', fur: '#babac6', furShade: '#8b8b99' },
+  { key: 'wolf', en: 'Wolf', ko: '늑대', fur: '#8f98a6', furShade: '#5f6876' },
+  { key: 'redPanda', en: 'Red panda', ko: '레서판다', fur: '#cc5b2c', furShade: '#8f3b19' },
 ];
-const SPECIES_POOL = ['dog', 'dog', 'dog', 'dog', ...SPECIES.slice(1).map((species) => species.key)];
+
+/**
+ * Who a site gets when nobody has chosen: the original ten, so every colleague
+ * already on the roster keeps the face it has today — the pool is part of the
+ * hash, and growing it would quietly swap animals around.
+ */
+const SPECIES_POOL = ['dog', 'dog', 'dog', 'dog', ...SPECIES.slice(1, 10).map((species) => species.key)];
+/** Who a new hire, or a re-roll, can be: all of them, still mostly dogs. */
+const HIRE_POOL = [...Array(8).fill('dog'), ...SPECIES.slice(1).map((species) => species.key)];
 
 /** A rename cannot be longer than this, or it breaks the nameplate. */
 export const MAX_DOG_NAME_LENGTH = 20;
@@ -97,11 +117,6 @@ export function coatByKey(key) {
 
 export function speciesByKey(key) {
   return SPECIES.find((species) => species.key === key) ?? null;
-}
-
-/** Where a species' portrait lives. */
-export function speciesImage(key) {
-  return `/assets/office/animals/${speciesByKey(key)?.key ?? 'dog'}.webp`;
 }
 
 /** FNV-1a. Small, stable, and not a security boundary — just a spread. */
@@ -151,7 +166,7 @@ export function randomDogAssignment(rng = Math.random) {
     dog: pick(DOG_KEYS),
     coat: pick(COAT_KEYS),
     accessory: pick(ACCESSORIES),
-    species: pick(SPECIES_POOL),
+    species: pick(HIRE_POOL),
   };
 }
 

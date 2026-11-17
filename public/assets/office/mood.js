@@ -102,6 +102,31 @@ export function deriveMood(monitor) {
   return { ...base, mood: 'working', cause: 'nominal' };
 }
 
+/** Which moods are worth a warning, and under what name. */
+const TROUBLE = { alarmed: 'down', uneasy: 'failing', strained: 'slow' };
+export const TROUBLE_LEVELS = ['down', 'failing', 'slow'];
+
+/**
+ * What is wrong right now across a roster, worst first: confirmed down, a
+ * failed check (a connection error, being re-checked), and slow answers.
+ * Returns `{ down: [{ id, name }], failing: [...], slow: [...] }`.
+ */
+export function troubleOf(monitors = []) {
+  const trouble = { down: [], failing: [], slow: [] };
+  for (const monitor of monitors) {
+    const level = TROUBLE[deriveMood(monitor).mood];
+    if (level) trouble[level].push({ id: monitor.id, name: monitor.name ?? monitor.id });
+  }
+  return trouble;
+}
+
+/** A key for "exactly this trouble", so a dismissed warning stays dismissed until it changes. */
+export function troubleSignature(trouble) {
+  return TROUBLE_LEVELS
+    .map((level) => `${level}:${trouble[level].map((site) => site.id).sort().join(',')}`)
+    .join('|');
+}
+
 /** Roster targets are permanent staff; browser-local ones clock out with the tab. */
 export function employmentOf(monitor) {
   return monitor?.kind === 'intern' ? 'intern' : 'staff';
