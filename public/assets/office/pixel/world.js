@@ -102,6 +102,7 @@ export function buildLayout(count, width = 384) {
       { kind: 'shelf', x: W - 90, y: 76, w: 30, h: 14 },
     );
     spots.sofa.push({ x: sx + 20, y: sy + 21 }, { x: sx + 44, y: sy + 21 });
+    spots.shelf = { x: W - 75, y: 98 };
   } else {
     const sx = 16;
     const sy = height - 40;

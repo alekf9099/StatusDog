@@ -6,7 +6,9 @@
  * from its mood. The mood still comes from mood.js and the site's real state; this
  * only decides how that mood looks when acted out:
  *
- *   working   mostly at the desk typing, with coffee, water and chats in between
+ *   working   types in short stretches, then gets up: coffee, water, the window,
+ *             the bookshelf, a sit on the sofa, a stroll, a chat with whoever
+ *             else is up — often two or three of those in one outing
  *   strained  typing fast with a sweat drop, dashing out for coffee
  *   uneasy    restless: sits, gets up, paces by the desk, looks around
  *   alarmed   runs to the server rack and back, over and over
@@ -15,7 +17,7 @@
  * Free of the DOM and of real time (the caller passes `dt` and a random source),
  * so a test can run a colleague through a mood and watch where it ends up.
  */
-import { findPath } from './world.js';
+import { CELL, findPath } from './world.js';
 
 export const WALK_SPEED = 22;
 export const RUN_SPEED = 48;
@@ -132,21 +134,65 @@ function claimSofa(agent, world) {
   return null;
 }
 
-/** Somewhere to go on a break, and what to do there. */
-function breakPlan(agent, world, rng, others) {
-  const options = [
-    () => ({ to: world.spots.coffee, face: 'up', bubble: 'coffee' }),
-    () => ({ to: world.spots.cooler, face: 'up', bubble: 'water' }),
-    () => ({ to: world.spots.plant, face: 'up', bubble: 'heart' }),
-    () => ({ to: world.spots.window, face: 'up', bubble: 'sun' }),
+/** Anywhere on open floor, for a stroll with no errand. */
+function strollPoint(world, rng) {
+  const { grid } = world;
+  for (let tries = 0; tries < 40; tries++) {
+    const c = Math.floor(rng() * grid.cols);
+    const r = Math.floor(rng() * grid.rows);
+    if (grid.open[r * grid.cols + c] !== 1) continue;
+    return { x: c * CELL + CELL / 2, y: r * CELL + CELL / 2 };
+  }
+  return world.spots.window;
+}
+
+/**
+ * One stop on an outing: where to go, and what to do there. Returns a list of
+ * tasks, since some stops are more than standing about.
+ */
+function breakStop(agent, world, rng, others) {
+  const stand = (to, face, bubble, lo = 2.5, hi = 5) => [
+    { kind: 'go', to },
+    { kind: 'idle', dur: between(rng, lo, hi), face, bubble, lookAround: !bubble },
   ];
-  if (world.spots.printer) options.push(() => ({ to: world.spots.printer, face: 'down', bubble: 'doc' }));
-  const colleague = others.filter((other) => other !== agent && other.sitting && !other.sleeping);
-  if (colleague.length > 0) {
+  const options = [
+    () => stand(world.spots.coffee, 'up', 'coffee'),
+    () => stand(world.spots.cooler, 'up', 'water'),
+    () => stand(world.spots.plant, 'up', 'heart'),
+    () => stand(world.spots.window, 'up', 'sun', 3, 6),
+    // A wander with no errand, looking about.
+    () => stand(strollPoint(world, rng), 'down', null, 1.5, 3.5),
+    () => stand(strollPoint(world, rng), 'down', null, 1.5, 3.5),
+  ];
+  if (world.spots.printer) options.push(() => stand(world.spots.printer, 'down', 'doc'));
+  if (world.spots.shelf) options.push(() => stand(world.spots.shelf, 'up', 'doc', 3, 6));
+
+  // A sit on the sofa with a coffee, if a seat is free.
+  options.push(() => {
+    const sofa = claimSofa(agent, world);
+    return sofa
+      ? [{ kind: 'go', to: sofa }, { kind: 'lounge', dur: between(rng, 5, 10), bubble: 'coffee' }]
+      : stand(world.spots.coffee, 'up', 'coffee');
+  });
+
+  // A chat: with someone already up and about, face to face; otherwise at a desk.
+  const standing = others.filter((other) => other !== agent && !other.sitting && other.task?.kind === 'idle');
+  const seated = others.filter((other) => other !== agent && other.sitting && !other.sleeping);
+  if (standing.length > 0) {
     options.push(() => {
-      const friend = pick(rng, colleague);
+      const friend = pick(rng, standing);
+      const side = friend.x > world.width / 2 ? -12 : 12;
+      return [
+        { kind: 'go', to: { x: friend.x + side, y: friend.y } },
+        { kind: 'idle', dur: between(rng, 3, 5), face: side > 0 ? 'left' : 'right', bubble: 'chat' },
+      ];
+    });
+  }
+  if (seated.length > 0) {
+    options.push(() => {
+      const friend = pick(rng, seated);
       const desk = world.desks[friend.seat.desk];
-      return { to: desk?.front ?? friend.seat, face: 'up', bubble: 'chat' };
+      return stand(desk?.front ?? friend.seat, 'up', 'chat');
     });
   }
   return pick(rng, options)();
@@ -195,13 +241,12 @@ export function plan(agent, world, rng, others = []) {
     }
     case 'working':
     default: {
-      const tasks = [home, { kind: 'sit', dur: between(rng, 14, 34), typing: 'calm' }];
-      if (rng() < 0.55) {
-        const trip = breakPlan(agent, world, rng, others);
-        tasks.push(
-          { kind: 'go', to: trip.to },
-          { kind: 'idle', dur: between(rng, 2.5, 5), face: trip.face, bubble: trip.bubble },
-        );
+      // Short stretches at the desk, and most of the time an outing after:
+      // about half the day is spent on the move, as in a management game.
+      const tasks = [home, { kind: 'sit', dur: between(rng, 7, 16), typing: 'calm' }];
+      if (rng() < 0.85) {
+        const stops = 1 + Math.floor(rng() * 3);
+        for (let i = 0; i < stops; i++) tasks.push(...breakStop(agent, world, rng, others));
       }
       return tasks;
     }
@@ -262,6 +307,12 @@ function begin(agent, task, world) {
     applyFace(agent, task.face);
     agent.bubble = task.bubble ?? null;
     agent.shake = Boolean(task.shake);
+  } else if (task.kind === 'lounge') {
+    // On the sofa, awake, with a coffee.
+    agent.dir = 'down';
+    agent.flip = false;
+    agent.sitting = true;
+    agent.bubble = task.bubble ?? null;
   } else if (task.kind === 'sleep') {
     agent.dir = 'down';
     agent.flip = false;
@@ -328,7 +379,15 @@ export function step(agent, dt, world, rng, others = []) {
   }
 
   if (task.kind === 'sleep') return;
-  if (agent.clock >= task.dur) agent.task = null;
+  // Standing about with nothing in hand: look one way, then the other.
+  if (task.kind === 'idle' && task.lookAround) {
+    const phase = Math.floor(agent.clock / 1.2) % 4;
+    applyFace(agent, ['down', 'left', 'down', 'right'][phase]);
+  }
+  if (agent.clock >= task.dur) {
+    if (task.kind === 'lounge') release(agent, world);
+    agent.task = null;
+  }
 }
 
 function pathLength(agent) {

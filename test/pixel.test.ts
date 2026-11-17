@@ -203,6 +203,42 @@ test('reduced motion: settle puts everyone where the mood says, without walking'
   assert.deepEqual({ x: working.x, y: working.y }, { x: layout.seats[1].x, y: layout.seats[1].y });
 });
 
+test('working: a colleague spends a good part of the day up and about, in different places', () => {
+  const layout = freshRoom(3);
+  const agents = layout.seats.map((seat, i) => sim.createAgent(`a${i}`, seat));
+  for (const agent of agents) sim.setMood(agent, 'working', layout);
+  const rng = seeded(5);
+  let away = 0;
+  let total = 0;
+  const places = new Set<string>();
+  for (let t = 0; t < 600; t += 0.1) {
+    for (const agent of agents) sim.step(agent, 0.1, layout, rng, agents);
+    const a = agents[0];
+    total++;
+    if (!(a.sitting && a.x === a.seat.x && a.y === a.seat.y)) away++;
+    if (a.task?.kind === 'idle' || a.task?.kind === 'lounge') places.add(`${Math.round(a.x / 16)},${Math.round(a.y / 16)}`);
+  }
+  const share = away / total;
+  assert.ok(share > 0.3 && share < 0.85, `away from the desk ${Math.round(share * 100)}% of the time`);
+  assert.ok(places.size >= 5, `stopped in ${places.size} different places`);
+});
+
+test('a coffee on the sofa gives the seat back afterwards', () => {
+  const layout = freshRoom(1);
+  const agent = sim.createAgent('a', layout.seats[0]);
+  sim.setMood(agent, 'working', layout);
+  const rng = seeded(9);
+  let lounged = false;
+  for (let t = 0; t < 900 && !lounged; t += 0.1) {
+    sim.step(agent, 0.1, layout, rng, [agent]);
+    lounged = agent.task?.kind === 'lounge';
+  }
+  assert.ok(lounged, 'sat on the sofa at some point');
+  assert.equal(layout.claims!.size, 1, 'holds a seat while there');
+  for (let t = 0; t < 12 && agent.task?.kind === 'lounge'; t += 0.1) sim.step(agent, 0.1, layout, rng, [agent]);
+  assert.equal(layout.claims!.size, 0, 'and gives it back');
+});
+
 test('a long working day never leaves anyone inside the furniture', () => {
   const layout = freshRoom(5);
   const agents = layout.seats.map((seat, i) => sim.createAgent(`a${i}`, seat));

@@ -310,7 +310,7 @@ export class PixelOffice {
     }
     for (const agent of this.agents.values()) {
       // Someone on the sofa sits in front of its back, not behind the whole thing.
-      const onSofa = agent.sleeping && agent.claim?.startsWith('sofa');
+      const onSofa = agent.sitting && agent.claim?.startsWith('sofa');
       items.push({ y: onSofa ? agent.y + 20 : agent.y + 0.5, draw: () => this.drawAgent(ctx, agent) });
     }
     items.sort((a, b) => a.y - b.y);

@@ -83,7 +83,7 @@ behind a web front end.
 [`/office`](https://status-dog.vercel.app/office) is a small pixel-art office, drawn on a
 canvas, with one animal colleague per monitored site — mostly dogs, with a cat, fox, panda
 and a few others. They walk about like the staff of a management game, and what they do
-is the status: typing at the desk with the odd coffee or chat, hammering the keys in a
+is the status: when all is well they type in short stretches and spend about half the day up and about — coffee, the window, the bookshelf, a sit on the sofa, a stroll, a chat with whoever else is up; hammering the keys in a
 sweat, getting up to pace with a question mark, running to the server rack while its
 beacon turns red, or asleep on the sofa. The window shows the sky over Seoul and the
 clock tells Seoul time; the whiteboard shows each site's last twelve checks. The home
