@@ -166,6 +166,14 @@ function breakStop(agent, world, rng, others) {
   ];
   if (world.spots.printer) options.push(() => stand(world.spots.printer, 'down', 'doc'));
   if (world.spots.shelf) options.push(() => stand(world.spots.shelf, 'up', 'doc', 3, 6));
+  // A stand-up at the meeting table, facing it.
+  if (world.spots.meeting?.length) {
+    options.push(() => {
+      const i = Math.floor(rng() * world.spots.meeting.length);
+      const face = i === 0 ? 'right' : i === 1 ? 'left' : 'up';
+      return stand(world.spots.meeting[i], face, 'chat', 4, 7);
+    });
+  }
 
   // A sit on the sofa with a coffee, if a seat is free.
   options.push(() => {

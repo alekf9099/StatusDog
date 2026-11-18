@@ -74,7 +74,7 @@ function run(agent: Agent, layout: Layout, seconds: number, others: Agent[] = [a
 /* ---------- layout ---------- */
 
 test('every colleague gets a seat, and no two desks overlap', () => {
-  for (const [count, width] of [[1, 384], [3, 336], [7, 384], [12, 480], [5, 192]]) {
+  for (const [count, width] of [[1, 384], [3, 336], [7, 384], [12, 480], [5, 192], [3, 576], [9, 640], [14, 448]]) {
     const layout = world.buildLayout(count, width);
     assert.equal(layout.seats.length, count);
     for (let i = 0; i < layout.desks.length; i++) {
@@ -92,6 +92,18 @@ test('every colleague gets a seat, and no two desks overlap', () => {
   }
 });
 
+test('a wide room has a meeting table below the desks, clear of them', () => {
+  for (const count of [3, 9]) {
+    const layout = world.buildLayout(count, 576);
+    const table = layout.furniture.find((item) => item.kind === 'table');
+    assert.ok(table, 'there is a table');
+    const lowestDesk = Math.max(...layout.desks.map((desk) => desk.y + desk.h));
+    assert.ok(table!.y > lowestDesk + 8, 'below the last row of desks');
+    assert.ok(table!.y + table!.h < layout.height - 8, 'inside the room');
+  }
+  assert.ok(!world.buildLayout(3, 336).furniture.some((item) => item.kind === 'table'), 'not in a small room');
+});
+
 test('a narrow room puts the lounge at the bottom instead of the side', () => {
   const wide = world.buildLayout(3, 384);
   const narrow = world.buildLayout(3, 192);
@@ -101,13 +113,14 @@ test('a narrow room puts the lounge at the bottom instead of the side', () => {
 });
 
 test('every seat and every place to visit can be reached from every other', () => {
-  for (const [count, width] of [[3, 336], [8, 384], [4, 192]]) {
+  for (const [count, width] of [[3, 336], [8, 384], [4, 192], [3, 576], [9, 448]]) {
     const layout = world.buildLayout(count, width);
     const places: Point[] = [
       ...layout.seats,
       ...layout.desks.map((desk) => desk.front),
       layout.spots.rack, layout.spots.coffee, layout.spots.cooler, layout.spots.window,
       ...layout.spots.sofa,
+      ...((layout.spots as { meeting?: Point[] }).meeting ?? []),
     ];
     for (const from of places) {
       for (const to of places) {

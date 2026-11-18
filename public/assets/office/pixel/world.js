@@ -23,6 +23,10 @@ const DESK_TOP = 72;
 /** A lounge column on the right needs this much room; narrower rooms put it at the bottom. */
 const LOUNGE_W = 96;
 const LOUNGE_MIN_ROOM = 320;
+/** From this wide, the room has space for a meeting table under the desks. */
+const MEETING_MIN_ROOM = 448;
+/** The strip of floor the meeting table needs below the last row of desks. */
+const MEETING_H = 64;
 
 /**
  * Lay out a room for `count` colleagues, `width` logical pixels wide.
@@ -45,9 +49,12 @@ export function buildLayout(count, width = 384) {
   const left = 8 + Math.floor((deskAreaW - usedCols * SLOT_W) / 2 / CELL) * CELL;
 
   const desksBottom = DESK_TOP + rows * SLOT_H;
-  const height = loungeRight
-    ? Math.max(desksBottom + 8, 184)
-    : desksBottom + 56;
+  const meeting = W >= MEETING_MIN_ROOM;
+  const height = meeting
+    ? Math.max(desksBottom + MEETING_H + 8, 232)
+    : loungeRight
+      ? Math.max(desksBottom + 8, 184)
+      : desksBottom + 56;
 
   const seats = [];
   const desks = [];
@@ -112,6 +119,23 @@ export function buildLayout(count, width = 384) {
       { kind: 'plant', x: 86, y: height - 44, w: 14, h: 22, small: true },
     );
     spots.sofa.push({ x: sx + 20, y: sy + 21 }, { x: sx + 44, y: sy + 21 });
+  }
+
+  // A meeting table under the desks, in the middle of their area, with room to
+  // stand round it: somewhere for a chat that is not somebody's desk.
+  if (meeting) {
+    const tw = 56;
+    const th = 22;
+    const tx = 8 + Math.floor((deskAreaW / 2 - tw / 2) / CELL) * CELL;
+    const ty = height - 52;
+    furniture.push({ kind: 'table', x: tx, y: ty, w: tw, h: th });
+    spots.meeting = [
+      { x: tx - 8, y: ty + 16 },
+      { x: tx + tw + 8, y: ty + 16 },
+      { x: tx + 16, y: ty + th + 10 },
+      { x: tx + tw - 16, y: ty + th + 10 },
+    ];
+    furniture.push({ kind: 'plant', x: tx + tw + 30, y: height - 34, w: 14, h: 22, small: true });
   }
 
   // A printer in the left-hand corner, if the desks leave room for one.

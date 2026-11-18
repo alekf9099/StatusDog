@@ -24,7 +24,8 @@ const MOOD_COLOUR = {
 /** Draw no faster than this; pixel art does not need sixty frames a second. */
 const FRAME_MS = 1000 / 24;
 const MIN_ROOM = 192;
-const MAX_ROOM = 480;
+/** Wide enough for a full office on a big screen, still drawn at a readable size. */
+const MAX_ROOM = 640;
 
 /* 5×5 icons for the speech bubbles. */
 const ICONS = {
@@ -45,7 +46,9 @@ const rect = (ctx, colour, x, y, w, h) => {
 
 /** The narrowest room that seats `count` in one row, with the lounge beside it. */
 function roomFor(count) {
-  return Math.max(320, Math.min(count, 5) * 64 + 16 + 96);
+  // Room for a meeting table even with only a few desks, so the floor has
+  // somewhere to go besides the desks and the lounge.
+  return Math.max(448, Math.min(count, 6) * 64 + 16 + 96);
 }
 
 /** Seoul's hour, because that is where the office is. */
@@ -433,6 +436,7 @@ export class PixelOffice {
       case 'sofa': return this.drawSofa(ctx, item);
       case 'shelf': return this.drawShelf(ctx, item);
       case 'printer': return this.drawPrinter(ctx, item);
+      case 'table': return this.drawTable(ctx, item);
       default: return undefined;
     }
   }
@@ -561,6 +565,29 @@ export class PixelOffice {
     rect(ctx, '#34508f', x + w - 4, y + 4, 4, h - 8);
     rect(ctx, '#2a3f73', x + 2, y + h - 4, 3, 4);
     rect(ctx, '#2a3f73', x + w - 5, y + h - 4, 3, 4);
+  }
+
+  /** A meeting table with a laptop and papers, and stools round it. */
+  drawTable(ctx, item) {
+    const { x, y, w, h } = item;
+    // Stools behind, then the table over them.
+    rect(ctx, '#3f4862', x + 8, y - 4, 10, 6);
+    rect(ctx, '#3f4862', x + w - 18, y - 4, 10, 6);
+    rect(ctx, 'rgba(60, 30, 10, 0.25)', x + 2, y + h - 1, w - 2, 3);
+    rect(ctx, '#6e4426', x + 3, y + 8, 3, h - 8);
+    rect(ctx, '#6e4426', x + w - 6, y + 8, 3, h - 8);
+    rect(ctx, '#8e5c35', x + 4, y + 8, w - 8, 7);
+    rect(ctx, '#d6a676', x, y, w, 9);
+    rect(ctx, '#e6ba8c', x, y, w, 1);
+    rect(ctx, '#b07f52', x, y + 8, w, 1);
+    // A laptop, a stack of paper, a mug.
+    rect(ctx, '#2e333d', x + 10, y - 3, 12, 6);
+    rect(ctx, '#5fa8ff', x + 11, y - 2, 10, 4);
+    rect(ctx, '#c9ced6', x + 9, y + 3, 14, 2);
+    rect(ctx, '#ffffff', x + w - 22, y + 2, 8, 5);
+    rect(ctx, '#e3e6ea', x + w - 21, y + 3, 6, 1);
+    rect(ctx, '#f4f4f4', x + w - 10, y + 1, 4, 4);
+    rect(ctx, '#7a4a2a', x + w - 9, y + 1, 2, 1);
   }
 
   drawPrinter(ctx, item) {

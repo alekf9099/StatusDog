@@ -67,8 +67,10 @@ a:hover { text-decoration: underline; }
 ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
 
 .wrap { width: min(1080px, 100% - 40px); margin-inline: auto; }
-/* Decorative glows may reach past the edges; they must never make the page scroll sideways. */
-main { overflow-x: clip; }
+/* Decorative glows, and the office room, may reach past the text column; they
+   must never make the page scroll sideways. On body, not main, so a section that
+   is meant to be wider than the column is not cut back to it. */
+body { overflow-x: clip; }
 
 /* ---------- header ---------- */
 
