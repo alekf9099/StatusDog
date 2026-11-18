@@ -32,6 +32,39 @@ const NOTIFIED_KEY = 'statusdog.watch.notified';
 
 let monitors = null;
 let receivedAt = 0;
+/** A signed-in person's own monitors, which matter to them as much as the roster. */
+let mine = [];
+let mineAt = 0;
+let signedIn = null;
+/** Your own list changes only when a check runs; asking for it costs storage reads. */
+const MINE_FRESH_MS = 10 * 60_000;
+
+document.addEventListener('statusdog:mine', (event) => {
+  if (!Array.isArray(event.detail?.monitors)) return;
+  mine = event.detail.monitors;
+  mineAt = Date.now();
+  render();
+});
+
+async function pollMine() {
+  if (signedIn === null) {
+    try {
+      const response = await fetch('/api/auth/me', { cache: 'no-store' });
+      signedIn = response.ok ? Boolean((await response.json()).signedIn) : false;
+    } catch {
+      signedIn = false;
+    }
+  }
+  if (!signedIn || Date.now() - mineAt < MINE_FRESH_MS) return;
+  try {
+    const response = await fetch('/api/auth/monitors', { cache: 'no-store' });
+    if (!response.ok) return;
+    mine = (await response.json()).monitors ?? [];
+    mineAt = Date.now();
+  } catch {
+    // Keep what we had.
+  }
+}
 let unreachable = false;
 let banner = null;
 
@@ -47,6 +80,7 @@ document.addEventListener('statusdog:monitors', (event) => {
 
 async function poll({ force = false } = {}) {
   if (document.hidden) return;
+  await pollMine();
   if (!force && Date.now() - receivedAt < FRESH_MS) return;
   if (!navigator.onLine) {
     render();
@@ -85,7 +119,7 @@ function render() {
   const header = document.querySelector('.site-header');
   if (!header) return;
 
-  const problems = problemsOf(monitors ?? []);
+  const problems = problemsOf([...(monitors ?? []), ...mine]);
   const worst = LEVELS.find((level) => problems[level].length > 0) ?? null;
   const offline = !navigator.onLine;
   const count = LEVELS.reduce((sum, level) => sum + problems[level].length, 0);

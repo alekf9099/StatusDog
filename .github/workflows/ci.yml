@@ -25,8 +25,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
-        run: npm test
-
+      # Before the tests: some exercise the Vercel functions in api/, which import dist/.
       - name: Build
         run: npm run build
+
+      - name: Test
+        run: npm test

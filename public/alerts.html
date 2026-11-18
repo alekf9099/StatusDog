@@ -159,6 +159,7 @@ Every    5 minutes</code></pre>
   <div class="wrap">
     <span data-i18n="footer.license">StatusDog · MIT</span>
     <span class="spacer"></span>
+    <a href="/privacy" data-i18n="footer.privacy">Privacy</a>
     <a href="/status" data-i18n="nav.status">Status</a>
     <a href="/docs" data-i18n="footer.docs">Docs</a>
     <a href="https://github.com/alekf9099/StatusDog" data-i18n="footer.github">GitHub</a>
@@ -221,8 +222,10 @@ function render() {
     box.innerHTML = `<p class="small muted">${escapeHtml(t('alerts.test.unavailable'))}</p>`;
     return;
   }
-  if (!viewer.signedIn) {
-    box.innerHTML = `<p class="small muted">${escapeHtml(t('alerts.test.signInFirst'))}
+  if (!viewer.owner) {
+    box.innerHTML = viewer.signedIn
+      ? `<p class="small muted">${escapeHtml(t('signin.denied'))}</p>`
+      : `<p class="small muted">${escapeHtml(t('alerts.test.signInFirst'))}
       <a href="/signin?next=${encodeURIComponent('/alerts')}">${escapeHtml(t('signin.in'))}</a></p>`;
     return;
   }

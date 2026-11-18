@@ -96,6 +96,33 @@ export function isAllowed(email: string | null | undefined, raw: string | undefi
 }
 
 /**
+ * Whether anybody can sign in at all: Google and a session secret are set up.
+ * Separate from the admin surface, which also needs an owner allowlist.
+ */
+export function loginConfigured(env: Record<string, string | undefined>): boolean {
+  return Boolean(env.STATUSDOG_SESSION_SECRET && env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+}
+
+/**
+ * Who is signed in, if anyone — any Google account, owner or not. For what a
+ * signed-in person may do with their own things; owner rights stay with
+ * `authorize`, which checks the allowlist on every request.
+ */
+export function identify(
+  cookieHeaderValue: string | undefined | null,
+  env: Record<string, string | undefined>,
+  nowMs = Date.now(),
+): string | null {
+  if (!loginConfigured(env)) return null;
+  const session = readSession(
+    parseCookies(cookieHeaderValue)[SESSION_COOKIE],
+    env.STATUSDOG_SESSION_SECRET,
+    nowMs,
+  );
+  return session?.sub ?? null;
+}
+
+/**
  * Whether the admin surface exists at all.
  *
  * Every piece has to be present. A deployment missing any of them gets a clear 503

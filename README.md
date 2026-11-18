@@ -622,16 +622,48 @@ With the real history that lands on a 30-minute cadence and a 90-minute threshol
 the 52- and 58-minute gaps that used to false-alarm stay quiet, and a genuinely
 stopped scheduler still trips at 100 minutes.
 
-## Owner sign-in
+## Signing in
 
-Everything the site shows is public and read-only. The only thing that needs an
-identity is **writing**, so that is all this gates.
+Everything the site shows is public. Anyone can sign in with Google, and that is
+all it takes to have an account — no sign-up step; the first monitor creates it.
+A signed-in person keeps **their own monitors** on it. Owners of the deployment
+can also write to the shared records.
+
+### Your own monitors
+
+Signed in, the office's hire form saves a colleague to your account instead of to
+the browser: the same on every device, and checked by the scheduler every run
+along with the roster. A button moves the interns already in this browser over,
+keeping their names and looks.
+
+- **Limits:** 5 per account and 50 for everyone together, so one visitor cannot
+  fill the store or keep the scheduler past its 60-second budget. Past 45 seconds
+  the scheduler leaves the rest for its next run.
+- **The same address rules as everywhere** (`normalizeCheckUrl`): no private or
+  local addresses, checked again on every run.
+- **No email address in the store.** Each account is keyed by an HMAC of its
+  address under `STATUSDOG_SESSION_SECRET`.
+- **Cheap however many accounts there are.** An account is one key holding its
+  whole list, plus one index key; a run reads the index, every account in one
+  `MGET`, and writes back in one `MSET` — after re-reading, so a monitor added
+  mid-run is not lost.
+- **No webhook alerts** for these: the webhooks are the deployment owner's, and
+  should not page them about strangers' sites. Your own monitors show in the
+  office and in the warning strip whenever you open the site.
+
+`GET` / `POST /api/auth/monitors` (`op: add | remove | import`); writes need the
+same same-origin header as every other write.
 
 ### Authentication is not authorization
 
 Google sign-in proves who somebody is, and everyone on earth has a Google account.
-`STATUSDOG_ADMIN_EMAILS` is the actual gate. Without it, nothing is authorized —
-adding sign-in *without* a list would make the deployment worse than having none.
+For anything shared, `STATUSDOG_ADMIN_EMAILS` is the actual gate: owner screens and
+`/api/admin/*` ask it on every request, and `/api/auth/me` reports `owner`
+separately from `signedIn` so the UI never shows owner controls to a member.
+
+For anyone outside the Google project's test users to sign in, the OAuth consent
+screen in the Google Cloud console must be **published** ("In production"). The
+app asks only for the email address, so Google does not need to review it.
 
 The list is re-read on every request rather than baked into the session cookie, so
 removing an address revokes it on the next request instead of whenever the session
@@ -645,8 +677,9 @@ happens to expire.
 | `STATUSDOG_ADMIN_EMAILS` | Comma-separated owner addresses — **the gate** |
 | `STATUSDOG_SITE_URL` | Optional but recommended: pins the origin instead of deriving it from the request |
 
-With any of the first four missing, `adminConfigured` is false: sign-in returns 503,
-the UI hides its admin affordances entirely, and `/api/admin/*` refuses everything.
+With any of the first three missing, sign-in returns 503 and the header offers
+none. With the owner list missing as well, `adminConfigured` is false: the UI
+hides its admin affordances entirely, and `/api/admin/*` refuses everything.
 **Unset closes the door rather than opening it**, exactly as `CRON_SECRET` does.
 
 Redirect URI to register with Google:

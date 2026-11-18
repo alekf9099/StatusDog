@@ -43,7 +43,9 @@ function plate(worker) {
     : '';
   const intern = monitor.kind === 'intern'
     ? `<span class="desk-badge-intern">${escapeHtml(t('office.intern'))}</span>`
-    : '';
+    : monitor.kind === 'mine'
+      ? `<span class="desk-badge-intern desk-badge-mine">${escapeHtml(t('office.mine.badge'))}</span>`
+      : '';
   const latency = mood.lastMs === null
     ? ''
     : `<div class="desk-latency">${formatMs(mood.lastMs)}${

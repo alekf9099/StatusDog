@@ -1,8 +1,11 @@
 /**
  * OfficeDashboard — the floor, and who is on it.
  *
- * Pulls from both halves of StatusDog and gives each a different job title,
+ * Pulls from every half of StatusDog and gives each a different job title,
  * because the difference is real rather than cosmetic:
+ *
+ *   mine   — monitors a signed-in person keeps on their account. Saved on the
+ *            server, the same on every device, checked with the roster.
  *
  *   staff  — targets on the server roster, checked every 15 minutes whether or
  *            not anyone is looking. Their history survives a closed tab.
@@ -28,6 +31,24 @@ import { PixelOffice } from './pixel/PixelOffice.js';
 import { expectFor, typeSwitch } from '../target-type.js';
 
 const POLL_MS = 60_000;
+/** Your own list changes only when you change it or a check runs, so ask less often. */
+const MINE_POLL_MS = 5 * 60_000;
+
+/** Ask the server to change your own list. */
+async function changeMine(body) {
+  const response = await fetch('/api/auth/monitors', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-statusdog-admin': '1' },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.error ?? t('error.requestFailed', { status: response.status }));
+    error.code = payload.code ?? null;
+    throw error;
+  }
+  return payload;
+}
 
 export class OfficeDashboard {
   /**
@@ -54,7 +75,14 @@ export class OfficeDashboard {
         dogOverrides.patch(uid, randomDogAssignment());
         this.render();
       },
-      onDismiss: (uid) => {
+      onDismiss: async (uid) => {
+        if (uid.startsWith('mine:')) {
+          try {
+            this.setMine(await changeMine({ op: 'remove', id: uid.slice('mine:'.length) }));
+          } catch {
+            return;
+          }
+        }
         const id = uid.startsWith('intern:') ? uid.slice('intern:'.length) : null;
         if (id) store.remove(id);
         dogOverrides.forget(uid);
@@ -65,6 +93,10 @@ export class OfficeDashboard {
     this.workers = [];
     this.serverPayload = null;
     this.serverError = null;
+    /** Who is signed in (from /api/auth/me), and their own list once loaded. */
+    this.viewer = null;
+    this.mine = null;
+    this.mineAt = 0;
 
     this.pixel = canvas
       ? new PixelOffice(canvas, {
@@ -84,7 +116,10 @@ export class OfficeDashboard {
       if (worker) this.report.open(worker, desk);
     });
 
-    document.addEventListener('statusdog:languagechange', () => this.render());
+    document.addEventListener('statusdog:languagechange', () => {
+      this.renderHireNote();
+      this.render();
+    });
 
     this.hire.kind = this.hire.form
       ? typeSwitch(this.hire.form, this.hire.url, { fieldAfter: this.hire.url.closest('label') })
@@ -119,6 +154,39 @@ export class OfficeDashboard {
     error.hidden = true;
     submit.disabled = true;
     submit.textContent = t('office.hire.hiring');
+
+    // Signed in: the colleague goes on your account, not into this browser.
+    if (this.viewer?.signedIn) {
+      try {
+        const before = new Set((this.mine?.monitors ?? []).map((monitor) => monitor.id));
+        const payload = await changeMine({
+          op: 'add',
+          url: display,
+          type: this.hire.kind?.type,
+          expect: this.hire.kind?.expect,
+          name: name.value.trim() || undefined,
+        });
+        this.setMine(payload);
+        const added = payload.monitors.find((monitor) => !before.has(monitor.id));
+        if (added) {
+          const uid = `mine:${added.id}`;
+          dogOverrides.patch(uid, {
+            ...randomDogAssignment(),
+            ...(name.value.trim() === '' ? {} : { name: name.value }),
+          });
+          this.arriving.add(uid);
+        }
+        url.value = '';
+        name.value = '';
+        this.render();
+      } catch (err) {
+        this.showHireError(this.mineErrorText(err));
+      } finally {
+        submit.disabled = false;
+        submit.textContent = t('office.hire.submit');
+      }
+      return;
+    }
 
     try {
       const { monitor, added } = store.add(display, {
@@ -158,6 +226,130 @@ export class OfficeDashboard {
     error.hidden = false;
   }
 
+  /** A server error about your own list, in words. */
+  mineErrorText(err) {
+    const limit = this.mine?.limit ?? 5;
+    if (err.code === 'member-limit') return t('office.mine.limit', { n: limit });
+    if (err.code === 'total-limit') return t('office.mine.full', { n: this.mine?.totalLimit ?? 50 });
+    if (err.code === 'duplicate') return t('office.hire.duplicate');
+    return t('office.mine.failed', { message: err.message });
+  }
+
+  setMine(payload) {
+    this.mine = payload;
+    this.mineAt = Date.now();
+    // The site-wide warning reads your own list from this rather than asking again.
+    document.dispatchEvent(new CustomEvent('statusdog:mine', { detail: payload }));
+  }
+
+  async loadViewer() {
+    if (this.viewer) return;
+    try {
+      const response = await fetch('/api/auth/me', { cache: 'no-store' });
+      this.viewer = response.ok ? await response.json() : { configured: false, signedIn: false };
+    } catch {
+      this.viewer = { configured: false, signedIn: false };
+    }
+    this.renderHireNote();
+  }
+
+  async loadMine({ force = false } = {}) {
+    if (!this.viewer?.signedIn) return;
+    if (!force && Date.now() - this.mineAt < MINE_POLL_MS) return;
+    try {
+      const response = await fetch('/api/auth/monitors', { cache: 'no-store' });
+      if (response.ok) this.setMine(await response.json());
+    } catch {
+      // Your colleagues stay as they were until the next try.
+    }
+  }
+
+  /**
+   * Under the hire form: what hiring does for you now, and — once you are signed
+   * in with interns still in this browser — a button to move them to your account.
+   */
+  renderHireNote() {
+    const { form } = this.hire;
+    if (!form) return;
+    let box = form.querySelector('.hire-mine');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'hire-mine';
+      form.append(box);
+      box.addEventListener('click', (event) => {
+        if (event.target.closest('[data-import-interns]')) void this.importInterns();
+      });
+    }
+    const viewer = this.viewer;
+    const internNote = form.querySelector('.hire-note[data-i18n]');
+    if (internNote) internNote.hidden = Boolean(viewer?.signedIn);
+    if (!viewer?.configured) {
+      box.innerHTML = '';
+      return;
+    }
+    if (!viewer.signedIn) {
+      box.innerHTML = `<p class="hire-note">${escapeHtml(t('office.mine.signinHint'))}
+        <a href="/signin?next=${encodeURIComponent('/office')}">${escapeHtml(t('signin.in'))}</a></p>`;
+      return;
+    }
+    const interns = store.list().length;
+    box.innerHTML = `
+      <p class="hire-note">${escapeHtml(t('office.mine.note', { n: this.mine?.limit ?? 5 }))}</p>
+      ${interns > 0 ? `<button type="button" class="secondary hire-import" data-import-interns>${escapeHtml(t('office.mine.import', { count: interns }))}</button>` : ''}
+      <p class="hire-message" hidden></p>`;
+  }
+
+  /** Move this browser's interns onto your account, keeping their names and looks. */
+  async importInterns() {
+    const interns = store.list();
+    if (interns.length === 0) return;
+    const box = this.hire.form?.querySelector('.hire-mine');
+    const button = box?.querySelector('[data-import-interns]');
+    if (button) button.disabled = true;
+    try {
+      const payload = await changeMine({
+        op: 'import',
+        items: interns.map((monitor) => ({
+          url: monitor.url,
+          type: monitor.type ?? 'web',
+          expect: monitor.expect,
+          name: dogOverrides.get(`intern:${monitor.id}`)?.name,
+        })),
+      });
+      this.setMine(payload);
+      let moved = 0;
+      payload.results.forEach((result, i) => {
+        const intern = interns[i];
+        if (!result.ok || !intern) return;
+        // Same face, same name, now on the account. A look that was never rolled
+        // comes from the old id's hash, so pin it before the id changes.
+        const worker = this.workers.find((candidate) => candidate.monitor.uid === `intern:${intern.id}`);
+        const look = dogOverrides.get(`intern:${intern.id}`) ?? {};
+        const dog = worker?.dog;
+        dogOverrides.patch(`mine:${result.id}`, {
+          ...(dog ? { dog: dog.key, coat: dog.coat.key, accessory: dog.accessory, species: dog.species.key } : {}),
+          ...look,
+        });
+        dogOverrides.forget(`intern:${intern.id}`);
+        store.remove(intern.id);
+        moved++;
+      });
+      this.renderHireNote();
+      const message = this.hire.form?.querySelector('.hire-message');
+      if (message) {
+        const left = interns.length - moved;
+        message.textContent = left > 0
+          ? `${t('office.mine.imported', { count: moved })} ${t('office.mine.importLeft', { count: left, n: payload.limit })}`
+          : t('office.mine.imported', { count: moved });
+        message.hidden = false;
+      }
+      this.render();
+    } catch (err) {
+      this.showHireError(this.mineErrorText(err));
+      if (button) button.disabled = false;
+    }
+  }
+
   start() {
     this.pixel?.start();
     void this.refresh();
@@ -166,7 +358,8 @@ export class OfficeDashboard {
 
   /** Fetch roster state, run the browser monitors, then redraw. */
   async refresh() {
-    await Promise.all([this.loadStaff(), this.loadRecords(), this.runInterns()]);
+    await this.loadViewer();
+    await Promise.all([this.loadStaff(), this.loadRecords(), this.runInterns(), this.loadMine()]);
     this.render();
   }
 
@@ -247,6 +440,20 @@ export class OfficeDashboard {
         kind: 'staff',
         // Roster dogs have a record; interns have only this tab.
         tenure: tenureOf(monitor, this.records?.get(monitor.id) ?? null),
+      };
+      workers.push(this.buildWorker(normalised));
+    }
+
+    // Your own monitors, from your account.
+    for (const monitor of this.mine?.monitors ?? []) {
+      const normalised = {
+        ...monitor,
+        uid: `mine:${monitor.id}`,
+        kind: 'mine',
+        name: monitor.name ?? monitor.url.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+        maxResponseTimeMs: 0,
+        stats: statsFromHistory(monitor.history ?? []),
+        tenure: null,
       };
       workers.push(this.buildWorker(normalised));
     }

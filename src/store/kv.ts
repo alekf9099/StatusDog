@@ -10,6 +10,10 @@ export interface KvClient {
   get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
   del(key: string): Promise<void>;
+  /** Several keys in one command. Optional, so simple test fakes need not have it. */
+  mget?(keys: string[]): Promise<Array<string | null>>;
+  /** Several keys set in one command. */
+  mset?(entries: Array<[string, string]>): Promise<void>;
   /** Where this client is pointed, for diagnostics. Never includes the token. */
   readonly origin: string;
 }
@@ -82,6 +86,14 @@ export function createKvClient(options: KvOptions): KvClient {
     },
     async del(key) {
       await command(['DEL', key]);
+    },
+    async mget(keys) {
+      const result = await command(['MGET', ...keys]);
+      const list = Array.isArray(result) ? result : [];
+      return keys.map((_, i) => (list[i] === null || list[i] === undefined ? null : String(list[i])));
+    },
+    async mset(entries) {
+      await command(['MSET', ...entries.flat()]);
     },
   };
 }
