@@ -28,27 +28,10 @@ import { dogOverrides } from './overrides.js';
 import { randomDogAssignment } from './dogs.js';
 import { normalizeUrlForDisplay } from './url.js';
 import { PixelOffice } from './pixel/PixelOffice.js';
+import { changeMine, fetchViewer, importMessage, loadMine, MINE_POLL_MS, mineErrorText, moveBrowserMonitors } from '../mine.js';
 import { expectFor, typeSwitch } from '../target-type.js';
 
 const POLL_MS = 60_000;
-/** Your own list changes only when you change it or a check runs, so ask less often. */
-const MINE_POLL_MS = 5 * 60_000;
-
-/** Ask the server to change your own list. */
-async function changeMine(body) {
-  const response = await fetch('/api/auth/monitors', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-statusdog-admin': '1' },
-    body: JSON.stringify(body),
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload.error ?? t('error.requestFailed', { status: response.status }));
-    error.code = payload.code ?? null;
-    throw error;
-  }
-  return payload;
-}
 
 export class OfficeDashboard {
   /**
@@ -228,40 +211,27 @@ export class OfficeDashboard {
 
   /** A server error about your own list, in words. */
   mineErrorText(err) {
-    const limit = this.mine?.limit ?? 5;
-    if (err.code === 'member-limit') return t('office.mine.limit', { n: limit });
-    if (err.code === 'total-limit') return t('office.mine.full', { n: this.mine?.totalLimit ?? 50 });
-    if (err.code === 'duplicate') return t('office.hire.duplicate');
-    return t('office.mine.failed', { message: err.message });
+    return mineErrorText(err, this.mine);
   }
 
+  /** A fresh copy of your list (mine.js has already announced it to the page). */
   setMine(payload) {
     this.mine = payload;
     this.mineAt = Date.now();
-    // The site-wide warning reads your own list from this rather than asking again.
-    document.dispatchEvent(new CustomEvent('statusdog:mine', { detail: payload }));
   }
 
   async loadViewer() {
     if (this.viewer) return;
-    try {
-      const response = await fetch('/api/auth/me', { cache: 'no-store' });
-      this.viewer = response.ok ? await response.json() : { configured: false, signedIn: false };
-    } catch {
-      this.viewer = { configured: false, signedIn: false };
-    }
+    this.viewer = await fetchViewer();
     this.renderHireNote();
   }
 
   async loadMine({ force = false } = {}) {
     if (!this.viewer?.signedIn) return;
     if (!force && Date.now() - this.mineAt < MINE_POLL_MS) return;
-    try {
-      const response = await fetch('/api/auth/monitors', { cache: 'no-store' });
-      if (response.ok) this.setMine(await response.json());
-    } catch {
-      // Your colleagues stay as they were until the next try.
-    }
+    // On failure your colleagues stay as they were until the next try.
+    const payload = await loadMine();
+    if (payload) this.setMine(payload);
   }
 
   /**
@@ -301,46 +271,17 @@ export class OfficeDashboard {
 
   /** Move this browser's interns onto your account, keeping their names and looks. */
   async importInterns() {
-    const interns = store.list();
-    if (interns.length === 0) return;
     const box = this.hire.form?.querySelector('.hire-mine');
     const button = box?.querySelector('[data-import-interns]');
     if (button) button.disabled = true;
     try {
-      const payload = await changeMine({
-        op: 'import',
-        items: interns.map((monitor) => ({
-          url: monitor.url,
-          type: monitor.type ?? 'web',
-          expect: monitor.expect,
-          name: dogOverrides.get(`intern:${monitor.id}`)?.name,
-        })),
-      });
-      this.setMine(payload);
-      let moved = 0;
-      payload.results.forEach((result, i) => {
-        const intern = interns[i];
-        if (!result.ok || !intern) return;
-        // Same face, same name, now on the account. A look that was never rolled
-        // comes from the old id's hash, so pin it before the id changes.
-        const worker = this.workers.find((candidate) => candidate.monitor.uid === `intern:${intern.id}`);
-        const look = dogOverrides.get(`intern:${intern.id}`) ?? {};
-        const dog = worker?.dog;
-        dogOverrides.patch(`mine:${result.id}`, {
-          ...(dog ? { dog: dog.key, coat: dog.coat.key, accessory: dog.accessory, species: dog.species.key } : {}),
-          ...look,
-        });
-        dogOverrides.forget(`intern:${intern.id}`);
-        store.remove(intern.id);
-        moved++;
-      });
+      const outcome = await moveBrowserMonitors();
+      if (!outcome) return;
+      this.setMine(outcome.payload);
       this.renderHireNote();
       const message = this.hire.form?.querySelector('.hire-message');
       if (message) {
-        const left = interns.length - moved;
-        message.textContent = left > 0
-          ? `${t('office.mine.imported', { count: moved })} ${t('office.mine.importLeft', { count: left, n: payload.limit })}`
-          : t('office.mine.imported', { count: moved });
+        message.textContent = importMessage(outcome.moved, outcome.left, outcome.payload.limit);
         message.hidden = false;
       }
       this.render();

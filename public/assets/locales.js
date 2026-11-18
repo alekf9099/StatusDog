@@ -316,7 +316,7 @@ export const LOCALES = {
     'dash.checkNow': 'Check now',
     'dash.empty': 'No monitors yet. Add a URL above to start watching it.',
     'dash.noticeHtml':
-      '<strong>Want a URL watched around the clock?</strong> Add it to <code>monitors.json</code> and the scheduler picks it up — the roster is a committed file rather than a form, so nobody can point StatusDog at an arbitrary target on a schedule. Or run the CLI on your own machine; see <a href="/docs">the docs</a>.',
+      '<strong>Want a URL watched around the clock?</strong> <a href="/signin?next=/dashboard">Sign in</a> and up to 5 of your own are checked every 30 minutes, on any device. For the shared list everyone sees, with alerts, add it to <code>monitors.json</code> — that roster is a committed file rather than a form. Or run the CLI on your own machine; see <a href="/docs">the docs</a>.',
 
     /* ---------- docs ---------- */
     'docs.pageTitle': 'Docs — StatusDog',
@@ -671,6 +671,13 @@ export const LOCALES = {
     'privacy.delete.h2': 'Removing your data',
     'privacy.delete.listHtml': '<li>Let a colleague go in the office to delete that monitor and its history straight away.</li><li>Sign out to remove the cookie from your browser.</li><li>To have anything else removed, or to ask a question, open an issue on <a href="https://github.com/alekf9099/StatusDog/issues">GitHub</a>.</li>',
     'footer.privacy': 'Privacy',
+    'dash.mine.h2': 'Your monitors — on your account',
+    'dash.mine.ledeHtml': 'Saved on your account: the same on every device, and checked by the server every 30 minutes whether or not this page is open. Up to 5.',
+    'dash.mine.summary': '{used} of {n}',
+    'dash.mine.empty': 'Nothing on your account yet. Add an address above.',
+    'dash.mine.localH3': 'Only in this browser',
+    'dash.mine.localLede': 'Added before you signed in. These are checked only while this page is open, and only here.',
+    'dash.mine.liveNote': 'Checked just now, for you to see. The record above is kept by the scheduler, every 30 minutes.',
     'office.h1': 'StatusDog Office',
     'office.hint': 'Click a colleague for their report',
     'office.lede':
@@ -1147,7 +1154,7 @@ export const LOCALES = {
     'dash.checkNow': '지금 확인',
     'dash.empty': '아직 모니터가 없습니다. 위에 URL을 추가해 감시를 시작하세요.',
     'dash.noticeHtml':
-      '<strong>24시간 감시가 필요하신가요?</strong> <code>monitors.json</code>에 추가하면 스케줄러가 가져갑니다. 감시 목록은 입력 폼이 아니라 커밋된 파일이라, 아무나 StatusDog를 임의의 대상에 붙일 수 없습니다. 아니면 직접 CLI를 돌리셔도 됩니다 — <a href="/docs">문서</a>를 참고하세요.',
+      '<strong>24시간 감시가 필요하신가요?</strong> <a href="/signin?next=/dashboard">로그인</a>하면 내 감시 최대 5개를 어느 기기에서나 30분마다 확인합니다. 모두가 보는 공용 목록(알림 포함)은 <code>monitors.json</code>에 추가하세요 — 공용 목록은 입력 폼이 아니라 커밋된 파일입니다. 아니면 직접 CLI를 돌리셔도 됩니다 — <a href="/docs">문서</a>를 참고하세요.',
 
     /* ---------- docs ---------- */
     'docs.pageTitle': '문서 — StatusDog',
@@ -1502,6 +1509,13 @@ export const LOCALES = {
     'privacy.delete.h2': '데이터 삭제',
     'privacy.delete.listHtml': '<li>오피스에서 동료를 내보내면 그 감시와 기록이 바로 삭제됩니다.</li><li>로그아웃하면 브라우저의 쿠키가 지워집니다.</li><li>그 밖의 삭제 요청이나 문의는 <a href="https://github.com/alekf9099/StatusDog/issues">GitHub</a>에 이슈로 남겨 주세요.</li>',
     'footer.privacy': '개인정보처리방침',
+    'dash.mine.h2': '내 감시 — 내 계정',
+    'dash.mine.ledeHtml': '내 계정에 저장됩니다: 어느 기기에서나 같고, 이 페이지를 열어 두지 않아도 서버가 30분마다 확인합니다. 최대 5개.',
+    'dash.mine.summary': '{used}/{n}개',
+    'dash.mine.empty': '아직 계정에 등록된 감시가 없습니다. 위에서 주소를 추가하세요.',
+    'dash.mine.localH3': '이 브라우저에만 있는 모니터',
+    'dash.mine.localLede': '로그인하기 전에 추가한 것들입니다. 이 페이지를 열어 둔 동안, 이 브라우저에서만 확인됩니다.',
+    'dash.mine.liveNote': '방금 확인한 결과입니다(보기용). 위 기록은 서버가 30분마다 남깁니다.',
     'office.h1': 'StatusDog 오피스',
     'office.hint': '동료를 클릭하면 리포트가 열립니다',
     'office.lede':

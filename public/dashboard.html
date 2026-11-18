@@ -55,12 +55,12 @@
 
   <section>
     <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px">
-      <h2 style="margin:0" data-i18n="dash.local.h2">Your monitors</h2>
+      <h2 style="margin:0" id="local-h2" data-i18n="dash.local.h2">Your monitors</h2>
       <span class="small muted" id="summary"></span>
       <span style="flex:1"></span>
       <button type="button" class="secondary" id="refresh" data-i18n="dash.refresh">Check all now</button>
     </div>
-    <p class="small muted" style="margin:0 0 18px" data-i18n-html="dash.local.ledeHtml"></p>
+    <p class="small muted" style="margin:0 0 18px" id="local-lede" data-i18n-html="dash.local.ledeHtml"></p>
 
     <form class="check-form" id="add-form" style="margin-bottom:26px">
       <input type="text" id="url" spellcheck="false" required
@@ -69,6 +69,7 @@
         placeholder="Add a URL to watch — example.com" aria-label="URL to watch">
       <button type="submit" data-i18n="dash.local.add">Add monitor</button>
     </form>
+    <p class="notice error small" id="add-error" style="margin:-12px 0 22px" hidden></p>
 
     <div id="monitors"></div>
   </section>
@@ -95,6 +96,7 @@ import {
   reflectStateInTab, renderStaleBanner, sparkline, stateBadge, statusBadge, store, uptimePct,
 } from '/assets/statusdog.js';
 import { expectFor, normalizeExpect, typeSwitch } from '/assets/target-type.js';
+import { changeMine, fetchViewer, importMessage, loadMine, MINE_POLL_MS, mineErrorText, moveBrowserMonitors } from '/assets/mine.js';
 
 const INTERVAL_MS = 60_000;
 
@@ -230,22 +232,68 @@ const input = document.getElementById('url');
 const refresh = document.getElementById('refresh');
 
 const kind = typeSwitch(addForm, input);
+const addError = document.getElementById('add-error');
 
-// `?add=` arrives from the landing page and the report page, with `type` and
-// `expect` when what was checked there was an app's API.
-const params = new URLSearchParams(location.search);
-const pending = params.get('add');
-if (pending) {
-  const type = params.get('type') === 'api' ? 'api' : 'web';
-  store.add(pending, { type, expect: type === 'api' ? normalizeExpect(params.get('expect')) ?? undefined : undefined });
-  const url = new URL(location.href);
-  for (const key of ['add', 'type', 'expect']) url.searchParams.delete(key);
-  history.replaceState(null, '', url);
+/*
+ * Signed in, "your monitors" are the ones on your account: saved on the server,
+ * the same on every device, checked every 30 minutes by the scheduler. Anything
+ * still kept only in this browser is listed under them, with a button to move it.
+ * Signed out, it is the browser's list, as before.
+ */
+let viewer = null;
+let mine = null;
+/** Results of "check now" on account monitors: shown, not stored — the scheduler keeps the record. */
+const live = new Map();
+
+function showAddError(message) {
+  addError.textContent = message;
+  addError.hidden = !message;
 }
 
-render();
-void runAll();
-setInterval(runAll, INTERVAL_MS);
+async function refreshMine() {
+  const payload = await loadMine();
+  if (payload) mine = payload;
+  render();
+}
+
+async function init() {
+  viewer = await fetchViewer();
+  if (viewer.signedIn) {
+    // The heading and lede describe the account, and keep doing so after a language switch.
+    document.getElementById('local-h2').dataset.i18n = 'dash.mine.h2';
+    document.getElementById('local-lede').dataset.i18nHtml = 'dash.mine.ledeHtml';
+    document.getElementById('local-h2').textContent = t('dash.mine.h2');
+    document.getElementById('local-lede').innerHTML = t('dash.mine.ledeHtml');
+    await refreshMine();
+    setInterval(() => void refreshMine(), MINE_POLL_MS);
+  }
+
+  // `?add=` arrives from the landing page and the report page, with `type` and
+  // `expect` when what was checked there was an app's API.
+  const params = new URLSearchParams(location.search);
+  const pending = params.get('add');
+  if (pending) {
+    const type = params.get('type') === 'api' ? 'api' : 'web';
+    const expect = type === 'api' ? normalizeExpect(params.get('expect')) ?? undefined : undefined;
+    if (viewer.signedIn) {
+      try {
+        mine = await changeMine({ op: 'add', url: pending, type, expect });
+      } catch (err) {
+        showAddError(mineErrorText(err, mine));
+      }
+    } else {
+      store.add(pending, { type, expect });
+    }
+    const url = new URL(location.href);
+    for (const key of ['add', 'type', 'expect']) url.searchParams.delete(key);
+    history.replaceState(null, '', url);
+  }
+
+  render();
+  void runAll();
+  setInterval(runAll, INTERVAL_MS);
+}
+void init();
 
 document.addEventListener('statusdog:languagechange', () => {
   setIntervalLabel();
@@ -260,10 +308,24 @@ function setIntervalLabel() {
   if (label) label.textContent = String(INTERVAL_MS / 1000);
 }
 
-addForm.addEventListener('submit', (event) => {
+addForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const url = input.value.trim();
   if (!url) return;
+  showAddError('');
+  if (viewer?.signedIn) {
+    try {
+      mine = await changeMine({ op: 'add', url, type: kind.type, expect: kind.expect });
+      input.value = '';
+      render();
+      // Show how it answers now, rather than an empty card until the next scheduled run.
+      const added = mine.monitors[mine.monitors.length - 1];
+      if (added) void runMine(added.id);
+    } catch (err) {
+      showAddError(mineErrorText(err, mine));
+    }
+    return;
+  }
   const { monitor, added } = store.add(url, { type: kind.type, expect: kind.expect });
   input.value = '';
   render();
@@ -272,7 +334,7 @@ addForm.addEventListener('submit', (event) => {
 
 refresh.addEventListener('click', () => void runAll());
 
-list.addEventListener('click', (event) => {
+list.addEventListener('click', async (event) => {
   const button = event.target.closest('button[data-action]');
   if (!button) return;
   const { action, id } = button.dataset;
@@ -281,15 +343,55 @@ list.addEventListener('click', (event) => {
     render();
   } else if (action === 'check') {
     void runOne(id);
+  } else if (action === 'remove-mine') {
+    try {
+      mine = await changeMine({ op: 'remove', id });
+      live.delete(id);
+      render();
+    } catch (err) {
+      showAddError(mineErrorText(err, mine));
+    }
+  } else if (action === 'check-mine') {
+    void runMine(id);
+  } else if (action === 'import') {
+    button.disabled = true;
+    try {
+      const outcome = await moveBrowserMonitors();
+      if (outcome) {
+        mine = outcome.payload;
+        render();
+        // Show how the moved ones answer now, rather than empty until the next scheduled run.
+        void runAll();
+        showAddError('');
+        const note = document.getElementById('import-note');
+        if (note) note.textContent = importMessage(outcome.moved, outcome.left, mine.limit);
+      }
+    } catch (err) {
+      showAddError(mineErrorText(err, mine));
+      button.disabled = false;
+    }
   }
 });
 
+/** Check one account monitor now, for display; the scheduler keeps the record. */
+async function runMine(id) {
+  const monitor = mine?.monitors.find((m) => m.id === id);
+  if (!monitor) return;
+  try {
+    live.set(id, await check(monitor.url, { expect: expectFor(monitor) }));
+  } catch (err) {
+    live.set(id, { ok: false, status: null, responseTimeMs: 0, checkedAt: new Date().toISOString(), message: err.message });
+  }
+  render();
+}
+
 async function runAll() {
   const monitors = store.list();
-  if (monitors.length === 0) return;
+  const own = viewer?.signedIn ? mine?.monitors ?? [] : [];
+  if (monitors.length === 0 && own.length === 0) return;
   refresh.disabled = true;
   refresh.textContent = t('dash.refreshing');
-  await Promise.all(monitors.map((m) => runOne(m.id)));
+  await Promise.all([...monitors.map((m) => runOne(m.id)), ...own.map((m) => runMine(m.id))]);
   refresh.disabled = false;
   refresh.textContent = t('dash.refresh');
 }
@@ -317,6 +419,7 @@ async function runOne(id) {
 }
 
 function render() {
+  if (viewer?.signedIn) return renderMine();
   const monitors = store.list();
   const down = monitors.filter((m) => m.lastResult && !m.lastResult.ok).length;
   summary.textContent = monitors.length === 0
@@ -329,6 +432,65 @@ function render() {
   list.innerHTML = monitors.length === 0
     ? `<div class="empty">${escapeHtml(t('dash.empty'))}</div>`
     : `<div class="grid cols-auto">${monitors.map(card).join('')}</div>`;
+}
+
+/** Signed in: your account's monitors, then whatever is still only in this browser. */
+function renderMine() {
+  const own = mine?.monitors ?? [];
+  const local = store.list();
+  const down = own.filter((m) => (live.get(m.id) ?? m.lastResult)?.ok === false).length;
+  summary.textContent = [
+    t('dash.mine.summary', { used: own.length, n: mine?.limit ?? 5 }),
+    ...(own.length ? [down ? t('dash.summary.down', { count: down }) : t('dash.summary.allHealthy')] : []),
+  ].join(' · ');
+
+  const ownHtml = own.length === 0
+    ? `<div class="empty">${escapeHtml(t('dash.mine.empty'))}</div>`
+    : `<div class="grid cols-auto">${own.map(cardMine).join('')}</div>`;
+  const localHtml = local.length === 0 ? '' : `
+    <div class="local-left">
+      <h3 style="margin:30px 0 4px">${escapeHtml(t('dash.mine.localH3'))}</h3>
+      <p class="small muted" style="margin:0 0 12px">${escapeHtml(t('dash.mine.localLede'))}</p>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+        <button type="button" class="secondary" data-action="import">${escapeHtml(t('office.mine.import', { count: local.length }))}</button>
+        <span class="small" style="color:var(--up)" id="import-note"></span>
+      </div>
+      <div class="grid cols-auto">${local.map(card).join('')}</div>
+    </div>`;
+  list.innerHTML = ownHtml + localHtml;
+}
+
+/** One monitor on your account: the scheduler's record, or a check you just ran. */
+function cardMine(monitor) {
+  const now = live.get(monitor.id) ?? null;
+  const result = now ?? monitor.lastResult;
+  const history = monitor.history ?? [];
+  const pct = uptimePct(history);
+  const problem = result && !result.ok
+    ? `<div class="notice error small" style="margin-top:14px">${escapeHtml(result.message ?? t('error.checkFailed'))}</div>`
+    : '';
+  return `
+    <section class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        ${statusBadge(result)}
+        <button type="button" class="ghost" data-action="remove-mine" data-id="${escapeHtml(monitor.id)}"
+          style="margin-left:auto" aria-label="${escapeHtml(t('dash.removeLabel'))}">${escapeHtml(t('dash.remove'))}</button>
+      </div>
+      <div style="font-weight:600;word-break:break-all;margin-bottom:14px">
+        ${monitor.name ? `<span>${escapeHtml(monitor.name)}</span> · ` : ''}<a href="/check?url=${encodeURIComponent(monitor.url)}">${escapeHtml(prettyUrl(monitor.url))}</a>${monitor.type === 'api' ? ` <span class="type-badge">${escapeHtml(t('type.badge'))}</span>` : ''}
+      </div>
+      ${sparkline(history)}
+      <div class="metrics" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+        <div class="metric"><span class="label">${escapeHtml(t('metric.uptime'))}</span><span class="value">${pct === null ? '–' : `${pct}%`}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.response'))}</span><span class="value">${formatMs(result?.responseTimeMs ?? null)}</span></div>
+        <div class="metric"><span class="label">${escapeHtml(t('metric.checked'))}</span><span class="value" style="font-size:15px">${escapeHtml(formatRelative(result?.checkedAt))}</span></div>
+      </div>
+      ${problem}
+      ${now ? `<p class="small muted" style="margin:12px 0 0">${escapeHtml(t('dash.mine.liveNote'))}</p>` : ''}
+      <div style="margin-top:14px">
+        <button type="button" class="secondary" data-action="check-mine" data-id="${escapeHtml(monitor.id)}">${escapeHtml(t('dash.checkNow'))}</button>
+      </div>
+    </section>`;
 }
 
 function card(monitor) {
