@@ -36,7 +36,11 @@
 
 /* ---------- room ---------- */
 
+/* The room is the point of the page, so it may spread past the 1080px text
+   column, up to 1400px, keeping a 16px gutter on small screens. */
 .office-room {
+  width: min(1400px, 100vw - 32px);
+  margin-inline: calc(50% - min(700px, 50vw - 16px));
   position: relative;
   border-radius: var(--radius);
   overflow: hidden;
