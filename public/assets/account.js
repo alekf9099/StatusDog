@@ -7,9 +7,9 @@
  * single status page, which meant somebody who had signed in could not find how to
  * sign out — the bug that prompted this file.
  *
- * Hidden entirely when the deployment has no admin surface configured. A reader who
- * will never be an owner should not be shown a door they cannot open, and offering a
- * sign-in that returns 503 is worse than offering none.
+ * Anyone can sign in, to keep their own monitors on an account; owners also get
+ * the owner-only links. Hidden entirely when sign-in is not configured — offering
+ * a sign-in that returns 503 is worse than offering none.
  */
 import { getLanguage, initI18n, t } from '/assets/i18n.js';
 import { escapeHtml } from '/assets/statusdog.js';
@@ -45,7 +45,7 @@ function returnPath() {
  */
 function renderOwnerLinks(nav, slot) {
   let link = nav.querySelector('[data-owner-link="security"]');
-  if (!viewer?.signedIn) {
+  if (!viewer?.owner) {
     link?.remove();
     return;
   }

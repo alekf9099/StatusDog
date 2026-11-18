@@ -108,7 +108,7 @@ function render() {
       ${notice()}
       <div class="card signin-card">
         <p class="signin-as">${escapeHtml(t('signin.as', { email: viewer.email ?? '' }))}</p>
-        <p class="small muted" style="margin:0 0 18px">${escapeHtml(t('signin.whatNow'))}</p>
+        <p class="small muted" style="margin:0 0 18px">${escapeHtml(t(viewer.owner ? 'signin.whatNow' : 'signin.whatNowMember'))}</p>
         <div class="signin-actions">
           <a href="${escapeHtml(next)}"><button type="button">${escapeHtml(t('signin.continue'))}</button></a>
           <button type="button" class="secondary" data-signout>${escapeHtml(t('signin.out'))}</button>

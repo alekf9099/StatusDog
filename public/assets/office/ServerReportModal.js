@@ -18,6 +18,7 @@ import { t, getLanguage } from '../i18n.js';
 import { renderDogChip } from './DogWorkerCard.js';
 import { deriveMood } from './mood.js';
 import { MAX_DOG_NAME_LENGTH } from './dogs.js';
+import { expectFor } from '../target-type.js';
 
 export class ServerReportModal {
   /**
@@ -176,7 +177,7 @@ export class ServerReportModal {
     this.busy = true;
     this.render();
     try {
-      this.liveResult = await check(this.worker.monitor.url);
+      this.liveResult = await check(this.worker.monitor.url, { expect: expectFor(this.worker.monitor) });
     } catch (err) {
       this.liveResult = { error: err.message };
     } finally {
@@ -411,9 +412,9 @@ export class ServerReportModal {
 
   actions() {
     const { monitor } = this.worker;
-    // Only interns can be dismissed here: roster targets live in monitors.json,
-    // and a button that silently failed to remove one would be a lie.
-    const dismiss = monitor.kind === 'intern'
+    // Interns and your own monitors can be let go here; roster targets live in
+    // monitors.json, and a button that silently failed to remove one would be a lie.
+    const dismiss = monitor.kind === 'intern' || monitor.kind === 'mine'
       ? `<button type="button" class="secondary report-danger" data-report-dismiss>${escapeHtml(t('office.dismiss'))}</button>`
       : '';
 

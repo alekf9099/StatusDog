@@ -481,7 +481,8 @@ function reportBody(report) {
  */
 function noteOf(report) {
   const note = report.note ?? null;
-  const canEdit = viewer?.signedIn === true;
+  // Notes are an owner's to write; signing in alone does not grant it.
+  const canEdit = viewer?.owner === true;
 
   if (editing === report.confirmedAt && canEdit) return noteForm(report, note);
 

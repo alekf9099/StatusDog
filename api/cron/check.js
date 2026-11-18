@@ -53,6 +53,8 @@ import { resolveRoster } from '../../dist/store/roster.js';
 import { applyCheck, readEntry } from '../../dist/store/uptime.js';
 import { recordCheck } from '../../dist/store/stats-store.js';
 import { kvEnvNames, kvFromEnv } from '../../dist/store/kv.js';
+import { checkMembers } from '../../dist/store/members.js';
+import { probeUrl } from '../../dist/monitor/probe.js';
 import {
   describeStaleness,
   evaluateStaleness,
@@ -441,8 +443,27 @@ export default async function handler(req, res) {
     }
   }));
 
+  // Signed-in people's own monitors, after the roster and within what is left of
+  // the time budget. No webhook alerts: those belong to the deployment's owner.
+  let members = null;
+  try {
+    members = await checkMembers(
+      kv,
+      (monitor) => probeUrl(monitor.url, {
+        timeoutMs: 8_000,
+        expectStatus: monitor.type === 'api'
+          ? (monitor.expect ?? '2xx').split(',')
+          : ['2xx', '3xx'],
+      }),
+      { deadline: startedAt + 45_000 },
+    );
+  } catch (err) {
+    members = { error: err?.message ?? 'failed' };
+  }
+
   res.status(everythingFailed ? 502 : 200).json({
     checkedAt: new Date(startedAt).toISOString(),
+    members,
     durationMs: Date.now() - startedAt,
     targets: checks.length,
     down,

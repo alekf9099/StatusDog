@@ -77,7 +77,7 @@ async function load() {
   }
   report = null;
   failure = null;
-  if (viewer.signedIn) {
+  if (viewer.owner) {
     try {
       const response = await fetch('/api/admin/security', {
         method: 'POST',
@@ -104,8 +104,11 @@ function render() {
     body.innerHTML = `<div class="notice">${escapeHtml(t('security.notConfigured'))}</div>`;
     return;
   }
-  if (!viewer.signedIn) {
-    body.innerHTML = `
+  if (!viewer.owner) {
+    // Signed in is not enough here; say so rather than offering a sign-in that changes nothing.
+    body.innerHTML = viewer.signedIn
+      ? `<div class="notice"><p style="margin:0">${escapeHtml(t('security.ownerOnly'))} ${escapeHtml(t('signin.denied'))}</p></div>`
+      : `
       <div class="notice">
         <p style="margin:0 0 8px">${escapeHtml(t('security.ownerOnly'))}</p>
         <a href="/signin?next=${encodeURIComponent('/security')}">${escapeHtml(t('signin.in'))}</a>

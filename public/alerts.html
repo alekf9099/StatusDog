@@ -221,8 +221,10 @@ function render() {
     box.innerHTML = `<p class="small muted">${escapeHtml(t('alerts.test.unavailable'))}</p>`;
     return;
   }
-  if (!viewer.signedIn) {
-    box.innerHTML = `<p class="small muted">${escapeHtml(t('alerts.test.signInFirst'))}
+  if (!viewer.owner) {
+    box.innerHTML = viewer.signedIn
+      ? `<p class="small muted">${escapeHtml(t('signin.denied'))}</p>`
+      : `<p class="small muted">${escapeHtml(t('alerts.test.signInFirst'))}
       <a href="/signin?next=${encodeURIComponent('/alerts')}">${escapeHtml(t('signin.in'))}</a></p>`;
     return;
   }
